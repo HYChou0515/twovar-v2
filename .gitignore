@@ -1,0 +1,5 @@
+datasmall
+data
+*.pyc
+*.o
+*.model
