@@ -871,6 +871,8 @@ public:
 	void one_random_1000();
 	void one_semigd_1000();
 	void one_semigd_shrink();
+	void one_semigd_dualobj_1000();
+	void one_semigd_dualobj_shrink();
 	void two_semicyclic_1000();
 	void two_semirandom1_1000();
 	void two_semirandom2_1000();
@@ -925,6 +927,10 @@ Solver::Solver(int _solver_type)
 		case ONE_L1_SEMIGD_SH:
 		case ONE_L2_SEMIGD_1000:
 		case ONE_L2_SEMIGD_SH:
+		case ONE_L1_SEMIGD_DUALOBJ_1000:
+		case ONE_L1_SEMIGD_DUALOBJ_SH:
+		case ONE_L2_SEMIGD_DUALOBJ_1000:
+		case ONE_L2_SEMIGD_DUALOBJ_SH:
 			category = ONE_NOBIAS; 
 			break;
 		case TWO_L1_SEMICY_1000:
@@ -987,6 +993,10 @@ Solver::Solver(int _solver_type)
 		SAVE_NAME(ONE_L1_SEMIGD_SH);
 		SAVE_NAME(ONE_L2_SEMIGD_1000);
 		SAVE_NAME(ONE_L2_SEMIGD_SH);
+		SAVE_NAME(ONE_L1_SEMIGD_DUALOBJ_1000);
+		SAVE_NAME(ONE_L1_SEMIGD_DUALOBJ_SH);
+		SAVE_NAME(ONE_L2_SEMIGD_DUALOBJ_1000);
+		SAVE_NAME(ONE_L2_SEMIGD_DUALOBJ_SH);
 		SAVE_NAME(TWO_L1_SEMICY_1000);
 		SAVE_NAME(TWO_L2_SEMICY_1000);
 		SAVE_NAME(TWO_L1_SEMIRDONE_1000);
@@ -1513,6 +1523,18 @@ void Solver::one_semigd_1000()
 		log_message();
 	}
 	summary();
+}
+
+void Solver::one_semigd_dualobj_shrink()
+{
+	info("THIS IS one semigd dual obj shrink\n");
+	//TODO: implement
+}
+
+void Solver::one_semigd_dualobj_1000()
+{
+	info("THIS IS one semigd dual obj 1000\n");
+	//TODO: implement
 }
 
 void Solver::one_random_1000()
@@ -5497,6 +5519,8 @@ static void onetwo_nobias_update(
 	 ||solver_type == ONE_L1_RD_SH
 	 ||solver_type == ONE_L1_SEMIGD_1000
 	 ||solver_type == ONE_L1_SEMIGD_SH
+	 ||solver_type == ONE_L1_SEMIGD_DUALOBJ_1000
+	 ||solver_type == ONE_L1_SEMIGD_DUALOBJ_SH
 	 ||solver_type == TWO_L1_CY_1000 
 	 ||solver_type == TWO_L1_RD_1000 
 	 ||solver_type == TWO_L1_SEMIGD_1000 
@@ -5599,6 +5623,18 @@ static void onetwo_nobias_update(
 		case ONE_L2_SEMIGD_SH:
 		{
 			solver.one_semigd_shrink();
+			break;
+		}
+		case ONE_L1_SEMIGD_DUALOBJ_1000:
+		case ONE_L2_SEMIGD_DUALOBJ_1000:
+		{
+			solver.one_semigd_dualobj_1000();
+			break;
+		}
+		case ONE_L1_SEMIGD_DUALOBJ_SH:
+		case ONE_L2_SEMIGD_DUALOBJ_SH:
+		{
+			solver.one_semigd_dualobj_shrink();
 			break;
 		}
 		case TWO_L1_RD_SH:
@@ -7050,6 +7086,10 @@ static void train_one(const problem *prob, const parameter *param, double *w, do
 		case ONE_L1_SEMIGD_SH:
 		case ONE_L2_SEMIGD_1000:
 		case ONE_L2_SEMIGD_SH:
+		case ONE_L1_SEMIGD_DUALOBJ_1000:
+		case ONE_L1_SEMIGD_DUALOBJ_SH:
+		case ONE_L2_SEMIGD_DUALOBJ_1000:
+		case ONE_L2_SEMIGD_DUALOBJ_SH:
 		case TWO_L1_CY_1000:
 		case TWO_L2_CY_1000:
 		case TWO_L1_SEMICY_1000:
@@ -7639,6 +7679,10 @@ class Solver_type_table
 		SAVE_NAME(ONE_L1_SEMIGD_SH);
 		SAVE_NAME(ONE_L2_SEMIGD_1000);
 		SAVE_NAME(ONE_L2_SEMIGD_SH);
+		SAVE_NAME(ONE_L1_SEMIGD_DUALOBJ_1000);
+		SAVE_NAME(ONE_L1_SEMIGD_DUALOBJ_SH);
+		SAVE_NAME(ONE_L2_SEMIGD_DUALOBJ_1000);
+		SAVE_NAME(ONE_L2_SEMIGD_DUALOBJ_SH);
 		//for two-variable
 		SAVE_NAME(TWO_L1_CY_1000);
 		SAVE_NAME(TWO_L1_RD_1000);
@@ -8016,6 +8060,10 @@ const char *check_parameter(const problem *prob, const parameter *param)
 		&& param->solver_type != ONE_L1_SEMIGD_SH
 		&& param->solver_type != ONE_L2_SEMIGD_1000
 		&& param->solver_type != ONE_L2_SEMIGD_SH
+		&& param->solver_type != ONE_L1_SEMIGD_DUALOBJ_1000
+		&& param->solver_type != ONE_L1_SEMIGD_DUALOBJ_SH
+		&& param->solver_type != ONE_L2_SEMIGD_DUALOBJ_1000
+		&& param->solver_type != ONE_L2_SEMIGD_DUALOBJ_SH
 		&& param->solver_type != TWO_L1_CY_1000
 		&& param->solver_type != TWO_L1_RD_1000
 		&& param->solver_type != TWO_L1_RD_SH

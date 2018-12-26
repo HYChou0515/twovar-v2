@@ -4,7 +4,7 @@ uselabel = labeltest
 #runtype = ["TWO_L1_RD_SH","TWO_L1_RD_SH2"]
 runtype = [
 	#"ONE_L1_CY_1000",
-	"ONE_L1_RD_1000",
+	"ONE_L1_SEMIGD_DUALOBJ_1000",
 	"TWO_L1_CY_1000",
 	"BIAS_L1_SEMIGD_1000",
 ]
