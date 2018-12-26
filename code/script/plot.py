@@ -3,7 +3,9 @@ import math
 import sys
 import os
 import numpy as np
-from config import *
+from plotconst import *
+from liblrconf import *
+from expconf import *
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter

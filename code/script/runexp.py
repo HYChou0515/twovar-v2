@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-from config import *
+from liblrconf import *
+from expconf import *
 import os
 import subprocess
 import itertools
