@@ -7,8 +7,8 @@ import time
 import sys
 PROCESS_NUM=7
 ROOT_PATH="../"
-DATA_PATH="../../../data/"
-LOG_PATH=ROOT_PATH+"logtmpp/"
+DATA_PATH="../../data/"
+LOG_PATH=ROOT_PATH+"logtmp/"
 train="train"
 
 def exit_with_help():
@@ -33,19 +33,19 @@ else:
 for data in dataset:
 	print("Running "+ data)
 	for tp in runtype:
-		if runs[tp] in semigd:
+		if is_semigd(runs[tp]):
 			need_r = True
 			rlist_real = rlist
 		else:
 			rlist_real = [0]
 			need_r = False
-                if runs[tp] in shrink:
+                if is_shrink(runs[tp]):
 			need_e = True
 			elist_real = elist
 		else:
 			elist_real = [0.1]
 			need_e = False
-                if runs[tp] in oneclass:
+                if is_oneclass(runs[tp]):
 			need_n = True
 			nlist_real = nlist
 		else:

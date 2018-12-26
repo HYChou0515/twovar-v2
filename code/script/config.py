@@ -1,133 +1,136 @@
-runs = {"ONE_L1_CY_1000iter":21, "ONE_L1_RD_1000iter":22, "ONE_L1_RD_SH":23,\
-	"ONE_L2_CY_1000iter":24, "ONE_L2_RD_1000iter":25, "ONE_L2_RD_SH":26,\
-        "ONE_L1_SEMIGD_1000iter":27,\
-        "ONE_L1_SEMIGD_1000iter_SHUFFLE":271,\
-        "ONE_L1_SEMIGDCY_1000iter":272,\
-        "ONE_L1_SEMIGD_SH":28,\
-        "ONE_L2_SEMIGD_1000iter":29,\
-        "ONE_L2_SEMIGD_SH":30,\
-	"TWO_L1_CY_1000iter":31, "TWO_L1_RD_1000iter":32, "TWO_L1_RD_SH":33,\
-	"TWO_L2_CY_1000iter":34, "TWO_L2_RD_1000iter":35, "TWO_L2_RD_SH":36,\
-	"ONE_L2_CY_SH":1, "ONE_L1_CY_SH":3,\
-	"TWO_L1_SEMICY_1000iter": 37,\
-	"TWO_L2_SEMICY_1000iter": 38,\
-	"TWO_L1_SEMIRDONE_1000iter": 371,\
-	"TWO_L2_SEMIRDONE_1000iter": 381,\
-	"TWO_L1_SEMIRDTWO_1000iter": 372,\
-	"TWO_L2_SEMIRDTWO_1000iter": 382,\
-	"TWO_L1_RD_SH2":39,\
-	"TWO_L2_RD_SH2":40,\
-	"BIAS_L1_RD_1000iter":41, "BIAS_L2_RD_1000iter":42,\
-	"BIAS_L1_semigd_1000iter":43, "BIAS_L2_semigd_1000iter":44,\
-	"BIAS_L1_RD_SH":45, "BIAS_L2_RD_SH":46,\
-	"BIAS_L1_SEMIGD_SH": 47, "BIAS_L2_SEMIGD_SH": 48, \
-	"ONECLASS_L1_RD_1000iter":51,\
-	"ONECLASS_L1_SEMIGD_1000iter":52,\
-	"ONECLASS_L1_FIRST_1000iter":53,\
-	"ONECLASS_L1_SECOND_1000iter":54,\
-	"ONECLASS_L1_RD_SH":55,\
-	"ONECLASS_L1_SEMIGD_SH":56,\
-	"ONECLASS_L2_RD_1000iter":57,\
-	"ONECLASS_L2_SEMIGD_1000iter":58,\
-	"ONECLASS_L2_FIRST_1000iter":59,\
-	"ONECLASS_L2_SECOND_1000iter":60,\
-	"ONECLASS_L2_RD_SH":61,\
-	"ONECLASS_L2_SEMIGD_SH":62,\
+runs = {
+	"L2R_LR" : 0,
+	"ONE_L2_CY_SH" : 1,
+	"L2R_L2LOSS_SVC" : 2,
+	"ONE_L1_CY_SH" : 3,
+	"MCSVM_CS" : 4,
+	"L1R_L2LOSS_SVC" : 5,
+	"L1R_LR" : 6,
+	"L2R_LR_DUAL" : 7,
+	"L2R_L2LOSS_SVR" : 11,
+	"L2R_L2LOSS_SVR_DUAL" : 12,
+	"L2R_L1LOSS_SVR_DUAL" : 13,
 
+	"ONE_L1_CY_1000" : 20111,
+	"ONE_L2_CY_1000" : 20121,
+
+	"ONE_L1_RD_1000" : 20211,
+	"ONE_L1_RD_SH" : 20212,
+	"ONE_L2_RD_1000" : 20221,
+	"ONE_L2_RD_SH" : 20122,
+
+	"ONE_L1_SEMIGD_1000" : 20311,
+	"ONE_L1_SEMIGD_SH" : 20312,
+	"ONE_L2_SEMIGD_1000" : 20321,
+	"ONE_L2_SEMIGD_SH" : 20322,
+
+	"TWO_L1_CY_1000" : 30111,
+	"TWO_L2_CY_1000" : 30121,
+
+	"TWO_L1_RD_1000" : 30211,
+	"TWO_L1_RD_SH" : 30212,
+	"TWO_L1_RD_SH2" : 30213,
+	"TWO_L2_RD_1000" : 30221,
+	"TWO_L2_RD_SH" : 30222,
+	"TWO_L2_RD_SH2" : 30223,
+
+	"TWO_L1_SEMICY_1000" : 30311,
+	"TWO_L2_SEMICY_1000" : 30321,
+	"TWO_L1_SEMIRDONE_1000" : 30411,
+	"TWO_L2_SEMIRDONE_1000" : 30421,
+	"TWO_L1_SEMIRDTWO_1000" : 30511,
+	"TWO_L2_SEMIRDTWO_1000" : 30521,
+	"TWO_L1_SEMIGD_1000" : 30611,
+	"TWO_L1_SEMIGD_SH" : 30612,
+	"TWO_L2_SEMIGD_1000" : 30621,
+	"TWO_L2_SEMIGD_SH" : 30622,
+
+	"BIAS_L1_RD_1000" : 40111,
+	"BIAS_L1_RD_SH" : 40112,
+	"BIAS_L2_RD_1000" : 40121,
+	"BIAS_L2_RD_SH" : 40122,
+
+	"BIAS_L1_SEMIGD_1000" : 40211,
+	"BIAS_L1_SEMIGD_SH" : 40212,
+	"BIAS_L2_SEMIGD_1000" : 40221,
+	"BIAS_L2_SEMIGD_SH" : 40222,
+
+	"ONECLASS_L1_RD_1000" : 50111,
+	"ONECLASS_L1_RD_SH" : 50112,
+	"ONECLASS_L2_RD_1000" : 50121,
+	"ONECLASS_L2_RD_SH" : 50222,
+
+	"ONECLASS_L1_SEMIGD_1000" : 50211,
+	"ONECLASS_L1_SEMIGD_SH" : 50212,
+	"ONECLASS_L2_SEMIGD_1000" : 50221,
+	"ONECLASS_L2_SEMIGD_SH" : 50222,
+
+	"ONECLASS_L1_FIRST_1000" : 50311,
+	"ONECLASS_L2_FIRST_1000" : 50321,
+	"ONECLASS_L1_SECOND_1000" : 50411,
+	"ONECLASS_L2_SECOND_1000" : 50421,
 }
 alltype = runs.values()
-biasobj = [41,42,43,44,45,46,47,48]
-semigd = [27,271,272,28,29,30,43,44,47,48,52,56,58,62]
-shrink = [28,29,23,26,33,36,1,3,39,40,45,46,47,48,55,56,61,62]
-oneclass = [51,52,53,54,55,56,57,58,59,60,61]
-L1 = [21,22,23,27,271,272,28,31,32,33,41,43,45,47,3,37,43,51,52,53,54,55,56,371,372]
-label1 = {31:"perm", 32:"random",37:"semi-random",\
-	  34:"perm", 35:"random",38:"semi-random",\
-}
-label2 = {21:"1-CD-perm", 22:"1-CD-random", 23:"1-CD-random",\
-	  24:"1-CD-perm", 25:"1-CD-random", 26:"1-CD-random",\
-	  27:"1-CD-smgd", 271:"1-CD-smgd-shf", 272:"1-CD-smgd-cy",\
-	  31:"2-CD-perm", 32:"2-CD-random", 33:"2-CD-random",\
-	  34:"2-CD-perm", 35:"2-CD-random", 36:"2-CD-random",\
-	  3:"1-CD-perm",  1:"1-CD-perm",
-          371:"2-CD-cyclic", 372:"2-CD-cyclic",\
-          381:"2-CD-cyclic", 382:"2-CD-cyclic",\
-}
-labeltest = {21:"1-CD-perm", 22:"1-CD-random", 23:"1-CD-random",\
-	  24:"1-CD-perm", 25:"1-CD-random", 26:"1-CD-random",\
-	  27:"1-CD-smgd", 271:"1-CD-smgd-shf", 272:"1-CD-smgd-cy",\
-	  31:"2-CD-perm", 32:"2-CD-random", 33:"2-CD-random",\
-	  34:"2-CD-perm", 35:"2-CD-random", 36:"2-CD-random",\
-	  3:"1-CD-perm",  1:"1-CD-perm",
-          371:"2-CD-cyclic", 372:"2-CD-cyclic",\
-          381:"2-CD-cyclic", 382:"2-CD-cyclic",\
-	  51:"oneclass-random" ,52:"oneclass-semigd",
-	  43: "semigd", 47: "semigd_shrink", 41: "random", 45: "random_shrink",
-	  44: "semigd", 48: "semigd_shrink", 42: "random", 46: "random_shrink",
-	  58:"oneclass-random-L2", 55:"oneclass-random-L1"
-}
+def is_biasobj(code):
+    str_code = str(code)
+    if len(str_code) != 5:
+        return False
+    else:
+        return str_code[0] == "4"
 
-label3 = {41:"2-CD-bias" ,32:"2-CD-nobias", 42:"2-CD-bias" ,35:"2-CD-nobias"}
-label4 = {3:"1-CD-shrink", 21:"1-CD", 32:"2-CD", 33:"2-CD-shrink",\
-	  1:"1-CD-shrink", 24:"1-CD", 35:"2-CD", 36:"2-CD-shrink"}
-label5 = {41:"2-CD-random", 42:"2-CD-random", 43:"2-CD-semigd", 44:"2-CD-semigd",
-	51:"oneclass-random" ,52:"oneclass-semigd"
+def is_semigd(code):
+	str_code = str(code)
+	if len(str_code) != 5:
+		return False
+	else:
+		semigd_prefix = [203, 402, 502]
+		return str_code[:3] in map(str, semigd_prefix)
+
+def is_shrink(code):
+	str_code = str(code)
+	if len(str_code) != 5:
+		return str_code in map(str, [1,3])
+	else:
+		return str_code[4] != "1"
+
+def is_oneclass(code):
+	str_code = str(code)
+	if len(str_code) != 5:
+		return False
+	else:
+		return str_code[0] == "5"
+
+def is_L1(code):
+	str_code = str(code)
+	if len(str_code) != 5:
+		return str_code in map(str, [3])
+	else:
+		return str_code[3] == "1"
+
+labeltest = {20111:"1-CD-perm", 20211:"1-CD-random", 20212:"1-CD-random",\
+	  20121:"1-CD-perm", 20221:"1-CD-random", 20222:"1-CD-random",\
+	  20311:"1-CD-smgd",\
+	  30111:"2-CD-perm", 30211:"2-CD-random", 30212:"2-CD-random",\
+	  30121:"2-CD-perm", 30221:"2-CD-random", 30222:"2-CD-random",\
+	  3:"1-CD-perm",  1:"1-CD-perm",
+          30411:"2-CD-cyclic", 30511:"2-CD-cyclic",\
+          30421:"2-CD-cyclic", 30521:"2-CD-cyclic",\
+	  50111:"oneclass-random" ,50211:"oneclass-semigd",
+	  40211: "semigd", 40212: "semigd_shrink", 40111: "random", 40112: "random_shrink",
+	  40221: "semigd", 40222: "semigd_shrink", 40121: "random", 40122: "random_shrink",
+	  50221:"oneclass-random-L2", 50112:"oneclass-random-L1"
 }
-label6 = {33: "2-nobias-shrink", 39:"2-nobias-shrink2"}
-label7 = {51: "1class-L1-random", 55: "1class-L1-random-shrink", 52: "1class-L1-semigd", 56: "1class-L1-semigd-shrink"}
-label8 = {43: "semigd", 47: "semigd_shrink", 41: "random", 45: "random_shrink", 44: "semigd", 48: "semigd_shrink", 42: "random", 46: "random_shrink"}
-label9 = {53:"L1-1st-order", 54:"L1-2nd-order", 51:"L1-random", 52:"L1:semigd"}
-label10 = {1:"nobias_random", 3:"nobias_random", 45:"bias_random", 47:"bias_semi", 46:"bias_random", 48:"bias_semi"}
-label11 = {41:"2-CD-random", 45:"2-CD-random-sh", 43:"2-CD-semigd", 47:"2-CD-semigd-sh",
-	51:"oneclass-random" ,52:"oneclass-semigd"}
 uselabel = labeltest
 #runtype = ["TWO_L1_RD_SH","TWO_L1_RD_SH2"]
-#runtype = ["ONECLASS_L1_RD_1000iter", "ONECLASS_L1_SEMIGD_1000iter", "ONECLASS_L1_RD_SH", "ONECLASS_L1_SEMIGD_SH"]
-#runtype = ["BIAS_L1_RD_1000iter", "BIAS_L1_semigd_1000iter", "BIAS_L1_RD_SH", "BIAS_L1_SEMIGD_SH"]
-#runtype = ["ONECLASS_L1_FIRST_1000iter", "ONECLASS_L1_SECOND_1000iter", "ONECLASS_L1_RD_1000iter", "ONECLASS_L1_SEMIGD_1000iter"]
-#runtype = ["BIAS_L2_RD_1000iter", "BIAS_L2_semigd_1000iter", "BIAS_L2_RD_SH", "BIAS_L2_SEMIGD_SH"]
-
-#runtype = ["ONE_L2_CY_SH", "ONE_L1_CY_SH"]#, "ONE_L1_CY_1000iter", "ONE_L2_CY_1000iter" ]
-
-#runtype = ["BIAS_L2_RD_1000iter", "BIAS_L2_semigd_1000iter", "BIAS_L2_RD_SH", "BIAS_L2_SEMIGD_SH"]
-#runtype = ["BIAS_L2_semigd_1000iter",  "BIAS_L2_SEMIGD_SH"]
-#runtype = ["BIAS_L1_RD_1000iter", "BIAS_L1_semigd_1000iter", "BIAS_L1_RD_SH", "BIAS_L1_SEMIGD_SH", ]
-#runtype = ["BIAS_L1_semigd_1000iter",  "BIAS_L1_SEMIGD_SH"]
-
-#runtype = ["ONE_L2_CY_SH", "ONE_L1_CY_SH", "ONE_L1_CY_1000iter", "ONE_L2_CY_1000iter" ]
-#runtype=["BIAS_L1_RD_1000iter", "BIAS_L2_RD_1000iter",\
-#	"BIAS_L1_semigd_1000iter", "BIAS_L2_semigd_1000iter",\
-#	"BIAS_L1_RD_SH", "BIAS_L2_RD_SH",\
-#	"BIAS_L1_SEMIGD_SH", "BIAS_L2_SEMIGD_SH", \
-#	]
-#elist = [0.1, 0.01, 0.001, 0.0001]
-#elist = [0.0001]
-#clist = [1, 0.03125, 32, 128, 1024]
-#clist = [128,1024]
-#rlist = [0.2, 0.1, 0.02, 0.01, 0.002, 0.001]
-#rlist = [0.1, 0.01, 0.001]
-#nlist = [0.1]
-#m=10000
-
-
-#runtype = [
-#	"TWO_L1_SEMIRDONE_1000iter",\
-#	"TWO_L2_SEMIRDONE_1000iter",\
-#	"TWO_L1_SEMIRDTWO_1000iter",\
-#	"TWO_L2_SEMIRDTWO_1000iter",\
-#"TWO_L1_CY_1000iter", "TWO_L1_RD_1000iter",\
-#"TWO_L2_CY_1000iter", "TWO_L2_RD_1000iter",
-#]
-
 runtype = [
-	#"ONE_L1_CY_1000iter",
-	#"ONE_L1_RD_1000iter",
-	"ONE_L1_SEMIGD_1000iter",
-	"BIAS_L1_semigd_1000iter",
+	#"ONE_L1_CY_1000",
+	"ONE_L1_RD_1000",
+	"TWO_L1_CY_1000",
+	"BIAS_L1_SEMIGD_1000",
 ]
+nlist = [0.1]
 clist = [1]
 elist = [0.1]
-#rlist = [1,2,3,4#,5,6,7,8,16,32,64,128,256,512,1024,2048,4096,8192,
 rlist = [
 	#1,0.99,0.98,0.97,0.96,0.95,0.94,0.93,0.92,0.91,0.9,0.8,0.7,0.6,0.5,0.1,0.001
 	#1,0.95,0.9,0.5,0.1,0.01,0.001
@@ -150,60 +153,6 @@ dataset = [
 #	"covtype.libsvm.binary.scale",
 #	"yahookr",
 	]
-#dataset = ["heart_scale"]
-#dataset = ["a1a",
-#	"breast-cancer_scale",
-#	"heart_scale",
-#	"australian_scale"
-#	]
-#dataset = ["australian_scale"]
-#dataset = ["a1a"]
-#runtype=[
-#   "ONECLASS_L1_RD_1000iter"\
-# , "ONECLASS_L1_SEMIGD_1000iter"\
-# , "ONECLASS_L1_FIRST_1000iter"\
-# , "ONECLASS_L1_SECOND_1000iter"\
-# , "ONECLASS_L1_RD_SH"\
-# , "ONECLASS_L1_SEMIGD_SH"\
-# , "ONECLASS_L2_RD_1000iter"\
-# , "ONECLASS_L2_SEMIGD_1000iter"\
-# , "ONECLASS_L2_FIRST_1000iter"\
-# , "ONECLASS_L2_SECOND_1000iter"\
-# , "ONECLASS_L2_RD_SH"\
-# , "ONECLASS_L2_SEMIGD_SH"
-#]
-
-#elist = [ 0.01]
-#clist = [1]
-#rlist = [0.2, 0.1, 0.02, 0.01 , 0.002, 0.001]
-#rlist = [0.1]
-#nlist = [0.01, 0.1, 0.2]
-#nlist = [0.1]
-
-#runtype=[
-#"TWO_L1_RD_SH2",\
-#"TWO_L2_RD_SH2",\
-#]
-
-
-#runtype = ["BIAS_L1_RD_SH", "BIAS_L1_SEMIGD_SH", "ONE_L1_CY_SH"]
-#runtype = ["BIAS_L2_RD_SH", "ONE_L2_CY_SH","BIAS_L2_SEMIGD_SH" ]
-#elist = [ 0.1, 0.01, 0.001, 0.0001]
-#clist = [1]
-#rlist = [0.1]
-#dataset = ["yahookr", "covtype.libsvm.binary"]
-#runtype = [ "TWO_L1_CY_1000iter",  "TWO_L1_RD_1000iter","TWO_L1_SEMICY_1000iter"]
-#elist = [ 0.01]
-#clist = [1,8192]
-
-#runtype = [ "TWO_L2_CY_1000iter",  "TWO_L2_RD_1000iter","TWO_L2_SEMICY_1000iter"]
-#elist = [ 0.01]
-#clist = [1,8192]
-
-#dataset = ["heart_scale"]
-#dataset = ["yahookr"]
-#dataset = ["a9a","ijcnn1","news20.binary",\
-#	   "rcv1_train.binary","real-sim","yahoojp"]
 
 
 # need to be checked later

@@ -56,7 +56,7 @@ class Plotter(object):
 		cmap = plt.get_cmap('hsv')
 		totnum = len(self.stype)
 		for st in self.stype:
-			if st in semigd:
+			if is_semigd(st):
 				totnum = totnum + len(rlist) -1
 		self.colors = [cmap(j) for j in np.linspace(0, 1, totnum+1)]
 		self.makr = ["--", "-.", "o-.", "-", "o-"]
@@ -78,7 +78,7 @@ class Plotter(object):
 					continue
 
 				lb = uselabel[tp]
-				if tp in semigd:
+				if is_semigd(tp):
 					lb = "%s_%s" % (lb, r)
 				plt.plot(xs, ys, self.makr[clridx],
 						color=self.colors[clridx],
@@ -88,28 +88,28 @@ class Plotter(object):
 		self.setup_fig()
 
 	def get_rlist(self, tp):
-		if tp not in semigd:
-			return [1]
-		else:
+		if is_semigd(tp):
 			return rlist
+		else:
+			return [1]
 
 	def get_eps(self, tp, orig_e):
-		if tp not in shrink:
-			return 0.1
-		else:
+		if is_shrink(tp):
 			return orig_e
+		else:
+			return 0.1
 
 	def get_logfile(self, tp, e, r):
-		if tp not in semigd:
-			if tp in oneclass:
-				logname = "%s_s%d_c1_e%g_n%g"% (self.dstr, tp, e, self.c)
-			else:
-				logname = "%s_s%d_c%g_e%g"% (self.dstr, tp, self.c, e)
-		else:
-			if tp in oneclass:
+		if is_semigd(tp):
+			if is_oneclass(tp):
 				logname = "%s_s%d_c1_e%g_n%g_r%g"% (self.dstr, tp, e, self.c, r)
 			else:
 				logname = "%s_s%d_c%g_e%g_r%g"% (self.dstr, tp, self.c, e, r)
+		else:
+			if is_oneclass(tp):
+				logname = "%s_s%d_c1_e%g_n%g"% (self.dstr, tp, e, self.c)
+			else:
+				logname = "%s_s%d_c%g_e%g"% (self.dstr, tp, self.c, e)
 		print(logname)
 		try:
 			return open(self.logpath+logname,"r")
@@ -118,9 +118,9 @@ class Plotter(object):
 			raise IOError
 
 	def get_minimal(self, tp):
-		if tp in biasobj:
+		if is_biasobj(tp):
 			return dobj["bias{}c{}".format(self.loss,self.c)][self.dstr]
-		elif tp in oneclass:
+		elif is_oneclass(tp):
 			return dobj["one{}c{}".format(self.loss,self.c)][self.dstr]
 		else:
 			return dobj["{}c{}".format(self.loss,self.c)][self.dstr]
@@ -366,14 +366,14 @@ def main():
 	stype = [runs[k] for k in runtype]
 
 	#check losses are same
-	losses = map(lambda st: st in L1, stype)
+	losses = map(lambda st: is_L1(st), stype)
 	assert losses.count(losses[0])==len(losses), "Need all stype have same loss"
-	loss = "L1" if stype[0] in L1 else "L2"
+	loss = "L1" if is_L1(stype[0]) else "L2"
 
 	#check all or none in oneclass
-	oneclass_types = map(lambda st: st in oneclass, stype)
+	oneclass_types = map(lambda st: is_oneclass(st), stype)
 	assert oneclass_types.count(oneclass_types[0])==len(oneclass_types), "Need all or none of stype are oneclass"
-	if stype[0] in oneclass:
+	if is_oneclass(stype[0]):
 		real_clist = nlist
 	else:
 		real_clist = clist

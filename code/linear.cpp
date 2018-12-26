@@ -7695,7 +7695,7 @@ class Solver_type_table
 	static const char * UNDEFINED;
 
 	private:
-		static const size_t init_size=1024;
+		static const size_t init_size=100000;
 		const char * array[init_size];
 }solver_type_table;
 
