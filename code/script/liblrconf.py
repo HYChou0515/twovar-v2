@@ -111,17 +111,3 @@ def is_L1(code):
 		return str_code in map(str, [3])
 	else:
 		return str_code[3] == "1"
-
-labeltest = {20111:"1-CD-perm", 20211:"1-CD-random", 20212:"1-CD-random",\
-	20121:"1-CD-perm", 20221:"1-CD-random", 20222:"1-CD-random",\
-	20311:"1-CD-smgd",\
-	30111:"2-CD-perm", 30211:"2-CD-random", 30212:"2-CD-random",\
-	30121:"2-CD-perm", 30221:"2-CD-random", 30222:"2-CD-random",\
-	3:"1-CD-perm",1:"1-CD-perm",
-	30411:"2-CD-cyclic", 30511:"2-CD-cyclic",\
-	30421:"2-CD-cyclic", 30521:"2-CD-cyclic",\
-	50111:"oneclass-random" ,50211:"oneclass-semigd",
-	40211: "semigd", 40212: "semigd_shrink", 40111: "random", 40112: "random_shrink",
-	40221: "semigd", 40222: "semigd_shrink", 40121: "random", 40122: "random_shrink",
-	50221:"oneclass-random-L2", 50112:"oneclass-random-L1"
-}
