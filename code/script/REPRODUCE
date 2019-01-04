@@ -1,0 +1,18 @@
+# generate log
+./runexp.py run
+
+28 log files
+
+# generate figure
+
+as rlist are too long and there are 2 semigd, 
+we draw seerate figures for those 2 semigd.
+
+comment line 4: "ONE_L1_SEMIGD_DUALOBJ_1000"
+./plot.py cd
+./plot.py time
+
+uncomment line 4
+comment line 5: "ONE_L1_SEMIGD_1000"
+./plot.py cd
+./plot.py time
