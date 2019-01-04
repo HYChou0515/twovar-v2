@@ -2,7 +2,7 @@ from liblrconf import *
 
 runtype = [
 	"ONE_L1_SEMIGD_DUALOBJ_1000",
-#	"ONE_L1_SEMIGD_1000",
+	"ONE_L1_SEMIGD_1000",
 	"ONE_L1_CY_1000",
 	"ONE_L1_RD_1000",
 ]
@@ -23,7 +23,7 @@ rlist = [
 m = 5000
 dataset = [
 #	"heart_scale",
-#	"a9a",
+	"a9a",
 #	"ijcnn1",
 	"rcv1_train.binary",
 #	"real-sim",
