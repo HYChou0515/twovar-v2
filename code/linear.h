@@ -127,8 +127,9 @@ struct parameter
 	double* weight;
 	double p;
 	double *init_sol;
-    	double r;       /* update ratio for semi-gd*/ 
-    	int max_iter;     
+	double r;       /* update ratio for semi-gd*/ 
+	int max_iter;     
+	int timeout; // in second     
 	double nu;	/* for one-class formulation */
 };
 

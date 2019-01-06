@@ -803,7 +803,13 @@ void Solver_MCSVM_CS::Solve(double *w)
 #undef GETI
 #define GETI(i) (y[i]+1)
 // To support weights for instances, use GETI(i) (i)
-
+#define EXIT_IF_TIMEOUT(time)\
+{\
+	if (timeout > 0 && (double)(time)/CLOCKS_PER_SEC > timeout)\
+	{\
+		break;\
+	}\
+}
 class Solver
 {
 public:
@@ -824,6 +830,7 @@ public:
 	int max_set;
 	int *index;
 	int max_iter;
+	int timeout;
 
 	// logged variables
 	int iter;
@@ -1228,6 +1235,7 @@ void Solver::summary()
 	info("eps = %f ratio_update = %f\n", eps, ratio_update);
 	info("solver = %s\n", solver_name);
 	info("max_iter = %d\n", max_iter);
+	info("timeout = %d\n", timeout);
 	info("obj = %.16g rho = %.16g\n", calculate_obj(), calculate_rho());
 
 	countSVs();
@@ -1551,6 +1559,7 @@ void Solver::one_semigd_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();
 }
@@ -5491,6 +5500,7 @@ static void oneclass_update(
 	solver.upper_bound = upper_bound;
 	solver.ratio_update = param->r;
 	solver.max_iter = param->max_iter;
+	solver.timeout = param->timeout;
 	switch(solver_type)
 	{
 		
@@ -5597,6 +5607,7 @@ static void two_bias_update(
 	solver.alpha_status = alpha_status;
 	solver.ratio_update = param->r;
 	solver.max_iter = param->max_iter;
+	solver.timeout = param->timeout;
 	switch(solver_type)
 	{
 		case BIAS_L1_RD_SH:
@@ -5724,6 +5735,7 @@ static void onetwo_nobias_update(
 	solver.index = index;
 	solver.upper_bound = upper_bound;
 	solver.max_iter = param->max_iter;
+	solver.timeout = param->timeout;
 	switch(solver_type)
 	{
 		case ONE_L1_RD_SH:

@@ -288,6 +288,7 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 	param.p = 0.1;
 	param.r = 1;
 	param.max_iter = 1000;
+	param.timeout = 0;
 	param.nu = 0.1;
 	param.nr_weight = 0;
 	param.weight_label = NULL;
@@ -311,13 +312,17 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 				param.max_iter = atoi(argv[i]);
 				break;
 
-            		case 'r':
-               			param.r = atof(argv[i]);
-                		break;
+			case 't':
+				param.timeout = atoi(argv[i]);
+				break;
 
-            		case 'n':
-               			param.nu = atof(argv[i]);
-                		break;
+			case 'r':
+				param.r = atof(argv[i]);
+				break;
+
+			case 'n':
+				param.nu = atof(argv[i]);
+				break;
 
 			case 's':
 				param.solver_type = atoi(argv[i]);
