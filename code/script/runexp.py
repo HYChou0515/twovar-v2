@@ -9,7 +9,7 @@ import sys
 PROCESS_NUM=7
 ROOT_PATH="../"
 DATA_PATH="../../data/"
-LOG_PATH=ROOT_PATH+"logtmp/"
+LOG_PATH=ROOT_PATH+logfolder+"/"
 train="train"
 
 def exit_with_help():

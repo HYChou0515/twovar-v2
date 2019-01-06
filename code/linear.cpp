@@ -853,8 +853,16 @@ public:
 		TWO_BIAS,
 		ONECLASS
 	};
+	enum WssMode
+	{
+		SEMIGD_PG,
+		SEMIGD_PG_RAND,
+		SEMIGD_DUALOBJ,
+		SEMIGD_DUALOBJ_RAND
+	};
 	enum {LOWER_BOUND, UPPER_BOUND, FREE};
 	SolverCate category;
+	WssMode wss_mode;
 	const char* solver_name;
 	//other function
 	double calculate_obj();
@@ -927,10 +935,18 @@ Solver::Solver(int _solver_type)
 		case ONE_L1_SEMIGD_SH:
 		case ONE_L2_SEMIGD_1000:
 		case ONE_L2_SEMIGD_SH:
+		case ONE_L1_SEMIGD_RAND_1000:
+		case ONE_L1_SEMIGD_RAND_SH:
+		case ONE_L2_SEMIGD_RAND_1000:
+		case ONE_L2_SEMIGD_RAND_SH:
 		case ONE_L1_SEMIGD_DUALOBJ_1000:
 		case ONE_L1_SEMIGD_DUALOBJ_SH:
 		case ONE_L2_SEMIGD_DUALOBJ_1000:
 		case ONE_L2_SEMIGD_DUALOBJ_SH:
+		case ONE_L1_SEMIGD_DUALOBJ_RAND_1000:
+		case ONE_L1_SEMIGD_DUALOBJ_RAND_SH:
+		case ONE_L2_SEMIGD_DUALOBJ_RAND_1000:
+		case ONE_L2_SEMIGD_DUALOBJ_RAND_SH:
 			category = ONE_NOBIAS; 
 			break;
 		case TWO_L1_SEMICY_1000:
@@ -993,10 +1009,18 @@ Solver::Solver(int _solver_type)
 		SAVE_NAME(ONE_L1_SEMIGD_SH);
 		SAVE_NAME(ONE_L2_SEMIGD_1000);
 		SAVE_NAME(ONE_L2_SEMIGD_SH);
+		SAVE_NAME(ONE_L1_SEMIGD_RAND_1000);
+		SAVE_NAME(ONE_L1_SEMIGD_RAND_SH);
+		SAVE_NAME(ONE_L2_SEMIGD_RAND_1000);
+		SAVE_NAME(ONE_L2_SEMIGD_RAND_SH);
 		SAVE_NAME(ONE_L1_SEMIGD_DUALOBJ_1000);
 		SAVE_NAME(ONE_L1_SEMIGD_DUALOBJ_SH);
 		SAVE_NAME(ONE_L2_SEMIGD_DUALOBJ_1000);
 		SAVE_NAME(ONE_L2_SEMIGD_DUALOBJ_SH);
+		SAVE_NAME(ONE_L1_SEMIGD_DUALOBJ_RAND_1000);
+		SAVE_NAME(ONE_L1_SEMIGD_DUALOBJ_RAND_SH);
+		SAVE_NAME(ONE_L2_SEMIGD_DUALOBJ_RAND_1000);
+		SAVE_NAME(ONE_L2_SEMIGD_DUALOBJ_RAND_SH);
 		SAVE_NAME(TWO_L1_SEMICY_1000);
 		SAVE_NAME(TWO_L2_SEMICY_1000);
 		SAVE_NAME(TWO_L1_SEMIRDONE_1000);
@@ -1496,7 +1520,10 @@ void Solver::one_semigd_1000()
 		//		++j;
 		//	}
 		//}
-		//std::random_shuffle(workset, workset+update_size);
+		if (wss_mode == SEMIGD_PG_RAND)
+		{
+			std::random_shuffle(workset, workset+update_size);
+		}
 		for(s=0; s<update_size; s++)
 		{
 			i = workset[s];
@@ -1606,7 +1633,11 @@ void Solver::one_semigd_dualobj_1000()
 			workset[update_size-1-i] = Max_order_queue.top().index;
 			Max_order_queue.pop();
 		}
-		//std::random_shuffle(workset, workset+update_size);
+
+		if (wss_mode == SEMIGD_DUALOBJ_RAND)
+		{
+			std::random_shuffle(workset, workset+update_size);
+		}
 		for(s=0; s<update_size; s++)
 		{
 			i = workset[s];
@@ -5621,8 +5652,12 @@ static void onetwo_nobias_update(
 	 ||solver_type == ONE_L1_RD_SH
 	 ||solver_type == ONE_L1_SEMIGD_1000
 	 ||solver_type == ONE_L1_SEMIGD_SH
+	 ||solver_type == ONE_L1_SEMIGD_RAND_1000
+	 ||solver_type == ONE_L1_SEMIGD_RAND_SH
 	 ||solver_type == ONE_L1_SEMIGD_DUALOBJ_1000
 	 ||solver_type == ONE_L1_SEMIGD_DUALOBJ_SH
+	 ||solver_type == ONE_L1_SEMIGD_DUALOBJ_RAND_1000
+	 ||solver_type == ONE_L1_SEMIGD_DUALOBJ_RAND_SH
 	 ||solver_type == TWO_L1_CY_1000 
 	 ||solver_type == TWO_L1_RD_1000 
 	 ||solver_type == TWO_L1_SEMIGD_1000 
@@ -5718,24 +5753,56 @@ static void onetwo_nobias_update(
 		case ONE_L1_SEMIGD_1000:
 		case ONE_L2_SEMIGD_1000:
 		{
+			solver.wss_mode = Solver::SEMIGD_PG;
 			solver.one_semigd_1000();
 			break;
 		}
 		case ONE_L1_SEMIGD_SH:
 		case ONE_L2_SEMIGD_SH:
 		{
+			solver.wss_mode = Solver::SEMIGD_PG;
+			solver.one_semigd_shrink();
+			break;
+		}
+		case ONE_L1_SEMIGD_RAND_1000:
+		case ONE_L2_SEMIGD_RAND_1000:
+		{
+			solver.wss_mode = Solver::SEMIGD_PG_RAND;
+			solver.one_semigd_1000();
+			break;
+		}
+		case ONE_L1_SEMIGD_RAND_SH:
+		case ONE_L2_SEMIGD_RAND_SH:
+		{
+			solver.wss_mode = Solver::SEMIGD_PG_RAND;
 			solver.one_semigd_shrink();
 			break;
 		}
 		case ONE_L1_SEMIGD_DUALOBJ_1000:
 		case ONE_L2_SEMIGD_DUALOBJ_1000:
 		{
+			solver.wss_mode = Solver::SEMIGD_DUALOBJ;
 			solver.one_semigd_dualobj_1000();
 			break;
 		}
 		case ONE_L1_SEMIGD_DUALOBJ_SH:
 		case ONE_L2_SEMIGD_DUALOBJ_SH:
 		{
+			solver.wss_mode = Solver::SEMIGD_DUALOBJ;
+			solver.one_semigd_dualobj_shrink();
+			break;
+		}
+		case ONE_L1_SEMIGD_DUALOBJ_RAND_1000:
+		case ONE_L2_SEMIGD_DUALOBJ_RAND_1000:
+		{
+			solver.wss_mode = Solver::SEMIGD_DUALOBJ_RAND;
+			solver.one_semigd_dualobj_1000();
+			break;
+		}
+		case ONE_L1_SEMIGD_DUALOBJ_RAND_SH:
+		case ONE_L2_SEMIGD_DUALOBJ_RAND_SH:
+		{
+			solver.wss_mode = Solver::SEMIGD_DUALOBJ_RAND;
 			solver.one_semigd_dualobj_shrink();
 			break;
 		}
@@ -7188,10 +7255,18 @@ static void train_one(const problem *prob, const parameter *param, double *w, do
 		case ONE_L1_SEMIGD_SH:
 		case ONE_L2_SEMIGD_1000:
 		case ONE_L2_SEMIGD_SH:
+		case ONE_L1_SEMIGD_RAND_1000:
+		case ONE_L1_SEMIGD_RAND_SH:
+		case ONE_L2_SEMIGD_RAND_1000:
+		case ONE_L2_SEMIGD_RAND_SH:
 		case ONE_L1_SEMIGD_DUALOBJ_1000:
 		case ONE_L1_SEMIGD_DUALOBJ_SH:
 		case ONE_L2_SEMIGD_DUALOBJ_1000:
 		case ONE_L2_SEMIGD_DUALOBJ_SH:
+		case ONE_L1_SEMIGD_DUALOBJ_RAND_1000:
+		case ONE_L1_SEMIGD_DUALOBJ_RAND_SH:
+		case ONE_L2_SEMIGD_DUALOBJ_RAND_1000:
+		case ONE_L2_SEMIGD_DUALOBJ_RAND_SH:
 		case TWO_L1_CY_1000:
 		case TWO_L2_CY_1000:
 		case TWO_L1_SEMICY_1000:
@@ -7781,10 +7856,18 @@ class Solver_type_table
 		SAVE_NAME(ONE_L1_SEMIGD_SH);
 		SAVE_NAME(ONE_L2_SEMIGD_1000);
 		SAVE_NAME(ONE_L2_SEMIGD_SH);
+		SAVE_NAME(ONE_L1_SEMIGD_RAND_1000);
+		SAVE_NAME(ONE_L1_SEMIGD_RAND_SH);
+		SAVE_NAME(ONE_L2_SEMIGD_RAND_1000);
+		SAVE_NAME(ONE_L2_SEMIGD_RAND_SH);
 		SAVE_NAME(ONE_L1_SEMIGD_DUALOBJ_1000);
 		SAVE_NAME(ONE_L1_SEMIGD_DUALOBJ_SH);
 		SAVE_NAME(ONE_L2_SEMIGD_DUALOBJ_1000);
 		SAVE_NAME(ONE_L2_SEMIGD_DUALOBJ_SH);
+		SAVE_NAME(ONE_L1_SEMIGD_DUALOBJ_RAND_1000);
+		SAVE_NAME(ONE_L1_SEMIGD_DUALOBJ_RAND_SH);
+		SAVE_NAME(ONE_L2_SEMIGD_DUALOBJ_RAND_1000);
+		SAVE_NAME(ONE_L2_SEMIGD_DUALOBJ_RAND_SH);
 		//for two-variable
 		SAVE_NAME(TWO_L1_CY_1000);
 		SAVE_NAME(TWO_L1_RD_1000);
@@ -8162,10 +8245,18 @@ const char *check_parameter(const problem *prob, const parameter *param)
 		&& param->solver_type != ONE_L1_SEMIGD_SH
 		&& param->solver_type != ONE_L2_SEMIGD_1000
 		&& param->solver_type != ONE_L2_SEMIGD_SH
+		&& param->solver_type != ONE_L1_SEMIGD_RAND_1000
+		&& param->solver_type != ONE_L1_SEMIGD_RAND_SH
+		&& param->solver_type != ONE_L2_SEMIGD_RAND_1000
+		&& param->solver_type != ONE_L2_SEMIGD_RAND_SH
 		&& param->solver_type != ONE_L1_SEMIGD_DUALOBJ_1000
 		&& param->solver_type != ONE_L1_SEMIGD_DUALOBJ_SH
 		&& param->solver_type != ONE_L2_SEMIGD_DUALOBJ_1000
 		&& param->solver_type != ONE_L2_SEMIGD_DUALOBJ_SH
+		&& param->solver_type != ONE_L1_SEMIGD_DUALOBJ_RAND_1000
+		&& param->solver_type != ONE_L1_SEMIGD_DUALOBJ_RAND_SH
+		&& param->solver_type != ONE_L2_SEMIGD_DUALOBJ_RAND_1000
+		&& param->solver_type != ONE_L2_SEMIGD_DUALOBJ_RAND_SH
 		&& param->solver_type != TWO_L1_CY_1000
 		&& param->solver_type != TWO_L1_RD_1000
 		&& param->solver_type != TWO_L1_RD_SH
