@@ -1433,15 +1433,10 @@ void Solver::one_semigd_1000()
 	std::priority_queue<struct feature_node, std::vector<feature_node>, mincomp> Min_order_queue;
 	int *workset = new int[l];
 	int smgd_size;
-	bool *need_update_ind = new bool[l];
 
 	active_size = l;
 	while (iter < max_iter)
 	{
-		for(i=0; i<l; i++)
-		{
-			need_update_ind[i]=true;
-		}
 		start = clock();
 		success_pair = 0;
 		nr_pos_y = 0;
@@ -1471,32 +1466,32 @@ void Solver::one_semigd_1000()
 		smgd_size = update_size;
 		//update_size = l;
 
-		for(i=0; i<active_size; i++)
+		for(s=0; s<active_size; s++)
 		{
 			PG = 0;	
-			struct feature_node comp;
-			comp.index = index[i];
+			i = index[s];
 
-			if (alpha_status[comp.index] == LOWER_BOUND)
+			if (alpha_status[i] == LOWER_BOUND)
 			{
-				if(G[i] < 0)
-					PG = G[i];
+				if(G[s] < 0)
+					PG = G[s];
 			}
-			else if (alpha_status[comp.index] == UPPER_BOUND)
+			else if (alpha_status[i] == UPPER_BOUND)
 			{
-				if(G[i] > 0)
-					PG = G[i];
+				if(G[s] > 0)
+					PG = G[s];
 			}
 			else
-				PG = G[i];
+				PG = G[s];
 
 			PGmax_new = max(PGmax_new, PG);
 			PGmin_new = min(PGmin_new, PG);
 
+			struct feature_node comp;
+			comp.index = i;
 			comp.value = fabs(PG);
 			if((int) Min_order_queue.size() < smgd_size)
 			{
-				need_update_ind[comp.index] = false;
 				Min_order_queue.push(comp);
 			}
 			else if ((int) Min_order_queue.size() <= 0)
@@ -1505,9 +1500,7 @@ void Solver::one_semigd_1000()
 			}
 			else if (Min_order_queue.top().value < comp.value)
 			{
-				need_update_ind[Min_order_queue.top().index] = true;
 				Min_order_queue.pop();
-				need_update_ind[comp.index] = false;
 				Min_order_queue.push(comp);
 			}
 		}
@@ -1519,15 +1512,6 @@ void Solver::one_semigd_1000()
 			workset[smgd_size-1-i] = Min_order_queue.top().index;
 			Min_order_queue.pop();
 		}
-		//j=0;
-		//for(i=0; i<update_size; i++)
-		//{
-		//	if(need_update_ind[i])
-		//	{
-		//		workset[smgd_size+j] = i;
-		//		++j;
-		//	}
-		//}
 		if (wss_mode == SEMIGD_PG_RAND)
 		{
 			std::random_shuffle(workset, workset+update_size);
@@ -5651,6 +5635,7 @@ static void onetwo_nobias_update(
 	double *QD = new double[l];
 	double *alpha =  new double[l];
 	int *alpha_status = new int[l];
+	//int *index = new int[l];
 	int *index = new int[l];
 	schar *y = new schar[l];
 	int i = 0;
@@ -5873,8 +5858,8 @@ static void onetwo_nobias_update(
 			break;
 		}
 	}
-	delete [] index;
 	delete [] QD;
+	delete [] index;
 	delete [] alpha;
 	delete [] y;
 }
