@@ -70,3 +70,36 @@ min_alpha  0.5(alpha^T Q alpha) - e^T alpha
 where
 
 Q is a matrix with Q_ij = y_i y_j x_i^T x_j.
+
+
+How to Add New Solver Type (-s)
+===============================
+1. linear.h
+	append NEWTYPE to solver_type enum with a valid code
+	example:
+		code=abcde
+		a: big category
+		bc: algo
+		d: loss 1 or 2
+		e: 1000 iter or shrink
+2. train.c
+	append NEWTYPE info to exit_with_help()
+3. linear.cpp
+	a) Solver::Solver
+		i) 	determine category
+		ii) SAVE_NAME	
+	b) (big) update function (e.g. onetwo_nobias_update)
+		i)
+			NEWTYPE is default L2
+			if NEWTYPE is L1, change diag and upper_bound 	
+		ii)
+			switch solver_type and run the (detailed) update function
+	c) train_one()
+		assign (big) update function
+	d) Solver_type_table
+		SAVE_NAME to the solver type table
+	e) check_parameter()
+		exit if solver_type is not equal to NEWTYPE or other
+4. script/liblrconf.py
+	a) append NEWTYPE code to runs = {}
+	b) modify semigd_prefix = []

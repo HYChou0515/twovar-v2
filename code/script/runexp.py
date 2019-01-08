@@ -9,7 +9,7 @@ import sys
 PROCESS_NUM=7
 ROOT_PATH="../"
 DATA_PATH="../../data/"
-LOG_PATH=ROOT_PATH+"logtmp/"
+LOG_PATH=ROOT_PATH+logfolder+"/"
 train="train"
 
 def exit_with_help():
@@ -60,7 +60,7 @@ for data in dataset:
 			if need_r:
 				filename = filename + "_r%g" %(r)
 			print(filename)
-			cmd = "%s%s -s %d -c %g -e %g -m %d" % (ROOT_PATH, train, runs[tp], tc, e, m)
+			cmd = "%s%s -s %d -c %g -e %g -m %d -t %d" % (ROOT_PATH, train, runs[tp], tc, e, m, timeout)
 			if need_n:
 				cmd = cmd + " -n %g" % (n)
 			if need_r:
