@@ -1367,6 +1367,154 @@ void Solver::one_random_shrink()
 			PGmax_old = INF;
 		if (PGmin_old >= 0)
 			PGmin_old = -INF;
+		EXIT_IF_TIMEOUT(duration);
+	}
+	summary();
+}
+
+void Solver::one_random_1000()
+{
+	int l = max_set;
+	int i, s;
+	double C, d, G;
+	clock_t start;
+	active_size = l;
+	
+	while (iter < max_iter)
+	{
+		start = clock();
+		success_pair = 0;
+		nr_pos_y = 0;
+		nr_neg_y = 0;
+		for (s=0; s<active_size; s++)
+		{
+			
+			i = index[rand()%active_size];
+			const schar yi = y[i];
+			if(yi == +1)
+				++nr_pos_y;
+			if(yi == -1)
+				++nr_neg_y;
+			feature_node * const xi = prob->x[i];
+			G = yi*sparse_operator::dot(w, xi)-1;
+			C = upper_bound[GETI(i)];
+			G += alpha[i]*diag[GETI(i)];
+
+			double alpha_old = alpha[i];
+			alpha[i] = min(max(alpha[i] - G/QD[i], 0.0), C);
+			d = (alpha[i] - alpha_old)*yi;
+			if(fabs(d) > 1.0e-16)
+			{
+				success_pair++;
+				sparse_operator::axpy(d, xi, w);
+			}
+		}
+
+		iter++;
+		duration += clock() - start;
+		log_message();
+		EXIT_IF_TIMEOUT(duration);
+	}
+	summary();
+}
+
+void Solver::one_cyclic_shrink()
+{
+	int l = max_set;
+	int i, s;
+	double C, d, G;
+	clock_t start;
+	// PG: projected gradient, for shrinking and stopping
+	double PG;
+	double PGmax_old = INF;
+	double PGmin_old = -INF;
+	
+	active_size = l;
+	start = clock();
+	while (iter < max_iter)
+	{
+		PGmax_new = -INF;
+		PGmin_new = INF;
+		start = clock();
+		success_pair = 0;
+		for (i=0; i<active_size; i++)
+		{
+			int j = i+rand()%(active_size-i);
+			swap(index[i], index[j]);
+		}
+		for (s=0; s<active_size; s++)
+		{
+			i = index[s];
+			const schar yi = y[i];
+			feature_node * const xi = prob->x[i];
+
+			G = yi*sparse_operator::dot(w, xi)-1;
+
+			C = upper_bound[GETI(i)];
+			G += alpha[i]*diag[GETI(i)];
+
+			PG = 0;
+			if (alpha[i] == 0)
+			{
+				if (G > PGmax_old)
+				{
+					active_size--;
+					swap(index[s], index[active_size]);
+					s--;
+					continue;
+				}
+				else if (G < 0)
+					PG = G;
+			}
+			else if (alpha[i] == C)
+			{
+				if (G < PGmin_old)
+				{
+					active_size--;
+					swap(index[s], index[active_size]);
+					s--;
+					continue;
+				}
+				else if (G > 0)
+					PG = G;
+			}
+			else
+				PG = G;
+
+			PGmax_new = max(PGmax_new, PG);
+			PGmin_new = min(PGmin_new, PG);
+
+			if(fabs(PG) > 1.0e-12)
+			{
+				double alpha_old = alpha[i];
+				alpha[i] = min(max(alpha[i] - G/QD[i], 0.0), C);
+				d = (alpha[i] - alpha_old)*yi;
+				sparse_operator::axpy(d, xi, w);
+				success_pair++;
+			}
+		}
+		iter++;
+		duration += clock()- start;
+		log_message();
+		if(PGmax_new - PGmin_new <= eps)
+		{
+			if(active_size == l)
+				break;
+			else
+			{
+				active_size = l;
+				PGmax_old = INF;
+				PGmin_old = -INF;
+				continue;
+			}
+		}
+		PGmax_old = PGmax_new;
+		PGmin_old = PGmin_new;
+		if (PGmax_old <= 0)
+			PGmax_old = INF;
+		if (PGmin_old >= 0)
+			PGmin_old = -INF;
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();
 }
@@ -1411,6 +1559,7 @@ void Solver::one_cyclic_1000()
 		iter++;
 		duration += clock() -start;
 		log_message();
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();
 }
@@ -1658,51 +1807,7 @@ void Solver::one_semigd_dualobj_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
-	}
-	summary();
-}
-
-void Solver::one_random_1000()
-{
-	int l = max_set;
-	int i, s;
-	double C, d, G;
-	clock_t start;
-	active_size = l;
-	
-	while (iter < max_iter)
-	{
-		start = clock();
-		success_pair = 0;
-		nr_pos_y = 0;
-		nr_neg_y = 0;
-		for (s=0; s<active_size; s++)
-		{
-			
-			i = index[rand()%active_size];
-			const schar yi = y[i];
-			if(yi == +1)
-				++nr_pos_y;
-			if(yi == -1)
-				++nr_neg_y;
-			feature_node * const xi = prob->x[i];
-			G = yi*sparse_operator::dot(w, xi)-1;
-			C = upper_bound[GETI(i)];
-			G += alpha[i]*diag[GETI(i)];
-
-			double alpha_old = alpha[i];
-			alpha[i] = min(max(alpha[i] - G/QD[i], 0.0), C);
-			d = (alpha[i] - alpha_old)*yi;
-			if(fabs(d) > 1.0e-16)
-			{
-				success_pair++;
-				sparse_operator::axpy(d, xi, w);
-			}
-		}
-
-		iter++;
-		duration += clock() - start;
-		log_message();
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();
 }
@@ -1890,6 +1995,7 @@ void Solver::two_semicyclic_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();
 }
@@ -2144,6 +2250,7 @@ void Solver::two_random_shrink2()
 			PGmax_old = INF;
 		if(PGmin_old >= 0)
 			PGmin_old = -INF;
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();
 }
@@ -2403,7 +2510,7 @@ void Solver::two_random_shrink()
 			PGmax_old = INF;
 		if(PGmin_old >= 0)
 			PGmin_old = -INF;
-
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();
 }
@@ -2596,6 +2703,7 @@ void Solver::two_cyclic_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();
 }
@@ -2772,6 +2880,7 @@ void Solver::two_semirandom2_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();
 }
@@ -2949,6 +3058,7 @@ void Solver::two_semirandom1_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();
 }
@@ -3097,6 +3207,7 @@ void Solver::two_random_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();
 }
@@ -3607,7 +3718,7 @@ void Solver::bias_semigd_shrink()
 		iter++;
 		duration += clock() - start;
 		log_message();
-
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();	
 	delete [] alpha_status;
@@ -3882,6 +3993,7 @@ void Solver::bias_semigd_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();	
 	delete [] alpha_status;
@@ -4156,6 +4268,7 @@ void Solver::bias_random_shrink()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();
 	delete [] alpha_status;
@@ -4333,7 +4446,7 @@ void Solver::bias_random_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
-
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();
 	delete [] alpha_status;
@@ -4551,6 +4664,7 @@ void Solver::oneclass_random_shrink()
 			Gmax_old = Gmax;
 			Gmin_old = Gmin;
 		}
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();
 }
@@ -4683,6 +4797,7 @@ void Solver::oneclass_random_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();
 }
@@ -4820,6 +4935,7 @@ void Solver::oneclass_first_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();
 	delete [] G;
@@ -4968,6 +5084,7 @@ void Solver::oneclass_second_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();
 	delete [] G;
@@ -5162,6 +5279,7 @@ void Solver::oneclass_semigd_1000()
 		duration += clock() - start;
 		log_message();
 		success_all += success_pair;
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();
 	delete [] Max_order_index;
@@ -5413,6 +5531,7 @@ void Solver::oneclass_semigd_shrink()
 		duration += clock() - start;
 		log_message();
 		success_all += success_pair;
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();
 	delete [] Max_order_index;
@@ -5862,106 +5981,6 @@ static void onetwo_nobias_update(
 	delete [] index;
 	delete [] alpha;
 	delete [] y;
-}
-
-void Solver::one_cyclic_shrink()
-{
-	int l = max_set;
-	int i, s;
-	double C, d, G;
-	clock_t start;
-	// PG: projected gradient, for shrinking and stopping
-	double PG;
-	double PGmax_old = INF;
-	double PGmin_old = -INF;
-	
-	active_size = l;
-	start = clock();
-	while (iter < max_iter)
-	{
-		PGmax_new = -INF;
-		PGmin_new = INF;
-		start = clock();
-		success_pair = 0;
-		for (i=0; i<active_size; i++)
-		{
-			int j = i+rand()%(active_size-i);
-			swap(index[i], index[j]);
-		}
-		for (s=0; s<active_size; s++)
-		{
-			i = index[s];
-			const schar yi = y[i];
-			feature_node * const xi = prob->x[i];
-
-			G = yi*sparse_operator::dot(w, xi)-1;
-
-			C = upper_bound[GETI(i)];
-			G += alpha[i]*diag[GETI(i)];
-
-			PG = 0;
-			if (alpha[i] == 0)
-			{
-				if (G > PGmax_old)
-				{
-					active_size--;
-					swap(index[s], index[active_size]);
-					s--;
-					continue;
-				}
-				else if (G < 0)
-					PG = G;
-			}
-			else if (alpha[i] == C)
-			{
-				if (G < PGmin_old)
-				{
-					active_size--;
-					swap(index[s], index[active_size]);
-					s--;
-					continue;
-				}
-				else if (G > 0)
-					PG = G;
-			}
-			else
-				PG = G;
-
-			PGmax_new = max(PGmax_new, PG);
-			PGmin_new = min(PGmin_new, PG);
-
-			if(fabs(PG) > 1.0e-12)
-			{
-				double alpha_old = alpha[i];
-				alpha[i] = min(max(alpha[i] - G/QD[i], 0.0), C);
-				d = (alpha[i] - alpha_old)*yi;
-				sparse_operator::axpy(d, xi, w);
-				success_pair++;
-			}
-		}
-		iter++;
-		duration += clock()- start;
-		log_message();
-		if(PGmax_new - PGmin_new <= eps)
-		{
-			if(active_size == l)
-				break;
-			else
-			{
-				active_size = l;
-				PGmax_old = INF;
-				PGmin_old = -INF;
-				continue;
-			}
-		}
-		PGmax_old = PGmax_new;
-		PGmin_old = PGmin_new;
-		if (PGmax_old <= 0)
-			PGmax_old = INF;
-		if (PGmin_old >= 0)
-			PGmin_old = -INF;
-	}
-	summary();
 }
 
 // A coordinate descent algorithm for 
