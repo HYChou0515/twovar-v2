@@ -37,8 +37,8 @@ class Plotter(object):
 		self.stype = stype
 		self.loss = loss
 		self.eps = eps
-		self.logpath = args.logpath
-		self.figpath = args.figpath
+		self.logpath = args.logpath+'/'
+		self.figpath = args.figpath+'/'
 
 		matplotlib.rc('xtick', labelsize=20)
 		matplotlib.rc('ytick', labelsize=20)
@@ -61,7 +61,7 @@ class Plotter(object):
 			if is_semigd(st):
 				totnum = totnum + len(rlist) -1
 		self.colors = [cmap(j) for j in np.linspace(0, 1, totnum+1)]
-		self.makr = ["--", "-.", "o-.", "-", "o-"]
+		self.makr = makr
 		self.makr = self.makr * int(math.ceil(float(len(self.colors))/len(self.makr)))
 
 	def init_new_fig(self):

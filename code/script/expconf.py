@@ -3,10 +3,10 @@ from liblrconf import *
 logfolder='log_notime'
 
 runtype = [
-	"ONE_L1_SEMIGD_DUALOBJ_1000",
 	"ONE_L1_SEMIGD_1000",
-	"ONE_L1_SEMIGD_DUALOBJ_RAND_1000",
 	"ONE_L1_SEMIGD_RAND_1000",
+	"ONE_L1_SEMIGD_DUALOBJ_1000",
+	"ONE_L1_SEMIGD_DUALOBJ_RAND_1000",
 	"ONE_L1_CY_1000",
 	"ONE_L1_RD_1000",
 ]
@@ -17,7 +17,7 @@ rlist = [
 	#1,0.99,0.98,0.97,0.96,0.95,0.94,0.93,0.92,0.91,0.9,0.8,0.7,0.6,0.5,0.1,0.001
 	#1,0.95,0.9,0.5,0.1,0.01,0.001
 	#1,2,4,8,16,32
-	0.1, 0.3,
+	#0.1, 0.3,
 	0.5,
 	#0.9,0.99
 	#1,0.95,0.9,0.5,0.1,0.001
@@ -50,3 +50,5 @@ uselabel = {
 		20211:"random",
 		20111:"cyclic",
 }
+
+makr = ["--","--","o-.","o-.","-.","-."]
