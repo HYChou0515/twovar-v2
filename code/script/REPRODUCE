@@ -1,18 +1,14 @@
 # generate log
-./runexp.py run
+./runexp.py print
+bash out_run.bash
 
-28 log files
+126 log files
 
 # generate figure
 
-as rlist are too long and there are 2 semigd, 
-we draw seerate figures for those 2 semigd.
+Because semigd with random is the best with r=0.5,
+we commented out the r=0.1 and 0.3
+./plot.py --logpath ../log/ cd
 
-comment line 4: "ONE_L1_SEMIGD_DUALOBJ_1000"
-./plot.py cd
-./plot.py time
-
-uncomment line 4
-comment line 5: "ONE_L1_SEMIGD_1000"
-./plot.py cd
-./plot.py time
+As we do it in parallel, the time is not meaningful.
+Don't use it to plot time.

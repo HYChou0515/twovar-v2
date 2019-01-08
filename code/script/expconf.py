@@ -26,7 +26,7 @@ rlist = [
 	#, 0.02, 0.01
 ]
 m = 100000
-timeout = 5400
+timeout = 1800
 dataset = [
 	"heart_scale",
 	"a9a",
