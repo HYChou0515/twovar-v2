@@ -6,7 +6,7 @@ import subprocess
 import itertools
 import time
 import sys
-PROCESS_NUM=7
+PROCESS_NUM=process_num
 ROOT_PATH="../"
 DATA_PATH="../../data/"
 LOG_PATH=ROOT_PATH+logfolder+"/"

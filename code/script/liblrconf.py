@@ -1,8 +1,8 @@
 runs = {
 	"L2R_LR" : 0,
-	"ONE_L2_CY_SH" : 1,
+	"OLD_ONE_L2_CY_SH" : 1,
 	"L2R_L2LOSS_SVC" : 2,
-	"ONE_L1_CY_SH" : 3,
+	"OLD_ONE_L1_CY_SH" : 3,
 	"MCSVM_CS" : 4,
 	"L1R_L2LOSS_SVC" : 5,
 	"L1R_LR" : 6,
@@ -12,7 +12,9 @@ runs = {
 	"L2R_L1LOSS_SVR_DUAL" : 13,
 
 	"ONE_L1_CY_1000" : 20111,
+	"ONE_L1_CY_SH" : 20112,
 	"ONE_L2_CY_1000" : 20121,
+	"ONE_L2_CY_SH" : 20122,
 
 	"ONE_L1_RD_1000" : 20211,
 	"ONE_L1_RD_SH" : 20212,

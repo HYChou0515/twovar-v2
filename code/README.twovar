@@ -84,6 +84,7 @@ How to Add New Solver Type (-s)
 		e: 1000 iter or shrink
 2. train.c
 	append NEWTYPE info to exit_with_help()
+	append NEWTYPE info to param.eps default value 
 3. linear.cpp
 	a) Solver::Solver
 		i) 	determine category

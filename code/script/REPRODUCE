@@ -2,19 +2,4 @@
 ./runexp.py print
 bash out_run.bash
 
-342 log files
-
-# generate figure
-As we do it in parallel, the time is not meaningful.
-Don't use it to plot time.
-
-Because semigd with random is the best with r=0.5,
-we commented out all r!=0.5
-./plot.py --logpath ../log/ cd
-
-Using SemiGD+random, when r is not good, the performence is bad.
-Can comment out the Original SemiGD, either PG or DualObj, 
-also comment out r=0.95,0.99,
-change marker in expconf.py to 
-	MARKER = ["--","--","--","--","--","--","--","o-.","o-."]
-and see how performence changes while r changes.
+18 log files
