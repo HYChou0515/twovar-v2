@@ -6,7 +6,7 @@ import subprocess
 import itertools
 import time
 import sys
-PROCESS_NUM=7
+PROCESS_NUM=process_num
 ROOT_PATH="../"
 DATA_PATH="../../data/"
 LOG_PATH=ROOT_PATH+logfolder+"/"
@@ -23,7 +23,7 @@ mode = -1
 if sys.argv[1] == "run":
     mode = 0
 elif sys.argv[1] == "print":
-    process_count = 0
+    process_count = 1
     ind = 0
     bashfile_name="out_run.bash"
     bashfile = open(bashfile_name, 'w')
@@ -77,7 +77,7 @@ for data in dataset:
 				ind += 1
 				bashfile.write(cmd)
 				if process_count >= PROCESS_NUM:
-					process_count = 0
+					process_count = 1
 					bashfile.write("wait\n")
 				else:
 					process_count += 1
