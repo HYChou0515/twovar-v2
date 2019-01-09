@@ -18,6 +18,9 @@ def format_labelx(x,pos):
 	return "%.1f" %x
 
 def expo_slice_avg(l,base):
+	#slice l into average of base^0, base^1, base^2
+	#e.g. l=[1,2,3,4,5,6,7], base=2
+	#ret=[1, (2+3)/2, (4+5+6+7)/4]
 	assert base>1
 	head = 0
 	length = 1
@@ -43,6 +46,9 @@ class Plotter(object):
 		matplotlib.rc('xtick', labelsize=20)
 		matplotlib.rc('ytick', labelsize=20)
 
+		self.MIN_SQUASH = MIN_SQUASH # the min value of a curve's width / figure's width
+		self.YLIM = YLIM # the range of Y (this value is set for relval)
+
 	def draw_all(self):
 		for dstr,c in itertools.product(self.dataset, self.clist):
 			self.dstr = dstr
@@ -61,7 +67,7 @@ class Plotter(object):
 			if is_semigd(st):
 				totnum = totnum + len(rlist) -1
 		self.colors = [cmap(j) for j in np.linspace(0, 1, totnum+1)]
-		self.makr = makr
+		self.makr = MARKER
 		self.makr = self.makr * int(math.ceil(float(len(self.colors))/len(self.makr)))
 
 	def init_new_fig(self):
@@ -133,9 +139,11 @@ class Plotter(object):
 
 class CdPlotter(Plotter):
 	PLOTTYPE = "cd"
-	YLIM = (1e-9, 1)
+	XLIM = (0, 1e12)
 	def init_new_fig(self):
 		self.min_y = 10
+		self.min_x = CdPlotter.XLIM[1] # min of max of x, for CdPlotter, it's the min of CDsteps
+		self.max_x = CdPlotter.XLIM[0] # max of max of x, for CdPlotter, it's the max of CDsteps
 	def get_xlim(self, tp):
 		key = "s%d_c%g_iter" % (tp, self.c)
 		if key in dlim.keys():
@@ -165,19 +173,22 @@ class CdPlotter(Plotter):
 			if 'iter' in line and 'obj' in line:
 				val = float(line[line.index('obj')+1])
 				relval = math.fabs((val - minimal)/minimal)
-				if not (CdPlotter.YLIM[0] < relval < CdPlotter.YLIM[1]):
-					break
-				if CDsteps > 1e6:
-					break
-				ys.append(relval)
-				self.min_y = min(relval,self.min_y)
 				CDsteps = CDsteps + (float(line[line.index('updsize')+1]))
+				if relval > self.YLIM[1] or CDsteps < CdPlotter.XLIM[0]:
+					continue
+				if relval < self.YLIM[0] or CDsteps > CdPlotter.XLIM[1]:
+					break;
+				ys.append(relval)
 				xs.append(CDsteps)
+				self.min_y = min(relval,self.min_y)
 				#print('CDsteps: %.16g\t relval: %.16g' % (CDsteps, relval))
+		self.min_x = min(CDsteps,self.min_x)
+		self.max_x = max(CDsteps,self.max_x)
 		logfile.close()
 		return ys, xs
 	def setup_fig(self):
 		plt.ylim(self.min_y,1)
+		plt.xlim(0, min(self.min_x / self.MIN_SQUASH, self.max_x))
 		if(self.min_y > 1.0e-2):
 			subsyy = [2,3,4,5,7]
 		else:
@@ -194,10 +205,11 @@ class CdPlotter(Plotter):
 
 class TimePlotter(Plotter):
 	PLOTTYPE = "time"
-	YLIM = (1e-9, 1)
 	XLIM = (0, 100)
 	def init_new_fig(self):
 		self.min_y = 10
+		self.min_x = TimePlotter.XLIM[1] # min of max of x, for TimePlotter, it's the min of total time
+		self.max_x = TimePlotter.XLIM[0] # max of max of x, for TimePlotter, it's the max of total time
 	def get_xlim(self, tp):
 		key = "s%d_c%g_shrink" % (tp, self.c)
 		if key in dlim.keys() and self.dstr in dlim[key]:
@@ -226,20 +238,23 @@ class TimePlotter(Plotter):
 				val = float(line[line.index('obj')+1])
 				relval = math.fabs((val - minimal)/minimal)
 				t =  float(line[line.index('t')+1])
-				if not (TimePlotter.YLIM[0] < relval < TimePlotter.YLIM[1]):
-					break
-				if not (TimePlotter.XLIM[0] < t < TimePlotter.XLIM[1]):
-					break
+				if relval > self.YLIM[1] or t < TimePlotter.XLIM[0]:
+					continue
+				if relval < self.YLIM[0] or t > TimePlotter.XLIM[1]:
+					break;
 				if t > xlim:
 					break
 				xs.append(t)
 				ys.append(relval)
 				self.min_y = min(relval,self.min_y)
 				#print('t: %.16g\t relval: %.16g' % (t, relval))
+		self.min_x = min(t,self.min_x)
+		self.max_x = max(t,self.max_x)
 		logfile.close()
 		return ys, xs
 	def setup_fig(self):
 		plt.ylim(self.min_y,1)
+		plt.xlim(0, min(self.min_x / self.MIN_SQUASH, self.max_x))
 		if(self.min_y > 1.0e-2):
 			subsyy = [2,3,4,5,7]
 		else:
@@ -256,7 +271,6 @@ class TimePlotter(Plotter):
 
 class SucrCdPlotter(Plotter):
 	PLOTTYPE = "sucrate-cd"
-	YLIM = (1e-9, 1)
 	def init_new_fig(self):
 		self.max_y = 0
 	def get_figname_fmt(self):
@@ -277,9 +291,9 @@ class SucrCdPlotter(Plotter):
 			line = line.split(' ')
 			if 'iter' in line and 'obj' in line:
 				val = float(line[line.index('sucpair')+1])/float(line[line.index('updsize')+1])
+				cdsteps = cdsteps + (float(line[line.index('updsize')+1]))
 				ys.append(val)
 				self.max_y = max(val,self.max_y)
-				cdsteps = cdsteps + (float(line[line.index('updsize')+1]))
 				xs.append(cdsteps)
 		logfile.close()
 		#slice xs and ys into average of 1,2,4,8,...
@@ -293,7 +307,6 @@ class SucrCdPlotter(Plotter):
 		Plotter.setup_fig(self)
 class ObjSucPlotter(Plotter):
 	PLOTTYPE = "obj-suc"
-	YLIM = (1e-9, 1)
 	def init_new_fig(self):
 		self.min_y = 10
 	def get_figname_fmt(self):
@@ -316,11 +329,13 @@ class ObjSucPlotter(Plotter):
 			if 'iter' in line and 'obj' in line:
 				val = float(line[line.index('obj')+1])
 				relval = math.fabs((val - minimal)/minimal)
-				if not (ObjSucPlotter.YLIM[0] < relval < ObjSucPlotter.YLIM[1]):
-					break
+				sucpair = sucpair + (float(line[line.index('sucpair')+1]))
+				if relval > self.YLIM[1]:
+					continue
+				if relval < self.YLIM[0]:
+					break;
 				ys.append(relval)
 				self.min_y = min(relval,self.min_y)
-				sucpair = sucpair + (float(line[line.index('sucpair')+1]))
 				xs.append(sucpair)
 				#print('sucpair: %.16g\t relval: %.16g' % (sucpair, relval))
 		logfile.close()
