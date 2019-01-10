@@ -1,13 +1,10 @@
-# need to be checked later
 dobj = {
-	"oneL2c0.1":{#THIS IS JUST A STUB, DONT USE IT AS EXP
+	"oneL2c0.1":{
 	"a9a": 94360681.2818033695120,
 	"ijcnn1": 6412124.210081208359921,
 	"ijcnn1": 6412124.2100812522,
 	"news20.binary": 229824.45181480217973,
-#	"rcv1_train.binary": 55051.248030351707612,
 	"rcv1_train.binary": 55051.248030351656,
-#	"real-sim": 282831.525057278166050,
 	"real-sim": 282831.52505727799,
 	"yahoojp": 2867829.835220990236848,
 	},
@@ -16,17 +13,13 @@ dobj = {
 	"ijcnn1": 6412124.210081208359921,
 	"ijcnn1": 6412124.2100812522,
 	"news20.binary": 229824.45181480217973,
-#	"rcv1_train.binary": 55051.248030351707612,
 	"rcv1_train.binary": 55051.248030351656,
-#	"real-sim": 282831.525057278166050,
 	"real-sim": 282831.52505727799,
 	"yahoojp": 2867829.835220990236848,
 	},
 	"oneL1c0.1":{
 	"a9a": 21622408.022816251963376,
-#	"ijcnn1": 1569167.168492316131029,
 	"ijcnn1": 1569167.1684923134,
-#	"news20.binary": 41283.881972819392103,
 	"news20.binary": 41283.88197281755,
 	"rcv1_train.binary": 11331.28987903422420,
 	"real-sim": 47167.016173025476745,
@@ -34,11 +27,8 @@ dobj = {
 	},
 	"oneL1c0.01":{
 	"a9a": 180123.032132618769533,
-#	"ijcnn1": 15027.1238209391450,
 	"ijcnn1": 15027.123809602508,
-#	"news20.binary": 101.481072729227019,
 	"news20.binary": 101.48107272922547,
-#	"rcv1_train.binary": 97.713305289904080,
 	"rcv1_train.binary": 97.713305188030290,
 	"real-sim": 205.475956164127350,
 	"yahoojp": 442.799337673292710,
@@ -51,18 +41,20 @@ dobj = {
 	"real-sim": -2715246.1517096990719438,
 	"yahoojp": -10861242.2472088448703289,
 	"heart_scale": -777407.015664262231439,
-	"covtype.libsvm.binary": -131408.78622,#could be small
+	"covtype.libsvm.binary": -131408.78622,
 	"yahookr": -39648244.84681542,
-	"covtype.libsvm.binary.scale": -2765352655.81279516#100,000
-	#-2767598655.16365861, #2561070
+	"covtype.libsvm.binary.scale": -2765352655.81279516
 	},
 	"L1c32":{
+	"heart_scale": -3038.43429389414,
 	"news20.binary": -5191.225594965,
 	"a9a": -365535.0613,
 	"ijcnn1": -273298.871245,
 	"rcv1_train.binary": -4415.13148310,
-	"real-sim": -26466.09948249538,
+	"real-sim": -26466.1241815967,
+	"covtype.libsvm.binary.scale": -10811065.427,
 	"yahoojp": -183009.81295,
+	"yahookr": -1441547.2,
 	},
 	"L1c1": {
 	"rcv1_test": -39031.082174,
@@ -93,12 +85,15 @@ dobj = {
 	"covtype.libsvm.binary": -7555.482649466,
 	},
 	"L1c0.03125":{
+	"heart_scale": -3.73747048323755,
 	"a9a": -362.699648110258,
 	"ijcnn1": -294.963417390445,
 	"news20.binary": -406.896000499557,
 	"rcv1_train.binary": -287.0691915538568,
 	"real-sim": -699.423367607873,
+	"covtype.libsvm.binary.scale": -10659.0987048636,
 	"yahoojp": -1362.1900637683,
+	"yahookr": -7362.90468917678,
 	},
 	"L1c0.25":{
 	"a9a": -2864.8765262514107235,
@@ -133,7 +128,6 @@ dobj = {
 	"covtype.libsvm.binary.scale": -403423.63037590693,
 	"yahookr": -140767.00986357091,
 	"australian_scale": -276.689688,
-	"splice_scale": None,
 	"webspam": -10813.749434,
 	"webspam_uni": -89938.633777,
 	"webspam_wc_normalized_unigram": -89938.633777,
@@ -141,7 +135,7 @@ dobj = {
 	"SUSY": -3114688.507448,
 	"ijcnn1.t": -21402.976954,
 	"gisette_scale": -0.667967,
-	"news20": -1947.384705, ## should be -1947.384704
+	"news20": -1947.384705,
 	"epsilon_normalized": -131303.806194,
 	"kdda": -652663.443215,
 	"kddb": -1460362.265430,
@@ -172,13 +166,13 @@ dobj = {
 	"real-sim":-1140.218892969904800
 	},
 	"L2c10":{
-		"a1a": -6279.530312061115183,
-		"a9a": -137394.982701375702163,
-		"heart_scale": -1207.955529794298400,
-		"ijcnn1": -110050.998198572007823,
-		"news20.binary": -3383.543862333313882,
-		"phishing": -19671.482209781686834,
-		"rcv1_train.binary": -2943.364638952120004,
+	"a1a": -6279.530312061115183,
+	"a9a": -137394.982701375702163,
+	"heart_scale": -1207.955529794298400,
+	"ijcnn1": -110050.998198572007823,
+	"news20.binary": -3383.543862333313882,
+	"phishing": -19671.482209781686834,
+	"rcv1_train.binary": -2943.364638952120004,
 	"yahoojp": -104033.727589559814078,
 	"real-sim": -13836.875530578598045
 	},
@@ -404,7 +398,7 @@ dobj = {
 	"yahoojp": -23717.47272737786,
 	"covtype.libsvm.binary":-4354.712314,
 	"yahookr": -139947.251207661116496,
-	"covtype.libsvm.binary.scale": -403422.79422253957#100,000
+	"covtype.libsvm.binary.scale": -403422.79422253957
 	},
 	"biasL2c2":{
 	"a9a": -27481.613283583359589,
@@ -466,11 +460,11 @@ dobj = {
 	},
 	"biasL2c0.03125":
 	{
-		"breast-cancer_scale": -2.295708688115122,
-		"australian_scale": -9.024280329477792,
-		"heart_scale": -3.977967876909248,
-		"a1a": -21.76590059953335,
-		"a9a": -431.2070362905467,
+	"breast-cancer_scale": -2.295708688115122,
+	"australian_scale": -9.024280329477792,
+	"heart_scale": -3.977967876909248,
+	"a1a": -21.76590059953335,
+	"a9a": -431.2070362905467,
 	"ijcnn1": -359.1098274363673,
 	"news20.binary": -330.7927242777877,
 	"rcv1_train.binary": -219.4214901785117,
@@ -483,12 +477,12 @@ dobj = {
 	"australian_scale": -6.749138721482132,
 	"heart_scale": -3.720906294186185,
 	"a1a": -19.86103562388033,
-		"a9a": -362.411649520055,
-		"ijcnn1": -289.1172415285611,
-		"news20.binary": -406.8329557870090,
-		"rcv1_train.binary": -286.5870788920642,
+	"a9a": -362.411649520055,
+	"ijcnn1": -289.1172415285611,
+	"news20.binary": -406.8329557870090,
+	"rcv1_train.binary": -286.5870788920642,
 	"real-sim": -676.9317624201007,
-		"yahoojp": -973.7819315032502,
+	"yahoojp": -973.7819315032502,
 	},
 	"biasL1c0.25":{
 	"a9a": -2864.449193292481596,
@@ -540,12 +534,12 @@ dobj = {
 	"australian_scale": -6356.178279425147,
 	"heart_scale": -3656.427734390489,
 	"a1a": -16588.37269656481,
-		"a9a" : -365534.5682798115,
-		"ijcnn1" : -273293.1496785236,
-		"rcv1_train.binary": -4313.039575816452,
-		"news20.binary": -4522.361358841757,
-		"real-sim":-24858.86588074639,
-		"yahoojp":-172087.6931881657,
+	"a9a" : -365534.5682798115,
+	"ijcnn1" : -273293.1496785236,
+	"rcv1_train.binary": -4313.039575816452,
+	"news20.binary": -4522.361358841757,
+	"real-sim":-24858.86588074639,
+	"yahoojp":-172087.6931881657,
 	},
 	"biasL1c128":{
 	"breast-cancer_scale": -5628.278659012924,
@@ -566,1003 +560,10 @@ dobj = {
 }
 
 dlim = {
-	"s41_c128_shrink":
-	{
-		"breast-cancer_scale": 0.1,
-	},
-	"s41_c32_shrink":
-	{
-		"a1a": 0.5,
-		"australian_scale":0.2,
-		"breast-cancer_scale": 5e-2,
-		"heart_scale": 6e-2,
-		"a9a": 3,
-	},
-	"s41_c0.03125_shrink":
-	{
-		"australian_scale": 0.1,
-		"breast-cancer_scale": 1e-3,
-		"heart_scale": 6e-4,
-		"a1a": 0.015,
-	},
-	"s41_c1_shrink":
-	{
-		"a1a": 0.15,
-		"breast-cancer_scale": 3e-3,
-		"heart_scale": 4e-3,
-		"australian_scale": 0.1,
-		"a9a": 40,
-		"ijcnn1": 5,
-		"news20.binary": 20,
-		"rcv1_train.binary": 20,
-		"real-sim": 5,
-		"yahoojp": 300
-	},
-	"s43_c1_shrink":
-	{
-		"a9a": 40,
-		"ijcnn1": 5,
-		"news20.binary": 20,
-		"rcv1_train.binary": 20,
-		"real-sim": 5,
-		#"yahoojp": 1.5
-	},
-	"s43_c32_shrink":
-	{
-		"heart_scale": 6e-2,
-		"a9a": 3,
-	},
-	"s42_c1_shrink":
-	{
-		"a1a":0.5,
-	},
-	"s45_c1_shrink":
-	{
-		"a9a": 40,
-		"ijcnn1": 5,
-		"news20.binary": 20,
-		"rcv1_train.binary": 20,
-		"real-sim": 5,
-		#"yahoojp": 1.5
-	},
-	"s47_c1_shrink":
-	{
-		"a9a": 40,
-		"ijcnn1": 5,
-		"news20.binary": 20,
-		"rcv1_train.binary": 20,
-		"real-sim": 5,
-		#"yahoojp": 1.5
-	},
-	"s51_c0.1_shrink":
-	{
-		"a9a": 4,
-		"ijcnn1": 12,
-		"news20.binary": 90,
-		"rcv1_train.binary": 25,
-		"real-sim": 120,
-		"yahoojp": 1.5
-	},
-	"s52_c0.1_shrink":
-	{
-		"a9a": 0.2,
-		"ijcnn1": 0.5,
-		"news20.binary": 2,
-		"rcv1_train.binary": 1,
-		"real-sim": 1,
-		"yahoojp": 1.5
-	},
-	"s55_c0.1_shrink":
-	{
-		"a9a": 0.2,
-		"ijcnn1": 0.5,
-		"news20.binary": 2,
-		"rcv1_train.binary": 1,
-		"real-sim": 1,
-		"yahoojp": 1.5
-	},
-	"s56_c0.1_shrink":
-	{
-		"a9a": 0.2,
-		"ijcnn1": 0.5,
-		"news20.binary": 2,
-		"rcv1_train.binary": 1,
-		"real-sim": 1,
-		"yahoojp": 1.5
-	},
-	"s53_c0.1_iter":
-	{
-		"a9a": 10000,
-		"ijcnn1": 20000,
-		"news20.binary": 10000,
-		"rcv1_train.binary": 20000,
-		"real-sim": 20000,
-		"yahoojp": 40000
-	},
-	"s54_c0.1_iter":
-	{
-		"a9a": 10000,
-		"ijcnn1": 20000,
-		"news20.binary": 10000,
-		"rcv1_train.binary": 20000,
-		"real-sim": 20000,
-		"yahoojp": 40000
-	},
-	"s51_c0.1_iter":
-	{
-		"a9a": 1000000,
-		"ijcnn1": 2000000,
-		"news20.binary": 1000000,
-		"rcv1_train.binary": 2000000,
-		"real-sim": 2000000,
-		"yahoojp": 4000000
-	},
-	"s52_c0.1_iter":
-	{
-		"a9a": 10000,
-		"ijcnn1": 200000,
-		"news20.binary": 10000,
-		"rcv1_train.binary": 20000,
-		"real-sim": 20000,
-		"yahoojp": 40000
-	},
-	"s35_c8192_iter":
-	{
-		"a9a":30000,
-		"news20.binary":16000,
-		"rcv1_train.binary":11000,
-	},
-	"s38_c8192_iter":
-	{
-		"a9a":30000,
-		"news20.binary":30000,
-		"rcv1_train.binary":300000,
-	},
-	"s34_c8192_iter":
-	{
-		"a9a":30000,
-		"news20.binary":9500,
-		"rcv1_train.binary":7500,
-	},
-	"s32_c8192_shrink":
-	{
-		"yahoojp":5000,
-		"ijcnn1":150,
-		"a9a":80,
-		"real-sim":500,
-		"rcv1_train.binary":250,
-		"news20.binary":450,
-	},
-	"s32_c1_shrink":
-	{
-		"yahoojp":50,
-		"ijcnn1":9,
-		"a9a":10,
-		"real-sim":1.5,
-		"rcv1_train.binary":1,
-		"news20.binary":35,
-		"yahookr": 500,
-	},
-	"s21_c0.03125_shrink":
-	{
-		"yahoojp":30,
-		"real-sim":4,
-		"rcv1_train.binary":2,
-		"news20.binary":4,
-	},
-	"s22_c0.03125_shrink":
-	{
-		"yahoojp":30,
-		"real-sim":4,
-		"rcv1_train.binary":2,
-		"news20.binary":4,
-	},
-	"s27_c32_shrink":
-	{
-		"real-sim":20.5,
-	},
-	"s27_c0.03125_shrink":
-	{
-		"yahoojp":30,
-		"real-sim":4,
-		"rcv1_train.binary":2,
-		"news20.binary":4,
-	},
-	"s271_c0.03125_shrink":
-	{
-		"yahoojp":30,
-		"real-sim":4,
-		"rcv1_train.binary":2,
-		"news20.binary":4,
-	},
-	"s21_c1_shrink":
-	{
-		"yahoojp":50,
-		"ijcnn1":50,
-		"a9a":50,
-		"real-sim":15,
-		"rcv1_train.binary":1,
-		"news20.binary":20,
-		"yahookr": 500,
-	},
-	"s22_c8192_shrink":
-	{
-		"yahoojp":4000,
-		"ijcnn1":250,
-		"a9a":150,
-		"real-sim":600,
-		"rcv1_train.binary":200,
-		"news20.binary":370,
-	},
-	"s21_c8192_shrink":
-	{
-		"yahoojp":4000,
-		"ijcnn1":150,
-		"a9a":150,
-		"real-sim":300,
-		"rcv1_train.binary":200,
-		"news20.binary":285,
-	},
-	"s22_c1_shrink":
-	{
-		"yahoojp":50,
-		"ijcnn1":8,
-		"a9a":8,
-		"real-sim":15,
-		"rcv1_train.binary":1,
-		"news20.binary":20,
-		"yahookr": 500,
-	},
-	"s26_c1_shrink":
-	{
-		"yahoojp":7,
-		"ijcnn1":1,
-		"a9a":1,
-		"real-sim":1,
-		"rcv1_train.binary":1,
-		"news20.binary":2,
-	},
-	"s36_c8192_shrink":
-	{
-		"yahoojp":1000,
-		"ijcnn1":180,
-		"a9a":150,
-		"real-sim":60,
-		"rcv1_train.binary":15,
-		"news20.binary":680,
-	},
-	"s1_c8192_shrink":
-	{
-		"yahoojp":1500,
-		"ijcnn1":200,
-		"a9a":150,
-		"real-sim":100,
-		"rcv1_train.binary":30,
-		"news20.binary":800,
-	},
-	"s26_c8192_shrink":
-	{
-		"yahoojp":1500,
-		"ijcnn1":200,
-		"a9a":150,
-		"real-sim":100,
-		"rcv1_train.binary":30,
-		"news20.binary":680,
-	},
-	"s36_c1_shrink":
-	{
-		"yahoojp":7,
-		"ijcnn1":1,
-		"a9a":1,
-		"real-sim":1,
-		"rcv1_train.binary":1,
-		"news20.binary":2,
-	},
-	"s1_c1_shrink":
-	{
-		"yahoojp":7,
-		"ijcnn1":1,
-		"a9a":1,
-		"real-sim":1,
-		"rcv1_train.binary":1,
-		"news20.binary":2,
-		"covtype.libsvm.binary":1000,
-	},
-	"s22_c1_iter":
-	{
-		"yahoojp":250,
-		"ijcnn1":1000,
-		"a9a":1000,
-		"real-sim":300,
-		"rcv1_train.binary":500,
-		"news20.binary":500,
-	},
-	"s21_c8192_iter":
-	{
-		"yahoojp":30000,
-		"ijcnn1":30000,
-		"a9a":30000,
-		"real-sim":15000,
-		"rcv1_train.binary":30000,
-		"news20.binary":6800,
-		"yahookr":25000,
-	},
-	"s32_c8192_iter":
-	{
-		"news20.binary":4240,
-		"rcv1_train.binary":14300,
-		"a9a":30000,
-		"real-sim":9500 ,
-	},
-	"s22_c8192_iter":
-	{
-		"yahoojp":30000,
-		"ijcnn1":30000,
-		"a9a":30000,
-		"real-sim":20000,
-		"rcv1_train.binary":30000,
-		"news20.binary":9000,
-	},
-	"s21_c1_iter":
-	{
-		"yahoojp":250,
-		"ijcnn1":1000,
-		"a9a":1000,
-		"real-sim":300,
-		"rcv1_train.binary":500,
-		"news20.binary":500,
-		"yahookr":1700
-	},
-	"s38_c1_iter":
-	{
-		"a9a":330,
-		"news20.binary":20,
-		"rcv1_train.binary":18,
-		"heart_scale":290,
-	},
-	"s34_c1_iter":
-	{
-		"a9a":180,
-		"news20.binary":20,
-		"rcv1_train.binary":18,
-		"heart_scale":140,
-	},
-	"s37_c1_iter":
-	{
-		"a9a":2000,
-		"news20.binary":300,
-		"rcv1_train.binary":2000,
-		"heart_scale":460,
-	},
-	"s31_c1_iter":
-	{
-		"a9a":2000,
-		"news20.binary":300,
-		"rcv1_train.binary":2000,
-		"heart_scale":240,
-	},
-	"s37_c8192_iter":
-	{
-		"a9a":30000,
-		"news20.binary":6400,
-		"rcv1_train.binary":7025,
-	},
-	"s31_c8192_iter":
-	{
-		"a9a":30000,
-		"news20.binary":4150,
-		"rcv1_train.binary":4325,
-	},
-	"s41_c32_iter":
-	{
-		"australian_scale":100000
-	},
-	"s41_c0.03125_iter":
-	{
-		"australian_scale":200000
-	},
-	"s41_c1_iter":
-	{
-		"australian_scale":200000,
-		"ijcnn1":500,
-		"a9a":500,
-		"news20.binary":100,
-		"real-sim":200,
-		"rcv1_train.binary":200,
-		"yahoojp":500,
-	},
-	"s32_c1_iter":
-	{
-		"ijcnn1":500,
-		"a9a":500,
-		"news20.binary":350,
-		"real-sim":200,
-		"rcv1_train.binary":270,
-		"yahoojp":100,
-		"heart_scale":200,
-		"yahookr":900,
-	},
-	"s25_c8192_shrink":
-	{
-		"yahoojp":2000,
-		"ijcnn1":220,
-		"a9a":110,
-		"real-sim":700,
-		"rcv1_train.binary":200,
-		"news20.binary":1000,
-		"yahookr":20000,
-	},
-	"s35_c1_shrink":
-	{
-		"yahoojp":7,
-		"ijcnn1":0.5,
-		"a9a":1.6,
-		"real-sim":1.3,
-		"rcv1_train.binary":0.28,
-		"news20.binary":2.5,
-		"yahookr":47,
-	},
-	"s25_c1_shrink":
-	{
-		"yahoojp":7,
-		"ijcnn1":0.5,
-		"a9a":1.4,
-		"real-sim":1,
-		"rcv1_train.binary":0.25,
-		"news20.binary":1.5,
-		"yahookr":40,
-	},
-	"s35_c8192_iter":
-	{
-		"yahookr":10000,
-	},
-	"s24_c8192_shrink":
-	{
-		"yahoojp":2000,
-		"ijcnn1":220,
-		"a9a":110,
-		"real-sim":700,
-		"rcv1_train.binary":200,
-		"news20.binary":1000,
-		"yahookr":20000,
-	},
-	"s24_c1_shrink":
-	{
-		"yahoojp":3.0,
-		"ijcnn1":0.4,
-		"a9a":1,
-		"real-sim":0.8,
-		"rcv1_train.binary":0.12,
-		"news20.binary":1,
-		"yahookr":27,
-	},
-	"s35_c8192_shrink":
-	{
-		"yahoojp":2000,
-		"ijcnn1":220,
-		"a9a":110,
-		"real-sim":700,
-		"rcv1_train.binary":200,
-		"news20.binary":1000,
-		"yahookr":20000,
-	},
-	"s24_c0.125_iter":
-	{
-		"a9a":  100,
-		"ijcnn1":  50,
-		"news20.binary": 50 ,
-		"rcv1_train.binary": 40,
-		"real-sim":  50,
-		"yahoojp":  50,
-	},
-	"s25_c0.125_iter":
-	{
-		"a9a":  100,
-		"ijcnn1":  50,
-		"news20.binary": 50 ,
-		"rcv1_train.binary":  40,
-		"real-sim":  50,
-		"yahoojp":  50,
-	},
-	"s35_c0.125_iter":
-	{
-		"a9a":  40,
-		"ijcnn1": 20 ,
-		"news20.binary": 15 ,
-		"rcv1_train.binary":  10,
-		"real-sim":  20,
-		"yahoojp":  50,
-	},
-	"s24_c0.25_iter":
-	{
-		"a9a":  150,
-		"ijcnn1": 50 ,
-		"news20.binary": 50 ,
-		"rcv1_train.binary":  50,
-		"real-sim":  50,
-		"yahoojp":  50,
-	},
-	"s25_c0.25_iter":
-	{
-		"a9a":  150,
-		"ijcnn1": 50 ,
-		"news20.binary":  20,
-		"rcv1_train.binary":  50,
-		"real-sim":  50,
-		"yahoojp":  50,
-	},
-	"s35_c0.25_iter":
-	{
-		"a9a":  60,
-		"ijcnn1":  20,
-		"news20.binary": 15 ,
-		"rcv1_train.binary":  20,
-		"real-sim":  20,
-		"yahoojp":  50,
-	},
-	"s24_c0.5_iter":
-	{
-		"a9a":  250,
-		"ijcnn1":  100,
-		"news20.binary":  50,
-		"rcv1_train.binary":  50,
-		"real-sim": 50 ,
-		"yahoojp":  50,
-	},
-	"s25_c0.5_iter":
-	{
-		"a9a": 250,
-		"ijcnn1":  100,
-		"news20.binary":  50,
-		"rcv1_train.binary":  50,
-		"real-sim":  50,
-		"yahoojp":  50,
-	},
-	"s35_c0.5_iter":
-	{
-		"a9a":  100,
-		"ijcnn1":  35,
-		"news20.binary": 20 ,
-		"rcv1_train.binary":  20,
-		"real-sim":  20,
-		"yahoojp":  50,
-	},
-	"s24_c0.1_iter":
-	{
-		"a9a":90,
-		"a1a": 60,
-		"heart_scale": 25,
-		"phishing": 18,
-			"rcv1_train.binary": 13,
-	},
-	"s25_c0.1_iter":
-	{
-		"a9a":100,
-		"a1a": 60,
-		"heart_scale": 25,
-		"phishing": 25,
-			"rcv1_train.binary": 15
-	},
-	"s34_c0.1_iter":
-	{
-		"a9a":100,
-		"a1a": 50,
-		"heart_scale": 25,
-		"phishing": 25,
-			"rcv1_train.binary": 15
-	},
-	"s35_c0.1_iter":
-	{
-		"a9a":100,
-		"a1a": 50,
-		"heart_scale": 25,
-		"phishing": 25,
-			"rcv1_train.binary": 15
-	},
-
-	"s24_c1_iter":
-	{
-		"a9a":400,
-		"a1a": 500,
-		"heart_scale": 360,
-		"phishing": 50,
-			"rcv1_train.binary": 20,
-		"ijcnn1": 80,
-		"real-sim": 25,
-		"yahoojp":30,
-		"news20.binary":25,
-		"yahookr":35,
-	},
-
-	"s25_c1_iter":
-	{
-		"a9a":400,
-		"a1a": 500,
-		"heart_scale": 360,
-		"phishing": 50,
-			"rcv1_train.binary": 35,
-		"real-sim": 40,
-		"ijcnn1": 90,
-		"yahoojp":40,
-		"news20.binary":40,
-		"yahookr":51,
-	},
-	"s35_c1_iter":
-	{
-		"a9a":180,
-		"a1a": 500,
-		"heart_scale": 200,
-		"phishing": 40,
-			"rcv1_train.binary": 20,
-		"news20.binary": 20,
-		"yahoojp":25,
-		"ijcnn1": 50,
-		"real-sim": 20,
-		"heart_scale": 140,
-		"yahookr":25,
-	},
-	"s24_c10_iter":
-	{
-		"a9a":1000,
-		"a1a": 1000,
-		"heart_scale": 1000,
-		"phishing": 400,
-			"rcv1_train.binary": 400
-	},
-	"s25_c10_iter":
-	{
-		"a9a":1000,
-		"a1a": 1000,
-		"heart_scale": 1000,
-		"phishing": 400,
-			"rcv1_train.binary": 400
-	},
-
-	"s34_c10_iter":
-	{
-		"a9a":1000,
-		"a1a": 1000,
-		"heart_scale": 1000,
-		"phishing": 200,
-			"rcv1_train.binary": 400
-	},
-
-	"s35_c10_iter":
-	{
-		"a9a":1000,
-		"a1a": 1000,
-		"heart_scale": 1000,
-		"phishing": 200,
-			"rcv1_train.binary": 400
-	},
-
-	"s24_c2_iter":
-	{
-		"a9a": 800 ,
-		"ijcnn1":  250,
-		"news20.binary": 60 ,
-		"rcv1_train.binary":  100,
-		"real-sim": 75 ,
-		"yahoojp":  100,
-	},
-	"s25_c2_iter":
-	{
-		"a9a": 800 ,
-		"ijcnn1":  250,
-		"news20.binary":  75,
-		"rcv1_train.binary": 100 ,
-		"real-sim": 100 ,
-		"yahoojp":  75,
-	},
-	"s35_c2_iter":
-	{
-		"a9a": 350,
-		"ijcnn1":  100,
-		"news20.binary":  35,
-		"rcv1_train.binary": 50 ,
-		"real-sim":  50,
-		"yahoojp":  50,
-	},
-	"s24_c4_iter":
-	{
-		"a9a": 1000 ,
-		"ijcnn1":  400,
-		"news20.binary":  100,
-		"rcv1_train.binary": 100 ,
-		"real-sim":  150,
-		"yahoojp":  150,
-	},
-	"s25_c4_iter":
-	{
-		"a9a":  1000,
-		"ijcnn1":  400,
-		"news20.binary":  150,
-		"rcv1_train.binary": 200 ,
-		"real-sim":  175,
-		"yahoojp": 150 ,
-	},
-	"s35_c4_iter":
-	{
-		"a9a": 750 ,
-		"ijcnn1":  250,
-		"news20.binary": 50,
-		"rcv1_train.binary":  75,
-		"real-sim":  100,
-		"yahoojp": 100 ,
-	},
-	"s24_c8_iter":
-	{
-		"a9a":  1000,
-		"ijcnn1":  800,
-		"news20.binary":  200,
-		"rcv1_train.binary": 200 ,
-		"real-sim": 250 ,
-		"yahoojp": 250 ,
-	},
-	"s25_c8_iter":
-	{
-		"a9a":  1000,
-		"ijcnn1":  800,
-		"news20.binary":  250,
-		"rcv1_train.binary": 250 ,
-		"real-sim": 230 ,
-		"yahoojp":  250,
-	},
-	"s35_c8_iter":
-	{
-		"a9a":  1000,
-		"ijcnn1":  400,
-		"news20.binary": 125 ,
-		"rcv1_train.binary": 150 ,
-		"real-sim":  150,
-		"yahoojp":  150,
-	},
-	"s24_c16_iter":
-	{
-		"a9a":  1000,
-		"ijcnn1":  1000,
-		"news20.binary":  400,
-		"rcv1_train.binary":  400,
-		"real-sim": 450 ,
-		"yahoojp":  450,
-	},
-	"s25_c16_iter":
-	{
-		"a9a":  1000,
-		"ijcnn1": 1000 ,
-		"news20.binary":  500,
-		"rcv1_train.binary": 450,
-		"real-sim":  400,
-		"yahoojp":  450,
-	},
-	"s35_c16_iter":
-	{
-		"a9a":  1000,
-		"ijcnn1": 700 ,
-		"news20.binary":  200,
-		"rcv1_train.binary":  250,
-		"real-sim": 250 ,
-		"yahoojp":  250,
-	},
-	"s24_c32_iter":
-	{
-		"a9a":  1000,
-		"ijcnn1":  1000,
-		"news20.binary":  600,
-		"rcv1_train.binary":  600,
-		"real-sim":  800,
-		"yahoojp":  600,
-	},
-	"s25_c32_iter":
-	{
-		"a9a":  1000,
-		"ijcnn1": 1000 ,
-		"news20.binary":  750,
-		"rcv1_train.binary":  700,
-		"real-sim": 750 ,
-		"yahoojp":  750,
-	},
-	"s35_c32_iter":
-	{
-		"a9a":  1000,
-		"ijcnn1": 1000 ,
-		"news20.binary":  400,
-		"rcv1_train.binary":  400,
-		"real-sim":  400,
-		"yahoojp":  400,
-	},
-	"s42_c64_iter":
-	{
-		"ijcnn1":2000,
-		"a9a":2000,
-		"news20.binary":2000,
-		"real-sim":2000,
-		"rcv1_train.binary":2000,
-	},
-	"s42_c4_iter":
-	{
-		"ijcnn1":500,
-		"a9a":1300,
-		"news20.binary":200,
-		"real-sim":800,
-		"rcv1_train.binary":450,
-	},
-	"s42_c8_iter":
-	{
-		"ijcnn1":800,
-		"a9a":2000,
-		"news20.binary":400,
-		"real-sim":1600,
-		"rcv1_train.binary":800,
-	},
-	"s35_c64_iter":
-	{
-		"ijcnn1":1000,
-		"a9a":1000,
-		"news20.binary":600,
-		"real-sim":500,
-		"rcv1_train.binary":500,
-	},
-	"s42_c128_iter":
-	{
-		"ijcnn1":2000,
-		"a9a":2000,
-		"news20.binary":2000,
-		"real-sim":2000,
-		"rcv1_train.binary":2000,
-	},
-	"s42_c0.25_iter":
-	{
-		"ijcnn1":90,
-		"a9a":150,
-		"news20.binary":40,
-		"real-sim":100,
-		"rcv1_train.binary":80,
-	},
-	"s35_c128_iter":
-	{
-		"ijcnn1":1000,
-		"a9a":1000,
-		"news20.binary":1000,
-		"real-sim":1000,
-		"rcv1_train.binary":1000,
-	},
-	"s42_c0.125_iter":
-	{
-		"ijcnn1":80,
-		"a9a":100,
-		"news20.binary":35,
-		"real-sim":100,
-		"rcv1_train.binary":60,
-	},
-	"s42_c2_iter":
-	{
-		"ijcnn1":250,
-		"a9a":800,
-		"news20.binary":100,
-		"real-sim":400,
-		"rcv1_train.binary":200,
-	},
-	"s42_c0.5_iter":
-	{
-		"ijcnn1":100,
-		"a9a":250,
-		"news20.binary":50,
-		"real-sim":100,
-		"rcv1_train.binary":100,
-	},
-	"s42_c1_iter":
-	{
-		"ijcnn1":140,
-		"a9a":450,
-		"news20.binary":50,
-		"real-sim":200,
-		"rcv1_train.binary":100,
-		"yahoojp":100,
-	},
-	"s42_c16_iter":
-	{
-		"ijcnn1":1500,
-		"a9a":2000,
-		"news20.binary":700,
-		"real-sim":2000,
-		"rcv1_train.binary":2000,
-	},
-	"s42_c32_iter":
-	{
-		"ijcnn1":2000,
-		"a9a":2000,
-		"news20.binary":1500,
-		"real-sim":2000,
-		"rcv1_train.binary":2000,
-	},
-
-	#######for l1 shrinking#######
-
-	"s3_c1_shrink":
-	{
-		"yahoojp":5,
-		"ijcnn1":0.079,
-		"a9a":0.20,
-		"real-sim":0.7,
-		"rcv1_train.binary":1,
-		"news20.binary":5,
-		"covtype.libsvm.binary": 287,
-		"yahookr":500,
-	},
-	"s33_c1_shrink":
-	{
-		"yahoojp":5,
-		"ijcnn1":0.25,
-		"a9a":5,
-		"real-sim":0.7,
-		"rcv1_train.binary":1,
-		"news20.binary":5,
-		"covtype.libsvm.binary":287,
-		"yahookr":500,
-	},
-	"s39_c1_shrink":
-	{
-		"yahoojp":5,
-		"ijcnn1":0.25,
-		"a9a":5,
-		"real-sim":0.7,
-		"rcv1_train.binary":1,
-		"news20.binary":5,
-		"covtype.libsvm.binary":287,
-		"yahookr":500,
-	},
-	"s32_c8192_shrink":
-	{
-		"yahoojp":1500,
-		"ijcnn1":200,
-		"a9a":200,
-		"real-sim":500,
-		"rcv1_train.binary":150,
-		"news20.binary":500,
-		"yahookr":14500,
-	},
-	"s3_c8192_shrink":
-	{
-		"yahoojp":1500,
-		"ijcnn1":200,
-		"a9a":200,
-		"real-sim":500,
-		"rcv1_train.binary":50,
-		"news20.binary":500,
-		"yahookr":14500,
-	},
-	"s32_c1_shrink":
-	{
-		"yahoojp":5,
-		"ijcnn1":1,
-		"a9a":2,
-		"real-sim":0.7,
-		"rcv1_train.binary":1,
-		"news20.binary":5,
-		"covtype.libsvm.binary":287,
-		"yahookr":500,
-	},
-	"s33_c8192_shrink":
-	{
-		"yahoojp":1500,
-		"ijcnn1":200,
-		"a9a":200,
-		"real-sim":500,
-		"rcv1_train.binary":50,
-		"news20.binary":500,
-		"yahookr":14500,
-	},
-	"s21_c8192_shrink":
-	{
-		"yahoojp":1500,
-		"ijcnn1":200,
-		"a9a":200,
-		"real-sim":500,
-		"rcv1_train.binary":150,
-		"news20.binary":285,
-		"yahookr":14500,
-	},
+	#"s32_c1_shrink":
+	#{
+	#	"yahookr":500,
+	#},
 }
 
 dstart = {

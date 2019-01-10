@@ -2,4 +2,14 @@
 ./runexp.py print
 bash out_run.bash
 
-18 log files
+As there's too many redundant cd steps, 
+artificially remove some cd steps after optimal.
+
+288 log files
+
+# generate plot
+combined with previous C=1,
+can use clist=[1.0/32, 1, 32] instead.
+
+as cyclic/random + shrink is too powerful,
+comment out shrink to compare all without shrink technique.

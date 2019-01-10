@@ -4,17 +4,17 @@ logfolder='log_notime'
 process_num=96
 
 runtype = [
-	#"ONE_L1_SEMIGD_1000",
-	#"ONE_L1_SEMIGD_RAND_1000",
-	#"ONE_L1_SEMIGD_DUALOBJ_1000",
-	#"ONE_L1_SEMIGD_DUALOBJ_RAND_1000",
-	#"ONE_L1_CY_1000",
-	#"ONE_L1_RD_1000",
+	"ONE_L1_SEMIGD_1000",
+	"ONE_L1_SEMIGD_RAND_1000",
+	"ONE_L1_SEMIGD_DUALOBJ_1000",
+	"ONE_L1_SEMIGD_DUALOBJ_RAND_1000",
+	"ONE_L1_CY_1000",
+	"ONE_L1_RD_1000",
 	"ONE_L1_CY_SH",
 	"ONE_L1_RD_SH",
 ]
 nlist = [0.1]
-clist = [1]
+clist = [1.0/32, 32]
 elist = [1e-12]
 rlist = [
 	#1,0.99,0.98,0.97,0.96,0.95,0.94,0.93,0.92,0.91,0.9,0.8,0.7,0.6,0.5,0.1,0.001
@@ -29,7 +29,7 @@ rlist = [
 	#, 0.02, 0.01
 ]
 m = 100000
-timeout = 3600
+timeout = 7200
 dataset = [
 	"heart_scale",
 	"a9a",
@@ -42,8 +42,6 @@ dataset = [
 	"yahookr",
 	]
 
-labeltest = {20111:"1-CD-perm", 20211:"1-CD-random", 20212:"1-CD-random",\
-}
 
 uselabel = {
 		20411:"semigd-dualobj",
@@ -51,7 +49,9 @@ uselabel = {
 		20511:"semigd-pg-rand",
 		20611:"semigd-dualobj-rand",
 		20211:"random",
+		20212:"random-sh",
 		20111:"cyclic",
+		20112:"cyclic-sh",
 }
 
 # plot config
