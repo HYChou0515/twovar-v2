@@ -1,15 +1,16 @@
+# exp-2019-01-11b
 # generate log
 ./runexp.py print
 bash out_run.bash
 
-As there's too many redundant cd steps, 
-artificially remove some cd steps after optimal.
-
-288 log files
+20 log files
 
 # generate plot
-combined with previous C=1,
-can use clist=[1.0/32, 1, 32] instead.
+We want to show it is because the r is too small 
+to make SemiGD bad for covtype_scale,
+and find out that r=0.6 is enough.
+Comment out r other than 0.6,
+uncomment "ONE_L1_CY_1000" and "ONE_L1_RD_1000"
+to see the result.
 
-as cyclic/random + shrink is too powerful,
-comment out shrink to compare all without shrink technique.
+./plot.py --logpath ../log/ cd
