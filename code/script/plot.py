@@ -3,7 +3,9 @@ import math
 import sys
 import os
 import numpy as np
-from config import *
+from plotconst import *
+from liblrconf import *
+from expconf import *
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
@@ -16,6 +18,9 @@ def format_labelx(x,pos):
 	return "%.1f" %x
 
 def expo_slice_avg(l,base):
+	#slice l into average of base^0, base^1, base^2
+	#e.g. l=[1,2,3,4,5,6,7], base=2
+	#ret=[1, (2+3)/2, (4+5+6+7)/4]
 	assert base>1
 	head = 0
 	length = 1
@@ -35,11 +40,14 @@ class Plotter(object):
 		self.stype = stype
 		self.loss = loss
 		self.eps = eps
-		self.logpath = args.logpath
-		self.figpath = args.figpath
+		self.logpath = args.logpath+'/'
+		self.figpath = args.figpath+'/'
 
 		matplotlib.rc('xtick', labelsize=20)
 		matplotlib.rc('ytick', labelsize=20)
+
+		self.MIN_SQUASH = MIN_SQUASH # the min value of a curve's width / figure's width
+		self.YLIM = YLIM # the range of Y (this value is set for relval)
 
 	def draw_all(self):
 		for dstr,c in itertools.product(self.dataset, self.clist):
@@ -56,10 +64,10 @@ class Plotter(object):
 		cmap = plt.get_cmap('hsv')
 		totnum = len(self.stype)
 		for st in self.stype:
-			if st in semigd:
+			if is_semigd(st):
 				totnum = totnum + len(rlist) -1
 		self.colors = [cmap(j) for j in np.linspace(0, 1, totnum+1)]
-		self.makr = ["--", "-.", "o-.", "-", "o-"]
+		self.makr = MARKER
 		self.makr = self.makr * int(math.ceil(float(len(self.colors))/len(self.makr)))
 
 	def init_new_fig(self):
@@ -78,7 +86,7 @@ class Plotter(object):
 					continue
 
 				lb = uselabel[tp]
-				if tp in semigd:
+				if is_semigd(tp):
 					lb = "%s_%s" % (lb, r)
 				plt.plot(xs, ys, self.makr[clridx],
 						color=self.colors[clridx],
@@ -86,30 +94,31 @@ class Plotter(object):
 						linewidth=3, markersize=6, markevery=0.1)
 				clridx += 1
 		self.setup_fig()
+		plt.close(self.fig)
 
 	def get_rlist(self, tp):
-		if tp not in semigd:
-			return [1]
-		else:
+		if is_semigd(tp):
 			return rlist
+		else:
+			return [1]
 
 	def get_eps(self, tp, orig_e):
-		if tp not in shrink:
-			return 0.1
-		else:
+		if is_shrink(tp):
 			return orig_e
+		else:
+			return 0.1
 
 	def get_logfile(self, tp, e, r):
-		if tp not in semigd:
-			if tp in oneclass:
-				logname = "%s_s%d_c1_e%g_n%g"% (self.dstr, tp, e, self.c)
-			else:
-				logname = "%s_s%d_c%g_e%g"% (self.dstr, tp, self.c, e)
-		else:
-			if tp in oneclass:
+		if is_semigd(tp):
+			if is_oneclass(tp):
 				logname = "%s_s%d_c1_e%g_n%g_r%g"% (self.dstr, tp, e, self.c, r)
 			else:
 				logname = "%s_s%d_c%g_e%g_r%g"% (self.dstr, tp, self.c, e, r)
+		else:
+			if is_oneclass(tp):
+				logname = "%s_s%d_c1_e%g_n%g"% (self.dstr, tp, e, self.c)
+			else:
+				logname = "%s_s%d_c%g_e%g"% (self.dstr, tp, self.c, e)
 		print(logname)
 		try:
 			return open(self.logpath+logname,"r")
@@ -118,12 +127,17 @@ class Plotter(object):
 			raise IOError
 
 	def get_minimal(self, tp):
-		if tp in biasobj:
-			return dobj["bias{}c{}".format(self.loss,self.c)][self.dstr]
-		elif tp in oneclass:
-			return dobj["one{}c{}".format(self.loss,self.c)][self.dstr]
+		if is_biasobj(tp):
+			dobj_key = "bias{}c{}".format(self.loss,self.c)
+		elif is_oneclass(tp):
+			dobj_key = "one{}c{}".format(self.loss,self.c)
 		else:
-			return dobj["{}c{}".format(self.loss,self.c)][self.dstr]
+			dobj_key = "{}c{}".format(self.loss,self.c)
+		try:
+			return dobj[dobj_key][self.dstr]
+		except KeyError:
+			print("\"" + self.dstr + "\" is not in " + dobj_key)
+			raise KeyError
 
 	def setup_fig(self):
 		plt.legend(loc=0)
@@ -131,9 +145,11 @@ class Plotter(object):
 
 class CdPlotter(Plotter):
 	PLOTTYPE = "cd"
-	YLIM = (1e-9, 1)
+	XLIM = (0, 1e12)
 	def init_new_fig(self):
 		self.min_y = 10
+		self.min_x = CdPlotter.XLIM[1] # min of max of x, for CdPlotter, it's the min of CDsteps
+		self.max_x = CdPlotter.XLIM[0] # max of max of x, for CdPlotter, it's the max of CDsteps
 	def get_xlim(self, tp):
 		key = "s%d_c%g_iter" % (tp, self.c)
 		if key in dlim.keys():
@@ -163,19 +179,22 @@ class CdPlotter(Plotter):
 			if 'iter' in line and 'obj' in line:
 				val = float(line[line.index('obj')+1])
 				relval = math.fabs((val - minimal)/minimal)
-				if not (CdPlotter.YLIM[0] < relval < CdPlotter.YLIM[1]):
-					break
-				if CDsteps > 1e6:
-					break
-				ys.append(relval)
-				self.min_y = min(relval,self.min_y)
 				CDsteps = CDsteps + (float(line[line.index('updsize')+1]))
+				if relval > self.YLIM[1] or CDsteps < CdPlotter.XLIM[0]:
+					continue
+				if relval < self.YLIM[0] or CDsteps > CdPlotter.XLIM[1]:
+					break;
+				ys.append(relval)
 				xs.append(CDsteps)
+				self.min_y = min(relval,self.min_y)
 				#print('CDsteps: %.16g\t relval: %.16g' % (CDsteps, relval))
+		self.min_x = min(CDsteps,self.min_x)
+		self.max_x = max(CDsteps,self.max_x)
 		logfile.close()
 		return ys, xs
 	def setup_fig(self):
 		plt.ylim(self.min_y,1)
+		plt.xlim(0, min(self.min_x / self.MIN_SQUASH, self.max_x))
 		if(self.min_y > 1.0e-2):
 			subsyy = [2,3,4,5,7]
 		else:
@@ -192,10 +211,11 @@ class CdPlotter(Plotter):
 
 class TimePlotter(Plotter):
 	PLOTTYPE = "time"
-	YLIM = (1e-9, 1)
 	XLIM = (0, 100)
 	def init_new_fig(self):
 		self.min_y = 10
+		self.min_x = TimePlotter.XLIM[1] # min of max of x, for TimePlotter, it's the min of total time
+		self.max_x = TimePlotter.XLIM[0] # max of max of x, for TimePlotter, it's the max of total time
 	def get_xlim(self, tp):
 		key = "s%d_c%g_shrink" % (tp, self.c)
 		if key in dlim.keys() and self.dstr in dlim[key]:
@@ -224,20 +244,23 @@ class TimePlotter(Plotter):
 				val = float(line[line.index('obj')+1])
 				relval = math.fabs((val - minimal)/minimal)
 				t =  float(line[line.index('t')+1])
-				if not (TimePlotter.YLIM[0] < relval < TimePlotter.YLIM[1]):
-					break
-				if not (TimePlotter.XLIM[0] < t < TimePlotter.XLIM[1]):
-					break
+				if relval > self.YLIM[1] or t < TimePlotter.XLIM[0]:
+					continue
+				if relval < self.YLIM[0] or t > TimePlotter.XLIM[1]:
+					break;
 				if t > xlim:
 					break
 				xs.append(t)
 				ys.append(relval)
 				self.min_y = min(relval,self.min_y)
 				#print('t: %.16g\t relval: %.16g' % (t, relval))
+		self.min_x = min(t,self.min_x)
+		self.max_x = max(t,self.max_x)
 		logfile.close()
 		return ys, xs
 	def setup_fig(self):
 		plt.ylim(self.min_y,1)
+		plt.xlim(0, min(self.min_x / self.MIN_SQUASH, self.max_x))
 		if(self.min_y > 1.0e-2):
 			subsyy = [2,3,4,5,7]
 		else:
@@ -254,7 +277,6 @@ class TimePlotter(Plotter):
 
 class SucrCdPlotter(Plotter):
 	PLOTTYPE = "sucrate-cd"
-	YLIM = (1e-9, 1)
 	def init_new_fig(self):
 		self.max_y = 0
 	def get_figname_fmt(self):
@@ -275,9 +297,9 @@ class SucrCdPlotter(Plotter):
 			line = line.split(' ')
 			if 'iter' in line and 'obj' in line:
 				val = float(line[line.index('sucpair')+1])/float(line[line.index('updsize')+1])
+				cdsteps = cdsteps + (float(line[line.index('updsize')+1]))
 				ys.append(val)
 				self.max_y = max(val,self.max_y)
-				cdsteps = cdsteps + (float(line[line.index('updsize')+1]))
 				xs.append(cdsteps)
 		logfile.close()
 		#slice xs and ys into average of 1,2,4,8,...
@@ -291,7 +313,6 @@ class SucrCdPlotter(Plotter):
 		Plotter.setup_fig(self)
 class ObjSucPlotter(Plotter):
 	PLOTTYPE = "obj-suc"
-	YLIM = (1e-9, 1)
 	def init_new_fig(self):
 		self.min_y = 10
 	def get_figname_fmt(self):
@@ -314,11 +335,13 @@ class ObjSucPlotter(Plotter):
 			if 'iter' in line and 'obj' in line:
 				val = float(line[line.index('obj')+1])
 				relval = math.fabs((val - minimal)/minimal)
-				if not (ObjSucPlotter.YLIM[0] < relval < ObjSucPlotter.YLIM[1]):
-					break
+				sucpair = sucpair + (float(line[line.index('sucpair')+1]))
+				if relval > self.YLIM[1]:
+					continue
+				if relval < self.YLIM[0]:
+					break;
 				ys.append(relval)
 				self.min_y = min(relval,self.min_y)
-				sucpair = sucpair + (float(line[line.index('sucpair')+1]))
 				xs.append(sucpair)
 				#print('sucpair: %.16g\t relval: %.16g' % (sucpair, relval))
 		logfile.close()
@@ -366,14 +389,14 @@ def main():
 	stype = [runs[k] for k in runtype]
 
 	#check losses are same
-	losses = map(lambda st: st in L1, stype)
+	losses = map(lambda st: is_L1(st), stype)
 	assert losses.count(losses[0])==len(losses), "Need all stype have same loss"
-	loss = "L1" if stype[0] in L1 else "L2"
+	loss = "L1" if is_L1(stype[0]) else "L2"
 
 	#check all or none in oneclass
-	oneclass_types = map(lambda st: st in oneclass, stype)
+	oneclass_types = map(lambda st: is_oneclass(st), stype)
 	assert oneclass_types.count(oneclass_types[0])==len(oneclass_types), "Need all or none of stype are oneclass"
-	if stype[0] in oneclass:
+	if is_oneclass(stype[0]):
 		real_clist = nlist
 	else:
 		real_clist = clist

@@ -1,5 +1,7 @@
+figure
 datasmall
 data
+log
 *.pyc
 *.o
 *.model

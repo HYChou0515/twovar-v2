@@ -1,14 +1,15 @@
 #!/usr/bin/env python
-from config import *
+from liblrconf import *
+from expconf import *
 import os
 import subprocess
 import itertools
 import time
 import sys
-PROCESS_NUM=7
+PROCESS_NUM=process_num
 ROOT_PATH="../"
-DATA_PATH="../../../data/"
-LOG_PATH=ROOT_PATH+"logtmpp/"
+DATA_PATH="../../data/"
+LOG_PATH=ROOT_PATH+logfolder+"/"
 train="train"
 
 def exit_with_help():
@@ -22,7 +23,7 @@ mode = -1
 if sys.argv[1] == "run":
     mode = 0
 elif sys.argv[1] == "print":
-    process_count = 0
+    process_count = 1
     ind = 0
     bashfile_name="out_run.bash"
     bashfile = open(bashfile_name, 'w')
@@ -33,19 +34,19 @@ else:
 for data in dataset:
 	print("Running "+ data)
 	for tp in runtype:
-		if runs[tp] in semigd:
+		if is_semigd(runs[tp]):
 			need_r = True
 			rlist_real = rlist
 		else:
 			rlist_real = [0]
 			need_r = False
-                if runs[tp] in shrink:
+                if is_shrink(runs[tp]):
 			need_e = True
 			elist_real = elist
 		else:
 			elist_real = [0.1]
 			need_e = False
-                if runs[tp] in oneclass:
+                if is_oneclass(runs[tp]):
 			need_n = True
 			nlist_real = nlist
 		else:
@@ -59,7 +60,7 @@ for data in dataset:
 			if need_r:
 				filename = filename + "_r%g" %(r)
 			print(filename)
-			cmd = "%s%s -s %d -c %g -e %g -m %d" % (ROOT_PATH, train, runs[tp], tc, e, m)
+			cmd = "%s%s -s %d -c %g -e %g -m %d -t %d" % (ROOT_PATH, train, runs[tp], tc, e, m, timeout)
 			if need_n:
 				cmd = cmd + " -n %g" % (n)
 			if need_r:
@@ -76,7 +77,7 @@ for data in dataset:
 				ind += 1
 				bashfile.write(cmd)
 				if process_count >= PROCESS_NUM:
-					process_count = 0
+					process_count = 1
 					bashfile.write("wait\n")
 				else:
 					process_count += 1

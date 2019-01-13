@@ -803,7 +803,13 @@ void Solver_MCSVM_CS::Solve(double *w)
 #undef GETI
 #define GETI(i) (y[i]+1)
 // To support weights for instances, use GETI(i) (i)
-
+#define EXIT_IF_TIMEOUT(time)\
+{\
+	if (timeout > 0 && (double)(time)/CLOCKS_PER_SEC > timeout)\
+	{\
+		break;\
+	}\
+}
 class Solver
 {
 public:
@@ -824,6 +830,7 @@ public:
 	int max_set;
 	int *index;
 	int max_iter;
+	int timeout;
 
 	// logged variables
 	int iter;
@@ -853,8 +860,16 @@ public:
 		TWO_BIAS,
 		ONECLASS
 	};
+	enum WssMode
+	{
+		SEMIGD_PG,
+		SEMIGD_PG_RAND,
+		SEMIGD_DUALOBJ,
+		SEMIGD_DUALOBJ_RAND
+	};
 	enum {LOWER_BOUND, UPPER_BOUND, FREE};
 	SolverCate category;
+	WssMode wss_mode;
 	const char* solver_name;
 	//other function
 	double calculate_obj();
@@ -871,6 +886,8 @@ public:
 	void one_random_1000();
 	void one_semigd_1000();
 	void one_semigd_shrink();
+	void one_semigd_dualobj_1000();
+	void one_semigd_dualobj_shrink();
 	void two_semicyclic_1000();
 	void two_semirandom1_1000();
 	void two_semirandom2_1000();
@@ -913,8 +930,10 @@ Solver::Solver(int _solver_type)
 
 	switch(solver_type)
 	{
-		case ONE_L1_CY_SH:// ONE_L1_CY_SH
-		case ONE_L2_CY_SH:// ONE_L2_CY_SH
+		case OLD_ONE_L1_CY_SH:// original algo 
+		case OLD_ONE_L2_CY_SH:// original algo
+		case ONE_L1_CY_SH:
+		case ONE_L2_CY_SH:
 		case ONE_L1_RD_SH:
 		case ONE_L2_RD_SH:
 		case ONE_L1_CY_1000:
@@ -925,6 +944,18 @@ Solver::Solver(int _solver_type)
 		case ONE_L1_SEMIGD_SH:
 		case ONE_L2_SEMIGD_1000:
 		case ONE_L2_SEMIGD_SH:
+		case ONE_L1_SEMIGD_RAND_1000:
+		case ONE_L1_SEMIGD_RAND_SH:
+		case ONE_L2_SEMIGD_RAND_1000:
+		case ONE_L2_SEMIGD_RAND_SH:
+		case ONE_L1_SEMIGD_DUALOBJ_1000:
+		case ONE_L1_SEMIGD_DUALOBJ_SH:
+		case ONE_L2_SEMIGD_DUALOBJ_1000:
+		case ONE_L2_SEMIGD_DUALOBJ_SH:
+		case ONE_L1_SEMIGD_DUALOBJ_RAND_1000:
+		case ONE_L1_SEMIGD_DUALOBJ_RAND_SH:
+		case ONE_L2_SEMIGD_DUALOBJ_RAND_1000:
+		case ONE_L2_SEMIGD_DUALOBJ_RAND_SH:
 			category = ONE_NOBIAS; 
 			break;
 		case TWO_L1_SEMICY_1000:
@@ -975,18 +1006,32 @@ Solver::Solver(int _solver_type)
 #define SAVE_NAME(p) case(p): solver_name = #p; break;
 	switch(solver_type)
 	{
-		SAVE_NAME(ONE_L1_RD_SH);
-		SAVE_NAME(ONE_L2_RD_SH);
-		SAVE_NAME(ONE_L1_CY_1000);
-		SAVE_NAME(ONE_L2_CY_1000);
+		SAVE_NAME(OLD_ONE_L1_CY_SH);
+		SAVE_NAME(OLD_ONE_L2_CY_SH);
 		SAVE_NAME(ONE_L1_CY_SH);
 		SAVE_NAME(ONE_L2_CY_SH);
+		SAVE_NAME(ONE_L1_CY_1000);
+		SAVE_NAME(ONE_L2_CY_1000);
+		SAVE_NAME(ONE_L1_RD_SH);
+		SAVE_NAME(ONE_L2_RD_SH);
 		SAVE_NAME(ONE_L1_RD_1000);
 		SAVE_NAME(ONE_L2_RD_1000);
 		SAVE_NAME(ONE_L1_SEMIGD_1000);
 		SAVE_NAME(ONE_L1_SEMIGD_SH);
 		SAVE_NAME(ONE_L2_SEMIGD_1000);
 		SAVE_NAME(ONE_L2_SEMIGD_SH);
+		SAVE_NAME(ONE_L1_SEMIGD_RAND_1000);
+		SAVE_NAME(ONE_L1_SEMIGD_RAND_SH);
+		SAVE_NAME(ONE_L2_SEMIGD_RAND_1000);
+		SAVE_NAME(ONE_L2_SEMIGD_RAND_SH);
+		SAVE_NAME(ONE_L1_SEMIGD_DUALOBJ_1000);
+		SAVE_NAME(ONE_L1_SEMIGD_DUALOBJ_SH);
+		SAVE_NAME(ONE_L2_SEMIGD_DUALOBJ_1000);
+		SAVE_NAME(ONE_L2_SEMIGD_DUALOBJ_SH);
+		SAVE_NAME(ONE_L1_SEMIGD_DUALOBJ_RAND_1000);
+		SAVE_NAME(ONE_L1_SEMIGD_DUALOBJ_RAND_SH);
+		SAVE_NAME(ONE_L2_SEMIGD_DUALOBJ_RAND_1000);
+		SAVE_NAME(ONE_L2_SEMIGD_DUALOBJ_RAND_SH);
 		SAVE_NAME(TWO_L1_SEMICY_1000);
 		SAVE_NAME(TWO_L2_SEMICY_1000);
 		SAVE_NAME(TWO_L1_SEMIRDONE_1000);
@@ -1194,6 +1239,7 @@ void Solver::summary()
 	info("eps = %f ratio_update = %f\n", eps, ratio_update);
 	info("solver = %s\n", solver_name);
 	info("max_iter = %d\n", max_iter);
+	info("timeout = %d\n", timeout);
 	info("obj = %.16g rho = %.16g\n", calculate_obj(), calculate_rho());
 
 	countSVs();
@@ -1325,192 +1371,7 @@ void Solver::one_random_shrink()
 			PGmax_old = INF;
 		if (PGmin_old >= 0)
 			PGmin_old = -INF;
-	}
-	summary();
-}
-
-void Solver::one_cyclic_1000()
-{
-	int l = max_set;
-	int i, s;
-	double C, d, G;
-	clock_t start;
-	active_size = l;
-	
-	while (iter < max_iter)
-	{
-		start = clock();
-		success_pair = 0;
-		for (i=0; i<active_size; i++)
-		{
-			int j = i+rand()%(active_size-i);
-			swap(index[i], index[j]);
-		}
-		for (s=0; s<active_size; s++)
-		{
-			i = index[s];
-			const schar yi = y[i];
-			feature_node * const xi = prob->x[i];
-
-			G = yi*sparse_operator::dot(w, xi)-1;
-
-			C = upper_bound[GETI(i)];
-			G += alpha[i]*diag[GETI(i)];
-
-			double alpha_old = alpha[i];
-			alpha[i] = min(max(alpha[i] - G/QD[i], 0.0), C);
-			d = (alpha[i] - alpha_old)*yi;
-			if(fabs(d) > 1.0e-16)
-			{
-				success_pair++;
-				sparse_operator::axpy(d, xi, w);
-			}
-		}
-		iter++;
-		duration += clock() -start;
-		log_message();
-	}
-	summary();
-}
-
-void Solver::one_semigd_shrink()
-{
-	info("THIS IS one semigd shrink\n");
-	//TODO: implement
-}
-
-void Solver::one_semigd_1000()
-{
-	int l = max_set;
-	int i, s;
-	clock_t start;
-	double G_i, C_i;
-	enum {LOWER_BOUND, UPPER_BOUND, FREE};
-	double *G = new double[l];
-	double PG;
-	std::priority_queue<struct feature_node, std::vector<feature_node>, mincomp> Min_order_queue;
-	int *workset = new int[l];
-	int smgd_size;
-	bool *need_update_ind = new bool[l];
-
-	active_size = l;
-	while (iter < max_iter)
-	{
-		for(i=0; i<l; i++)
-		{
-			need_update_ind[i]=true;
-		}
-		start = clock();
-		success_pair = 0;
-		nr_pos_y = 0;
-		nr_neg_y = 0;
-		for (i=0; i<active_size; i++)
-		{
-			int j = i+rand()%(active_size-i);
-			swap(index[i], index[j]);
-		}
-		PGmax_new = -INF;
-		PGmin_new = INF;
-		
-		for(i=0; i<active_size; i++)
-		{
-			int G_index = index[i];
-			feature_node * const xi = prob->x[G_index];
-			G[i] = y[G_index]*sparse_operator::dot(w, xi) -1 +alpha[G_index]*diag[GETI(G_index)];
-		}
-		//TODO: rlist as number not ratio
-		//update_size = int(active_size*ratio_update);
-		update_size = int(ratio_update);
-		if(update_size < 1)
-			update_size = 1;
-		smgd_size = update_size;
-		//update_size = l;
-
-		for(i=0; i<active_size; i++)
-		{
-			PG = 0;	
-			struct feature_node comp;
-			comp.index = index[i];
-
-			if (alpha_status[comp.index] == LOWER_BOUND)
-			{
-				if(G[i] < 0)
-					PG = G[i];
-			}
-			else if (alpha_status[comp.index] == UPPER_BOUND)
-			{
-				if(G[i] > 0)
-					PG = G[i];
-			}
-			else
-				PG = G[i];
-
-			PGmax_new = max(PGmax_new, PG);
-			PGmin_new = min(PGmin_new, PG);
-
-			comp.value = fabs(PG);
-			if((int) Min_order_queue.size() < smgd_size)
-			{
-				need_update_ind[comp.index] = false;
-				Min_order_queue.push(comp);
-			}
-			else if ((int) Min_order_queue.size() <= 0)
-			{
-				// nothing
-			}
-			else if (Min_order_queue.top().value < comp.value)
-			{
-				need_update_ind[Min_order_queue.top().index] = true;
-				Min_order_queue.pop();
-				need_update_ind[comp.index] = false;
-				Min_order_queue.push(comp);
-			}
-		}
-		smgd_size = (int) Min_order_queue.size();
-		update_size = smgd_size;
-
-		for(i=0; i<smgd_size; i++)
-		{
-			workset[smgd_size-1-i] = Min_order_queue.top().index;
-			Min_order_queue.pop();
-		}
-		//j=0;
-		//for(i=0; i<update_size; i++)
-		//{
-		//	if(need_update_ind[i])
-		//	{
-		//		workset[smgd_size+j] = i;
-		//		++j;
-		//	}
-		//}
-		//std::random_shuffle(workset, workset+update_size);
-		for(s=0; s<update_size; s++)
-		{
-			i = workset[s];
-			const schar yi = y[i];
-			if(yi == +1)
-				++nr_pos_y;
-			if(yi == -1)
-				++nr_neg_y;
-			feature_node const * xi = prob->x[i];
-
-			G_i = yi*sparse_operator::dot(w, xi)-1;
-			C_i = upper_bound[GETI(i)];
-			G_i += alpha[i]*diag[GETI(i)];
-
-			double alpha_new = min(max(alpha[i] - G_i/QD[i], 0.0), C_i);
-			alpha_diff = alpha_new - alpha[i];
-			if (fabs(alpha_diff) > 1e-16)
-			{
-				success_pair++;
-				alpha[i] = alpha_new;
-				sparse_operator::axpy(alpha_diff*yi, xi, w);
-				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[GETI(i)]);
-			}
-		}
-		iter++;
-		duration += clock() - start;
-		log_message();
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();
 }
@@ -1556,6 +1417,401 @@ void Solver::one_random_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		EXIT_IF_TIMEOUT(duration);
+	}
+	summary();
+}
+
+void Solver::one_cyclic_shrink()
+{
+	int l = max_set;
+	int i, s;
+	double C, d, G;
+	clock_t start;
+	// PG: projected gradient, for shrinking and stopping
+	double PG;
+	double PGmax_old = INF;
+	double PGmin_old = -INF;
+	
+	active_size = l;
+	start = clock();
+	while (iter < max_iter)
+	{
+		PGmax_new = -INF;
+		PGmin_new = INF;
+		start = clock();
+		success_pair = 0;
+		for (i=0; i<active_size; i++)
+		{
+			int j = i+rand()%(active_size-i);
+			swap(index[i], index[j]);
+		}
+		for (s=0; s<active_size; s++)
+		{
+			i = index[s];
+			const schar yi = y[i];
+			feature_node * const xi = prob->x[i];
+
+			G = yi*sparse_operator::dot(w, xi)-1;
+
+			C = upper_bound[GETI(i)];
+			G += alpha[i]*diag[GETI(i)];
+
+			PG = 0;
+			if (alpha[i] == 0)
+			{
+				if (G > PGmax_old)
+				{
+					active_size--;
+					swap(index[s], index[active_size]);
+					s--;
+					continue;
+				}
+				else if (G < 0)
+					PG = G;
+			}
+			else if (alpha[i] == C)
+			{
+				if (G < PGmin_old)
+				{
+					active_size--;
+					swap(index[s], index[active_size]);
+					s--;
+					continue;
+				}
+				else if (G > 0)
+					PG = G;
+			}
+			else
+				PG = G;
+
+			PGmax_new = max(PGmax_new, PG);
+			PGmin_new = min(PGmin_new, PG);
+
+			if(fabs(PG) > 1.0e-12)
+			{
+				double alpha_old = alpha[i];
+				alpha[i] = min(max(alpha[i] - G/QD[i], 0.0), C);
+				d = (alpha[i] - alpha_old)*yi;
+				sparse_operator::axpy(d, xi, w);
+				success_pair++;
+			}
+		}
+		iter++;
+		duration += clock()- start;
+		log_message();
+		if(PGmax_new - PGmin_new <= eps)
+		{
+			if(active_size == l)
+				break;
+			else
+			{
+				active_size = l;
+				PGmax_old = INF;
+				PGmin_old = -INF;
+				continue;
+			}
+		}
+		PGmax_old = PGmax_new;
+		PGmin_old = PGmin_new;
+		if (PGmax_old <= 0)
+			PGmax_old = INF;
+		if (PGmin_old >= 0)
+			PGmin_old = -INF;
+		EXIT_IF_TIMEOUT(duration);
+	}
+	summary();
+}
+
+void Solver::one_cyclic_1000()
+{
+	int l = max_set;
+	int i, s;
+	double C, d, G;
+	clock_t start;
+	active_size = l;
+	
+	while (iter < max_iter)
+	{
+		start = clock();
+		success_pair = 0;
+		for (i=0; i<active_size; i++)
+		{
+			int j = i+rand()%(active_size-i);
+			swap(index[i], index[j]);
+		}
+		for (s=0; s<active_size; s++)
+		{
+			i = index[s];
+			const schar yi = y[i];
+			feature_node * const xi = prob->x[i];
+
+			G = yi*sparse_operator::dot(w, xi)-1;
+
+			C = upper_bound[GETI(i)];
+			G += alpha[i]*diag[GETI(i)];
+
+			double alpha_old = alpha[i];
+			alpha[i] = min(max(alpha[i] - G/QD[i], 0.0), C);
+			d = (alpha[i] - alpha_old)*yi;
+			if(fabs(d) > 1.0e-16)
+			{
+				success_pair++;
+				sparse_operator::axpy(d, xi, w);
+			}
+		}
+		iter++;
+		duration += clock() -start;
+		log_message();
+		EXIT_IF_TIMEOUT(duration);
+	}
+	summary();
+}
+
+void Solver::one_semigd_shrink()
+{
+	info("THIS IS one semigd shrink\n");
+	//TODO: implement
+}
+
+void Solver::one_semigd_1000()
+{
+	int l = max_set;
+	int i, s;
+	clock_t start;
+	double G_i, C_i;
+	enum {LOWER_BOUND, UPPER_BOUND, FREE};
+	double *G = new double[l];
+	double PG;
+	std::priority_queue<struct feature_node, std::vector<feature_node>, mincomp> Min_order_queue;
+	int *workset = new int[l];
+	int smgd_size;
+
+	active_size = l;
+	while (iter < max_iter)
+	{
+		start = clock();
+		success_pair = 0;
+		nr_pos_y = 0;
+		nr_neg_y = 0;
+		for (i=0; i<active_size; i++)
+		{
+			int j = i+rand()%(active_size-i);
+			swap(index[i], index[j]);
+		}
+		PGmax_new = -INF;
+		PGmin_new = INF;
+		
+		for(i=0; i<active_size; i++)
+		{
+			int G_index = index[i];
+			feature_node * const xi = prob->x[G_index];
+			G[i] = y[G_index]*sparse_operator::dot(w, xi) -1 +alpha[G_index]*diag[GETI(G_index)];
+		}
+		//TODO: rlist as number not ratio
+		//update_size = int(active_size*ratio_update);
+		if(ratio_update < 1)
+			update_size = int(active_size*ratio_update);
+		else
+			update_size = int(ratio_update);
+		if(update_size < 1)
+			update_size = 1;
+		smgd_size = update_size;
+		//update_size = l;
+
+		for(s=0; s<active_size; s++)
+		{
+			PG = 0;	
+			i = index[s];
+
+			if (alpha_status[i] == LOWER_BOUND)
+			{
+				if(G[s] < 0)
+					PG = G[s];
+			}
+			else if (alpha_status[i] == UPPER_BOUND)
+			{
+				if(G[s] > 0)
+					PG = G[s];
+			}
+			else
+				PG = G[s];
+
+			PGmax_new = max(PGmax_new, PG);
+			PGmin_new = min(PGmin_new, PG);
+
+			struct feature_node comp;
+			comp.index = i;
+			comp.value = fabs(PG);
+			if((int) Min_order_queue.size() < smgd_size)
+			{
+				Min_order_queue.push(comp);
+			}
+			else if ((int) Min_order_queue.size() <= 0)
+			{
+				// nothing
+			}
+			else if (Min_order_queue.top().value < comp.value)
+			{
+				Min_order_queue.pop();
+				Min_order_queue.push(comp);
+			}
+		}
+		smgd_size = (int) Min_order_queue.size();
+		update_size = smgd_size;
+
+		for(i=0; i<smgd_size; i++)
+		{
+			workset[smgd_size-1-i] = Min_order_queue.top().index;
+			Min_order_queue.pop();
+		}
+		if (wss_mode == SEMIGD_PG_RAND)
+		{
+			std::random_shuffle(workset, workset+update_size);
+		}
+		for(s=0; s<update_size; s++)
+		{
+			i = workset[s];
+			const schar yi = y[i];
+			if(yi == +1)
+				++nr_pos_y;
+			if(yi == -1)
+				++nr_neg_y;
+			feature_node const * xi = prob->x[i];
+
+			G_i = yi*sparse_operator::dot(w, xi)-1;
+			C_i = upper_bound[GETI(i)];
+			G_i += alpha[i]*diag[GETI(i)];
+
+			double alpha_new = min(max(alpha[i] - G_i/QD[i], 0.0), C_i);
+			alpha_diff = alpha_new - alpha[i];
+			if (fabs(alpha_diff) > 1e-16)
+			{
+				success_pair++;
+				alpha[i] = alpha_new;
+				sparse_operator::axpy(alpha_diff*yi, xi, w);
+				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[GETI(i)]);
+			}
+		}
+		iter++;
+		duration += clock() - start;
+		log_message();
+		EXIT_IF_TIMEOUT(duration);
+	}
+	summary();
+}
+
+void Solver::one_semigd_dualobj_shrink()
+{
+	info("THIS IS one semigd dual obj shrink\n");
+	//TODO: implement
+}
+
+void Solver::one_semigd_dualobj_1000()
+{
+	int l = max_set;
+	int i, s;
+	clock_t start;
+	double G_i, C_i;
+	enum {LOWER_BOUND, UPPER_BOUND, FREE};
+	double *G = new double[l];
+	std::priority_queue<struct feature_node, std::vector<feature_node>, maxcomp> Max_order_queue;
+	int *workset = new int[l];
+	double dualobj_drop;
+
+	active_size = l;
+	while (iter < max_iter)
+	{
+		start = clock();
+		success_pair = 0;
+		nr_pos_y = 0;
+		nr_neg_y = 0;
+		for (i=0; i<active_size; i++)
+		{
+			int j = i+rand()%(active_size-i);
+			swap(index[i], index[j]);
+		}
+		
+		for(i=0; i<active_size; i++)
+		{
+			int G_index = index[i];
+			feature_node * const xi = prob->x[G_index];
+			G[i] = y[G_index]*sparse_operator::dot(w, xi) -1 +alpha[G_index]*diag[GETI(G_index)];
+		}
+		if(ratio_update < 1)
+			update_size = int(active_size*ratio_update);
+		else
+			update_size = int(ratio_update);
+		if(update_size < 1)
+			update_size = 1;
+
+		for(s=0; s<active_size; s++)
+		{
+			i = index[s];
+			G_i = G[s];
+			C_i = upper_bound[GETI(i)];
+			double alpha_new = min(max(alpha[i] - G_i/QD[i], 0.0), C_i);
+			alpha_diff = alpha_new - alpha[i];
+
+			dualobj_drop = alpha_diff*G_i + 0.5*alpha_diff*alpha_diff*QD[i];
+
+			struct feature_node comp;
+			comp.index = i;
+			comp.value = dualobj_drop;
+			if((int) Max_order_queue.size() < update_size)
+			{
+				Max_order_queue.push(comp);
+			}
+			else if ((int) Max_order_queue.size() <= 0)
+			{
+				// nothing
+			}
+			else if (Max_order_queue.top().value > comp.value)
+			{
+				Max_order_queue.pop();
+				Max_order_queue.push(comp);
+			}
+		}
+		update_size = (int) Max_order_queue.size();
+
+		for(i=0; i<update_size; i++)
+		{
+			workset[update_size-1-i] = Max_order_queue.top().index;
+			Max_order_queue.pop();
+		}
+
+		if (wss_mode == SEMIGD_DUALOBJ_RAND)
+		{
+			std::random_shuffle(workset, workset+update_size);
+		}
+		for(s=0; s<update_size; s++)
+		{
+			i = workset[s];
+			const schar yi = y[i];
+			if(yi == +1)
+				++nr_pos_y;
+			if(yi == -1)
+				++nr_neg_y;
+			feature_node const * xi = prob->x[i];
+
+			G_i = yi*sparse_operator::dot(w, xi)-1;
+			C_i = upper_bound[GETI(i)];
+			G_i += alpha[i]*diag[GETI(i)];
+
+			double alpha_new = min(max(alpha[i] - G_i/QD[i], 0.0), C_i);
+			alpha_diff = alpha_new - alpha[i];
+			if (fabs(alpha_diff) > 1e-16)
+			{
+				success_pair++;
+				alpha[i] = alpha_new;
+				sparse_operator::axpy(alpha_diff*yi, xi, w);
+				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[GETI(i)]);
+			}
+		}
+		iter++;
+		duration += clock() - start;
+		log_message();
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();
 }
@@ -1743,6 +1999,7 @@ void Solver::two_semicyclic_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();
 }
@@ -1997,6 +2254,7 @@ void Solver::two_random_shrink2()
 			PGmax_old = INF;
 		if(PGmin_old >= 0)
 			PGmin_old = -INF;
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();
 }
@@ -2256,7 +2514,7 @@ void Solver::two_random_shrink()
 			PGmax_old = INF;
 		if(PGmin_old >= 0)
 			PGmin_old = -INF;
-
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();
 }
@@ -2449,6 +2707,7 @@ void Solver::two_cyclic_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();
 }
@@ -2625,6 +2884,7 @@ void Solver::two_semirandom2_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();
 }
@@ -2802,6 +3062,7 @@ void Solver::two_semirandom1_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();
 }
@@ -2950,182 +3211,184 @@ void Solver::two_random_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();
 }
 
 void Solver::two_semigd_1000()
 {
-	// TODO:implement
+	info("THIS IS two semigd 1000\n");
 	info("Not implement yet\n");
-	int l = max_set;
-	int i, j, si;
-	active_size = l;
-	double C_i, C_j, G_i, G_j;
-	enum {LOWER_BOUND, UPPER_BOUND, FREE};
-	double *G = new double[l];
-	double PG;
-	double Q_ij;
-	bool is_updated;
-	std::pair<double,double> *newalpha_ij = new std::pair<double,double>;
-
-	clock_t start;
-
-	int *Max_order_index = new int[l];
-	int *Min_order_index = new int[l];
-	
-	std::priority_queue<struct feature_node, std::vector<feature_node>, mincomp> Min_order_queue;
-	std::priority_queue<struct feature_node, std::vector<feature_node>, maxcomp> Max_order_queue;
-
-	while (iter < max_iter)
-	{
-		start = clock();
-		success_pair = 0;
-
-		for(i=0; i<active_size; i++)
-		{
-			int G_index = index[i];
-			feature_node * const xi = prob->x[G_index];
-			G[i] = y[G_index]*sparse_operator::dot(w, xi) -1 +alpha[i]*diag[GETI(i)];
-		}
-
-		update_size = int(active_size*ratio_update);
-		if(update_size < 1)
-			update_size = 1;
-		update_size = 1;
-
-		for(i=0; i<active_size; i++)
-		{
-			struct feature_node comp;
-			comp.index = index[i];
-
-//			PG=0;
-//			if(alpha_status[comp.index] == LOWER_BOUND)
-//			{
-//				if(G[i] < 0)
-//					PG = G[i];
-//			}
-//			else if (alpha_status[comp.index] == UPPER_BOUND)
-//			{
-//				if(G[i] > 0)
-//					PG = G[i];
-//			}
-//			else
-//				PG = G[i];
-//
-//			PGmax_new = max(PGmax_new, PG);
-//			PGmin_new = min(PGmin_new, PG);
-
-			//comp.value = fabs(PG);
-
-//			comp.value = PG;
-//			if((int) Min_order_queue.size() < update_size)
-//			{
-//				Min_order_queue.push(comp);
-//			}
-//			else if(Min_order_queue.top().value < comp.value)
-//			{
-//				Min_order_queue.pop();
-//				Min_order_queue.push(comp);
-//			}
-//			if((int) Max_order_queue.size() < update_size)
-//			{
-//				Max_order_queue.push(comp);
-//			}
-//			else if(Max_order_queue.top().value > comp.value)
-//			{
-//				Max_order_queue.pop();
-//				Max_order_queue.push(comp);
-//			}
-
-//			int yc = y[comp.index];
-//			comp.value = -yc * G[i];
-//			if( (alpha_status[comp.index] != UPPER_BOUND && yc==+1) ||
-//					(alpha_status[comp.index] != LOWER_BOUND && yc==-1) )
-//			{ //Iup
-//				if((int) Min_order_queue.size() < update_size)
-//				{
-//					Min_order_queue.push(comp);
-//				}
-//				else if(Min_order_queue.top().value < comp.value)
-//				{
-//					Min_order_queue.pop();
-//					Min_order_queue.push(comp);
-//				}
-//			}
-//			if( (alpha_status[comp.index] != UPPER_BOUND && yc==-1) ||
-//					(alpha_status[comp.index] != LOWER_BOUND && yc==+1) )
-//			{ //Ilow
-//				if((int) Max_order_queue.size() < update_size)
-//				{
-//					Max_order_queue.push(comp);
-//				}
-//				else if(Max_order_queue.top().value > comp.value)
-//				{
-//					Max_order_queue.pop();
-//					Max_order_queue.push(comp);
-//				}
-//			}
-		}
-		update_size = min((int)Min_order_queue.size(), (int)Max_order_queue.size());
-		while((int)Max_order_queue.size() > update_size)
-		{
-			Max_order_queue.pop();
-		}
-		while((int)Min_order_queue.size() > update_size)
-		{
-			Min_order_queue.pop();
-		}
-		for(i=0; i<update_size; i++)
-		{
-			Max_order_index[update_size-1-i] = Min_order_queue.top().index;
-			Min_order_queue.pop();
-
-			Min_order_index[update_size-1-i] = Max_order_queue.top().index;
-			Max_order_queue.pop();
-		}
-
-		for(si=0; si<update_size; si++)
-		{
-			i = Max_order_index[si];
-			j = Min_order_index[si];
-
-			const schar yi = y[i];
-			const schar yj = y[j];
-			const feature_node *xi = prob->x[i];
-			const feature_node *xj = prob->x[j];
-			
-			Q_ij = yi * yj * sparse_operator::feature_dot(xi, xj);
-			G_i = yi*sparse_operator::dot(w, xi) -1 +alpha[i]*diag[GETI(i)];
-			G_j = yj*sparse_operator::dot(w, xj) -1 +alpha[j]*diag[GETI(j)];
-
-			C_i = upper_bound[GETI(i)];
-			C_j = upper_bound[GETI(j)];
-			
-			calculate_unbias_two_newalpha(newalpha_ij, QD[i],QD[j],Q_ij,C_i,C_j,alpha[i],alpha[j],G_i,G_j);
-
-			is_updated = false;
-			if(fabs(newalpha_ij->first - alpha[i]) > 1.0e-16)
-			{
-				sparse_operator::axpy(yi*(newalpha_ij->first - alpha[i]), prob->x[i], w);
-				alpha[i] = newalpha_ij->first;
-				is_updated = true;
-			}
-			if(fabs(newalpha_ij->second - alpha[j]) > 1.0e-16)
-			{
-				sparse_operator::axpy(yj*(newalpha_ij->second - alpha[j]), prob->x[j], w);
-				alpha[j] = newalpha_ij->second;
-				is_updated = true;
-			}
-			if(is_updated)
-				success_pair++;
-		}
-		iter++;
-		duration += clock() - start;
-		log_message();
-	}
-	summary();
+	// TODO:implement
 	// TODO:test
+//	int l = max_set;
+//	int i, j, si;
+//	active_size = l;
+//	double C_i, C_j, G_i, G_j;
+//	enum {LOWER_BOUND, UPPER_BOUND, FREE};
+//	double *G = new double[l];
+//	double PG;
+//	double Q_ij;
+//	bool is_updated;
+//	std::pair<double,double> *newalpha_ij = new std::pair<double,double>;
+//
+//	clock_t start;
+//
+//	int *Max_order_index = new int[l];
+//	int *Min_order_index = new int[l];
+//	
+//	std::priority_queue<struct feature_node, std::vector<feature_node>, mincomp> Min_order_queue;
+//	std::priority_queue<struct feature_node, std::vector<feature_node>, maxcomp> Max_order_queue;
+//
+//	while (iter < max_iter)
+//	{
+//		start = clock();
+//		success_pair = 0;
+//
+//		for(i=0; i<active_size; i++)
+//		{
+//			int G_index = index[i];
+//			feature_node * const xi = prob->x[G_index];
+//			G[i] = y[G_index]*sparse_operator::dot(w, xi) -1 +alpha[i]*diag[GETI(i)];
+//		}
+//
+//		update_size = int(active_size*ratio_update);
+//		if(update_size < 1)
+//			update_size = 1;
+//		update_size = 1;
+//
+//		for(i=0; i<active_size; i++)
+//		{
+//			struct feature_node comp;
+//			comp.index = index[i];
+//
+////			PG=0;
+////			if(alpha_status[comp.index] == LOWER_BOUND)
+////			{
+////				if(G[i] < 0)
+////					PG = G[i];
+////			}
+////			else if (alpha_status[comp.index] == UPPER_BOUND)
+////			{
+////				if(G[i] > 0)
+////					PG = G[i];
+////			}
+////			else
+////				PG = G[i];
+////
+////			PGmax_new = max(PGmax_new, PG);
+////			PGmin_new = min(PGmin_new, PG);
+//
+//			//comp.value = fabs(PG);
+//
+////			comp.value = PG;
+////			if((int) Min_order_queue.size() < update_size)
+////			{
+////				Min_order_queue.push(comp);
+////			}
+////			else if(Min_order_queue.top().value < comp.value)
+////			{
+////				Min_order_queue.pop();
+////				Min_order_queue.push(comp);
+////			}
+////			if((int) Max_order_queue.size() < update_size)
+////			{
+////				Max_order_queue.push(comp);
+////			}
+////			else if(Max_order_queue.top().value > comp.value)
+////			{
+////				Max_order_queue.pop();
+////				Max_order_queue.push(comp);
+////			}
+//
+////			int yc = y[comp.index];
+////			comp.value = -yc * G[i];
+////			if( (alpha_status[comp.index] != UPPER_BOUND && yc==+1) ||
+////					(alpha_status[comp.index] != LOWER_BOUND && yc==-1) )
+////			{ //Iup
+////				if((int) Min_order_queue.size() < update_size)
+////				{
+////					Min_order_queue.push(comp);
+////				}
+////				else if(Min_order_queue.top().value < comp.value)
+////				{
+////					Min_order_queue.pop();
+////					Min_order_queue.push(comp);
+////				}
+////			}
+////			if( (alpha_status[comp.index] != UPPER_BOUND && yc==-1) ||
+////					(alpha_status[comp.index] != LOWER_BOUND && yc==+1) )
+////			{ //Ilow
+////				if((int) Max_order_queue.size() < update_size)
+////				{
+////					Max_order_queue.push(comp);
+////				}
+////				else if(Max_order_queue.top().value > comp.value)
+////				{
+////					Max_order_queue.pop();
+////					Max_order_queue.push(comp);
+////				}
+////			}
+//		}
+//		update_size = min((int)Min_order_queue.size(), (int)Max_order_queue.size());
+//		while((int)Max_order_queue.size() > update_size)
+//		{
+//			Max_order_queue.pop();
+//		}
+//		while((int)Min_order_queue.size() > update_size)
+//		{
+//			Min_order_queue.pop();
+//		}
+//		for(i=0; i<update_size; i++)
+//		{
+//			Max_order_index[update_size-1-i] = Min_order_queue.top().index;
+//			Min_order_queue.pop();
+//
+//			Min_order_index[update_size-1-i] = Max_order_queue.top().index;
+//			Max_order_queue.pop();
+//		}
+//
+//		for(si=0; si<update_size; si++)
+//		{
+//			i = Max_order_index[si];
+//			j = Min_order_index[si];
+//
+//			const schar yi = y[i];
+//			const schar yj = y[j];
+//			const feature_node *xi = prob->x[i];
+//			const feature_node *xj = prob->x[j];
+//			
+//			Q_ij = yi * yj * sparse_operator::feature_dot(xi, xj);
+//			G_i = yi*sparse_operator::dot(w, xi) -1 +alpha[i]*diag[GETI(i)];
+//			G_j = yj*sparse_operator::dot(w, xj) -1 +alpha[j]*diag[GETI(j)];
+//
+//			C_i = upper_bound[GETI(i)];
+//			C_j = upper_bound[GETI(j)];
+//			
+//			calculate_unbias_two_newalpha(newalpha_ij, QD[i],QD[j],Q_ij,C_i,C_j,alpha[i],alpha[j],G_i,G_j);
+//
+//			is_updated = false;
+//			if(fabs(newalpha_ij->first - alpha[i]) > 1.0e-16)
+//			{
+//				sparse_operator::axpy(yi*(newalpha_ij->first - alpha[i]), prob->x[i], w);
+//				alpha[i] = newalpha_ij->first;
+//				is_updated = true;
+//			}
+//			if(fabs(newalpha_ij->second - alpha[j]) > 1.0e-16)
+//			{
+//				sparse_operator::axpy(yj*(newalpha_ij->second - alpha[j]), prob->x[j], w);
+//				alpha[j] = newalpha_ij->second;
+//				is_updated = true;
+//			}
+//			if(is_updated)
+//				success_pair++;
+//		}
+//		iter++;
+//		duration += clock() - start;
+//		log_message();
+//	}
+//	summary();
 }
 
 void Solver::two_semigd_shrink()
@@ -3459,7 +3722,7 @@ void Solver::bias_semigd_shrink()
 		iter++;
 		duration += clock() - start;
 		log_message();
-
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();	
 	delete [] alpha_status;
@@ -3734,6 +3997,7 @@ void Solver::bias_semigd_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();	
 	delete [] alpha_status;
@@ -4008,6 +4272,7 @@ void Solver::bias_random_shrink()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();
 	delete [] alpha_status;
@@ -4185,7 +4450,7 @@ void Solver::bias_random_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
-
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();
 	delete [] alpha_status;
@@ -4403,6 +4668,7 @@ void Solver::oneclass_random_shrink()
 			Gmax_old = Gmax;
 			Gmin_old = Gmin;
 		}
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();
 }
@@ -4535,6 +4801,7 @@ void Solver::oneclass_random_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();
 }
@@ -4672,6 +4939,7 @@ void Solver::oneclass_first_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();
 	delete [] G;
@@ -4820,6 +5088,7 @@ void Solver::oneclass_second_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();
 	delete [] G;
@@ -5014,6 +5283,7 @@ void Solver::oneclass_semigd_1000()
 		duration += clock() - start;
 		log_message();
 		success_all += success_pair;
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();
 	delete [] Max_order_index;
@@ -5265,6 +5535,7 @@ void Solver::oneclass_semigd_shrink()
 		duration += clock() - start;
 		log_message();
 		success_all += success_pair;
+		EXIT_IF_TIMEOUT(duration);
 	}
 	summary();
 	delete [] Max_order_index;
@@ -5336,6 +5607,7 @@ static void oneclass_update(
 	solver.upper_bound = upper_bound;
 	solver.ratio_update = param->r;
 	solver.max_iter = param->max_iter;
+	solver.timeout = param->timeout;
 	switch(solver_type)
 	{
 		
@@ -5442,6 +5714,7 @@ static void two_bias_update(
 	solver.alpha_status = alpha_status;
 	solver.ratio_update = param->r;
 	solver.max_iter = param->max_iter;
+	solver.timeout = param->timeout;
 	switch(solver_type)
 	{
 		case BIAS_L1_RD_SH:
@@ -5485,6 +5758,7 @@ static void onetwo_nobias_update(
 	double *QD = new double[l];
 	double *alpha =  new double[l];
 	int *alpha_status = new int[l];
+	//int *index = new int[l];
 	int *index = new int[l];
 	schar *y = new schar[l];
 	int i = 0;
@@ -5494,9 +5768,16 @@ static void onetwo_nobias_update(
 	if(solver_type == ONE_L1_CY_1000 
 	 ||solver_type == ONE_L1_RD_1000 
 	 ||solver_type == ONE_L1_CY_SH
+	 ||solver_type == OLD_ONE_L1_CY_SH
 	 ||solver_type == ONE_L1_RD_SH
 	 ||solver_type == ONE_L1_SEMIGD_1000
 	 ||solver_type == ONE_L1_SEMIGD_SH
+	 ||solver_type == ONE_L1_SEMIGD_RAND_1000
+	 ||solver_type == ONE_L1_SEMIGD_RAND_SH
+	 ||solver_type == ONE_L1_SEMIGD_DUALOBJ_1000
+	 ||solver_type == ONE_L1_SEMIGD_DUALOBJ_SH
+	 ||solver_type == ONE_L1_SEMIGD_DUALOBJ_RAND_1000
+	 ||solver_type == ONE_L1_SEMIGD_DUALOBJ_RAND_SH
 	 ||solver_type == TWO_L1_CY_1000 
 	 ||solver_type == TWO_L1_RD_1000 
 	 ||solver_type == TWO_L1_SEMIGD_1000 
@@ -5563,6 +5844,7 @@ static void onetwo_nobias_update(
 	solver.index = index;
 	solver.upper_bound = upper_bound;
 	solver.max_iter = param->max_iter;
+	solver.timeout = param->timeout;
 	switch(solver_type)
 	{
 		case ONE_L1_RD_SH:
@@ -5577,6 +5859,8 @@ static void onetwo_nobias_update(
 			solver.one_cyclic_1000();
 			break;	
 		}
+		case OLD_ONE_L1_CY_SH:
+		case OLD_ONE_L2_CY_SH:
 		case ONE_L1_CY_SH:
 		case ONE_L2_CY_SH:
 		{
@@ -5592,13 +5876,57 @@ static void onetwo_nobias_update(
 		case ONE_L1_SEMIGD_1000:
 		case ONE_L2_SEMIGD_1000:
 		{
+			solver.wss_mode = Solver::SEMIGD_PG;
 			solver.one_semigd_1000();
 			break;
 		}
 		case ONE_L1_SEMIGD_SH:
 		case ONE_L2_SEMIGD_SH:
 		{
+			solver.wss_mode = Solver::SEMIGD_PG;
 			solver.one_semigd_shrink();
+			break;
+		}
+		case ONE_L1_SEMIGD_RAND_1000:
+		case ONE_L2_SEMIGD_RAND_1000:
+		{
+			solver.wss_mode = Solver::SEMIGD_PG_RAND;
+			solver.one_semigd_1000();
+			break;
+		}
+		case ONE_L1_SEMIGD_RAND_SH:
+		case ONE_L2_SEMIGD_RAND_SH:
+		{
+			solver.wss_mode = Solver::SEMIGD_PG_RAND;
+			solver.one_semigd_shrink();
+			break;
+		}
+		case ONE_L1_SEMIGD_DUALOBJ_1000:
+		case ONE_L2_SEMIGD_DUALOBJ_1000:
+		{
+			solver.wss_mode = Solver::SEMIGD_DUALOBJ;
+			solver.one_semigd_dualobj_1000();
+			break;
+		}
+		case ONE_L1_SEMIGD_DUALOBJ_SH:
+		case ONE_L2_SEMIGD_DUALOBJ_SH:
+		{
+			solver.wss_mode = Solver::SEMIGD_DUALOBJ;
+			solver.one_semigd_dualobj_shrink();
+			break;
+		}
+		case ONE_L1_SEMIGD_DUALOBJ_RAND_1000:
+		case ONE_L2_SEMIGD_DUALOBJ_RAND_1000:
+		{
+			solver.wss_mode = Solver::SEMIGD_DUALOBJ_RAND;
+			solver.one_semigd_dualobj_1000();
+			break;
+		}
+		case ONE_L1_SEMIGD_DUALOBJ_RAND_SH:
+		case ONE_L2_SEMIGD_DUALOBJ_RAND_SH:
+		{
+			solver.wss_mode = Solver::SEMIGD_DUALOBJ_RAND;
+			solver.one_semigd_dualobj_shrink();
 			break;
 		}
 		case TWO_L1_RD_SH:
@@ -5656,110 +5984,10 @@ static void onetwo_nobias_update(
 			break;
 		}
 	}
-	delete [] index;
 	delete [] QD;
+	delete [] index;
 	delete [] alpha;
 	delete [] y;
-}
-
-void Solver::one_cyclic_shrink()
-{
-	int l = max_set;
-	int i, s;
-	double C, d, G;
-	clock_t start;
-	// PG: projected gradient, for shrinking and stopping
-	double PG;
-	double PGmax_old = INF;
-	double PGmin_old = -INF;
-	
-	active_size = l;
-	start = clock();
-	while (iter < max_iter)
-	{
-		PGmax_new = -INF;
-		PGmin_new = INF;
-		start = clock();
-		success_pair = 0;
-		for (i=0; i<active_size; i++)
-		{
-			int j = i+rand()%(active_size-i);
-			swap(index[i], index[j]);
-		}
-		for (s=0; s<active_size; s++)
-		{
-			i = index[s];
-			const schar yi = y[i];
-			feature_node * const xi = prob->x[i];
-
-			G = yi*sparse_operator::dot(w, xi)-1;
-
-			C = upper_bound[GETI(i)];
-			G += alpha[i]*diag[GETI(i)];
-
-			PG = 0;
-			if (alpha[i] == 0)
-			{
-				if (G > PGmax_old)
-				{
-					active_size--;
-					swap(index[s], index[active_size]);
-					s--;
-					continue;
-				}
-				else if (G < 0)
-					PG = G;
-			}
-			else if (alpha[i] == C)
-			{
-				if (G < PGmin_old)
-				{
-					active_size--;
-					swap(index[s], index[active_size]);
-					s--;
-					continue;
-				}
-				else if (G > 0)
-					PG = G;
-			}
-			else
-				PG = G;
-
-			PGmax_new = max(PGmax_new, PG);
-			PGmin_new = min(PGmin_new, PG);
-
-			if(fabs(PG) > 1.0e-12)
-			{
-				double alpha_old = alpha[i];
-				alpha[i] = min(max(alpha[i] - G/QD[i], 0.0), C);
-				d = (alpha[i] - alpha_old)*yi;
-				sparse_operator::axpy(d, xi, w);
-				success_pair++;
-			}
-		}
-		iter++;
-		duration += clock()- start;
-		log_message();
-		if(PGmax_new - PGmin_new <= eps)
-		{
-			if(active_size == l)
-				break;
-			else
-			{
-				active_size = l;
-				PGmax_old = INF;
-				PGmin_old = -INF;
-				continue;
-			}
-		}
-		PGmax_old = PGmax_new;
-		PGmin_old = PGmin_new;
-		if (PGmax_old <= 0)
-			PGmax_old = INF;
-		if (PGmin_old >= 0)
-			PGmin_old = -INF;
-	}
-	summary();
 }
 
 // A coordinate descent algorithm for 
@@ -7038,8 +7266,10 @@ static void train_one(const problem *prob, const parameter *param, double *w, do
 		case ONECLASS_L2_SEMIGD_SH:
 			oneclass_update(prob, w, param);
 			break;
-		case ONE_L2_CY_SH: //ONE_L1_CY_SH
-		case ONE_L1_CY_SH: //ONE_L2_CY_SH
+		case OLD_ONE_L1_CY_SH: // original algo
+		case OLD_ONE_L2_CY_SH: // original algo
+		case ONE_L1_CY_SH:
+		case ONE_L2_CY_SH:
 		case ONE_L1_CY_1000:
 		case ONE_L2_CY_1000:
 		case ONE_L1_RD_1000:
@@ -7050,6 +7280,18 @@ static void train_one(const problem *prob, const parameter *param, double *w, do
 		case ONE_L1_SEMIGD_SH:
 		case ONE_L2_SEMIGD_1000:
 		case ONE_L2_SEMIGD_SH:
+		case ONE_L1_SEMIGD_RAND_1000:
+		case ONE_L1_SEMIGD_RAND_SH:
+		case ONE_L2_SEMIGD_RAND_1000:
+		case ONE_L2_SEMIGD_RAND_SH:
+		case ONE_L1_SEMIGD_DUALOBJ_1000:
+		case ONE_L1_SEMIGD_DUALOBJ_SH:
+		case ONE_L2_SEMIGD_DUALOBJ_1000:
+		case ONE_L2_SEMIGD_DUALOBJ_SH:
+		case ONE_L1_SEMIGD_DUALOBJ_RAND_1000:
+		case ONE_L1_SEMIGD_DUALOBJ_RAND_SH:
+		case ONE_L2_SEMIGD_DUALOBJ_RAND_1000:
+		case ONE_L2_SEMIGD_DUALOBJ_RAND_SH:
 		case TWO_L1_CY_1000:
 		case TWO_L2_CY_1000:
 		case TWO_L1_SEMICY_1000:
@@ -7618,9 +7860,9 @@ class Solver_type_table
 		}
 #define SAVE_NAME(p) array[p] = #p;
 		SAVE_NAME(L2R_LR);
-		SAVE_NAME(ONE_L2_CY_SH);
+		SAVE_NAME(OLD_ONE_L2_CY_SH);
 		SAVE_NAME(L2R_L2LOSS_SVC);
-		SAVE_NAME(ONE_L1_CY_SH);
+		SAVE_NAME(OLD_ONE_L1_CY_SH);
 		SAVE_NAME(MCSVM_CS);
 		SAVE_NAME(L1R_L2LOSS_SVC);
 		SAVE_NAME(L1R_LR);
@@ -7630,15 +7872,29 @@ class Solver_type_table
 		SAVE_NAME(L2R_L1LOSS_SVR_DUAL);
 		//for one-variable
 		SAVE_NAME(ONE_L1_CY_1000);
+		SAVE_NAME(ONE_L1_CY_SH);
 		SAVE_NAME(ONE_L1_RD_1000);
 		SAVE_NAME(ONE_L1_RD_SH);
 		SAVE_NAME(ONE_L2_CY_1000);
+		SAVE_NAME(ONE_L2_CY_SH);
 		SAVE_NAME(ONE_L2_RD_1000);
 		SAVE_NAME(ONE_L2_RD_SH);
 		SAVE_NAME(ONE_L1_SEMIGD_1000);
 		SAVE_NAME(ONE_L1_SEMIGD_SH);
 		SAVE_NAME(ONE_L2_SEMIGD_1000);
 		SAVE_NAME(ONE_L2_SEMIGD_SH);
+		SAVE_NAME(ONE_L1_SEMIGD_RAND_1000);
+		SAVE_NAME(ONE_L1_SEMIGD_RAND_SH);
+		SAVE_NAME(ONE_L2_SEMIGD_RAND_1000);
+		SAVE_NAME(ONE_L2_SEMIGD_RAND_SH);
+		SAVE_NAME(ONE_L1_SEMIGD_DUALOBJ_1000);
+		SAVE_NAME(ONE_L1_SEMIGD_DUALOBJ_SH);
+		SAVE_NAME(ONE_L2_SEMIGD_DUALOBJ_1000);
+		SAVE_NAME(ONE_L2_SEMIGD_DUALOBJ_SH);
+		SAVE_NAME(ONE_L1_SEMIGD_DUALOBJ_RAND_1000);
+		SAVE_NAME(ONE_L1_SEMIGD_DUALOBJ_RAND_SH);
+		SAVE_NAME(ONE_L2_SEMIGD_DUALOBJ_RAND_1000);
+		SAVE_NAME(ONE_L2_SEMIGD_DUALOBJ_RAND_SH);
 		//for two-variable
 		SAVE_NAME(TWO_L1_CY_1000);
 		SAVE_NAME(TWO_L1_RD_1000);
@@ -7695,7 +7951,7 @@ class Solver_type_table
 	static const char * UNDEFINED;
 
 	private:
-		static const size_t init_size=1024;
+		static const size_t init_size=100000;
 		const char * array[init_size];
 }solver_type_table;
 
@@ -7996,9 +8252,9 @@ const char *check_parameter(const problem *prob, const parameter *param)
 		return "p < 0";
 
 	if(param->solver_type != L2R_LR
-		&& param->solver_type != ONE_L2_CY_SH
+		&& param->solver_type != OLD_ONE_L2_CY_SH
 		&& param->solver_type != L2R_L2LOSS_SVC
-		&& param->solver_type != ONE_L1_CY_SH
+		&& param->solver_type != OLD_ONE_L1_CY_SH
 		&& param->solver_type != MCSVM_CS
 		&& param->solver_type != L1R_L2LOSS_SVC
 		&& param->solver_type != L1R_LR
@@ -8007,15 +8263,29 @@ const char *check_parameter(const problem *prob, const parameter *param)
 		&& param->solver_type != L2R_L2LOSS_SVR_DUAL
 		&& param->solver_type != L2R_L1LOSS_SVR_DUAL
 		&& param->solver_type != ONE_L1_CY_1000
+		&& param->solver_type != ONE_L1_CY_SH
 		&& param->solver_type != ONE_L1_RD_1000
 		&& param->solver_type != ONE_L1_RD_SH
 		&& param->solver_type != ONE_L2_CY_1000
+		&& param->solver_type != ONE_L2_CY_SH
 		&& param->solver_type != ONE_L2_RD_1000
 		&& param->solver_type != ONE_L2_RD_SH
 		&& param->solver_type != ONE_L1_SEMIGD_1000
 		&& param->solver_type != ONE_L1_SEMIGD_SH
 		&& param->solver_type != ONE_L2_SEMIGD_1000
 		&& param->solver_type != ONE_L2_SEMIGD_SH
+		&& param->solver_type != ONE_L1_SEMIGD_RAND_1000
+		&& param->solver_type != ONE_L1_SEMIGD_RAND_SH
+		&& param->solver_type != ONE_L2_SEMIGD_RAND_1000
+		&& param->solver_type != ONE_L2_SEMIGD_RAND_SH
+		&& param->solver_type != ONE_L1_SEMIGD_DUALOBJ_1000
+		&& param->solver_type != ONE_L1_SEMIGD_DUALOBJ_SH
+		&& param->solver_type != ONE_L2_SEMIGD_DUALOBJ_1000
+		&& param->solver_type != ONE_L2_SEMIGD_DUALOBJ_SH
+		&& param->solver_type != ONE_L1_SEMIGD_DUALOBJ_RAND_1000
+		&& param->solver_type != ONE_L1_SEMIGD_DUALOBJ_RAND_SH
+		&& param->solver_type != ONE_L2_SEMIGD_DUALOBJ_RAND_1000
+		&& param->solver_type != ONE_L2_SEMIGD_DUALOBJ_RAND_SH
 		&& param->solver_type != TWO_L1_CY_1000
 		&& param->solver_type != TWO_L1_RD_1000
 		&& param->solver_type != TWO_L1_RD_SH

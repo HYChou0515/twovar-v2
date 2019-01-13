@@ -1,0 +1,32 @@
+<<<<<<< HEAD
+# exp-2019-01-10
+=======
+# exp-2019-01-11b
+>>>>>>> hychou-feat-l1l2cyclic-number-and-exp
+# generate log
+./runexp.py run 
+
+<<<<<<< HEAD
+As there's too many redundant cd steps, 
+artificially remove some cd steps after optimal.
+
+90 log files
+
+# generate plot
+As r=0.5 is better than r=0.1 in many data,
+using rlist=[0.5] to plot is appropriate.
+
+./plot.py --logpath ../log/ time
+=======
+20 log files
+
+# generate plot
+We want to show it is because the r is too small 
+to make SemiGD bad for covtype_scale,
+and find out that r=0.6 is enough.
+Comment out r other than 0.6,
+uncomment "ONE_L1_CY_1000" and "ONE_L1_RD_1000"
+to see the result.
+
+./plot.py --logpath ../log/ cd
+>>>>>>> hychou-feat-l1l2cyclic-number-and-exp
