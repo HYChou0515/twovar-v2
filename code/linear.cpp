@@ -930,8 +930,10 @@ Solver::Solver(int _solver_type)
 
 	switch(solver_type)
 	{
-		case ONE_L1_CY_SH:// ONE_L1_CY_SH
-		case ONE_L2_CY_SH:// ONE_L2_CY_SH
+		case OLD_ONE_L1_CY_SH:// original algo 
+		case OLD_ONE_L2_CY_SH:// original algo
+		case ONE_L1_CY_SH:
+		case ONE_L2_CY_SH:
 		case ONE_L1_RD_SH:
 		case ONE_L2_RD_SH:
 		case ONE_L1_CY_1000:
@@ -1004,12 +1006,14 @@ Solver::Solver(int _solver_type)
 #define SAVE_NAME(p) case(p): solver_name = #p; break;
 	switch(solver_type)
 	{
-		SAVE_NAME(ONE_L1_RD_SH);
-		SAVE_NAME(ONE_L2_RD_SH);
-		SAVE_NAME(ONE_L1_CY_1000);
-		SAVE_NAME(ONE_L2_CY_1000);
+		SAVE_NAME(OLD_ONE_L1_CY_SH);
+		SAVE_NAME(OLD_ONE_L2_CY_SH);
 		SAVE_NAME(ONE_L1_CY_SH);
 		SAVE_NAME(ONE_L2_CY_SH);
+		SAVE_NAME(ONE_L1_CY_1000);
+		SAVE_NAME(ONE_L2_CY_1000);
+		SAVE_NAME(ONE_L1_RD_SH);
+		SAVE_NAME(ONE_L2_RD_SH);
 		SAVE_NAME(ONE_L1_RD_1000);
 		SAVE_NAME(ONE_L2_RD_1000);
 		SAVE_NAME(ONE_L1_SEMIGD_1000);
@@ -5764,6 +5768,7 @@ static void onetwo_nobias_update(
 	if(solver_type == ONE_L1_CY_1000 
 	 ||solver_type == ONE_L1_RD_1000 
 	 ||solver_type == ONE_L1_CY_SH
+	 ||solver_type == OLD_ONE_L1_CY_SH
 	 ||solver_type == ONE_L1_RD_SH
 	 ||solver_type == ONE_L1_SEMIGD_1000
 	 ||solver_type == ONE_L1_SEMIGD_SH
@@ -5854,6 +5859,8 @@ static void onetwo_nobias_update(
 			solver.one_cyclic_1000();
 			break;	
 		}
+		case OLD_ONE_L1_CY_SH:
+		case OLD_ONE_L2_CY_SH:
 		case ONE_L1_CY_SH:
 		case ONE_L2_CY_SH:
 		{
@@ -7259,8 +7266,10 @@ static void train_one(const problem *prob, const parameter *param, double *w, do
 		case ONECLASS_L2_SEMIGD_SH:
 			oneclass_update(prob, w, param);
 			break;
-		case ONE_L2_CY_SH: //ONE_L1_CY_SH
-		case ONE_L1_CY_SH: //ONE_L2_CY_SH
+		case OLD_ONE_L1_CY_SH: // original algo
+		case OLD_ONE_L2_CY_SH: // original algo
+		case ONE_L1_CY_SH:
+		case ONE_L2_CY_SH:
 		case ONE_L1_CY_1000:
 		case ONE_L2_CY_1000:
 		case ONE_L1_RD_1000:
@@ -7851,9 +7860,9 @@ class Solver_type_table
 		}
 #define SAVE_NAME(p) array[p] = #p;
 		SAVE_NAME(L2R_LR);
-		SAVE_NAME(ONE_L2_CY_SH);
+		SAVE_NAME(OLD_ONE_L2_CY_SH);
 		SAVE_NAME(L2R_L2LOSS_SVC);
-		SAVE_NAME(ONE_L1_CY_SH);
+		SAVE_NAME(OLD_ONE_L1_CY_SH);
 		SAVE_NAME(MCSVM_CS);
 		SAVE_NAME(L1R_L2LOSS_SVC);
 		SAVE_NAME(L1R_LR);
@@ -7863,9 +7872,11 @@ class Solver_type_table
 		SAVE_NAME(L2R_L1LOSS_SVR_DUAL);
 		//for one-variable
 		SAVE_NAME(ONE_L1_CY_1000);
+		SAVE_NAME(ONE_L1_CY_SH);
 		SAVE_NAME(ONE_L1_RD_1000);
 		SAVE_NAME(ONE_L1_RD_SH);
 		SAVE_NAME(ONE_L2_CY_1000);
+		SAVE_NAME(ONE_L2_CY_SH);
 		SAVE_NAME(ONE_L2_RD_1000);
 		SAVE_NAME(ONE_L2_RD_SH);
 		SAVE_NAME(ONE_L1_SEMIGD_1000);
@@ -8241,9 +8252,9 @@ const char *check_parameter(const problem *prob, const parameter *param)
 		return "p < 0";
 
 	if(param->solver_type != L2R_LR
-		&& param->solver_type != ONE_L2_CY_SH
+		&& param->solver_type != OLD_ONE_L2_CY_SH
 		&& param->solver_type != L2R_L2LOSS_SVC
-		&& param->solver_type != ONE_L1_CY_SH
+		&& param->solver_type != OLD_ONE_L1_CY_SH
 		&& param->solver_type != MCSVM_CS
 		&& param->solver_type != L1R_L2LOSS_SVC
 		&& param->solver_type != L1R_LR
@@ -8252,9 +8263,11 @@ const char *check_parameter(const problem *prob, const parameter *param)
 		&& param->solver_type != L2R_L2LOSS_SVR_DUAL
 		&& param->solver_type != L2R_L1LOSS_SVR_DUAL
 		&& param->solver_type != ONE_L1_CY_1000
+		&& param->solver_type != ONE_L1_CY_SH
 		&& param->solver_type != ONE_L1_RD_1000
 		&& param->solver_type != ONE_L1_RD_SH
 		&& param->solver_type != ONE_L2_CY_1000
+		&& param->solver_type != ONE_L2_CY_SH
 		&& param->solver_type != ONE_L2_RD_1000
 		&& param->solver_type != ONE_L2_RD_SH
 		&& param->solver_type != ONE_L1_SEMIGD_1000

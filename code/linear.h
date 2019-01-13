@@ -21,9 +21,9 @@ struct problem
 
 enum { 
 	L2R_LR, 
-	ONE_L2_CY_SH,
+	OLD_ONE_L2_CY_SH,
 	L2R_L2LOSS_SVC, 
-	ONE_L1_CY_SH,
+	OLD_ONE_L1_CY_SH,
 	MCSVM_CS,
 	L1R_L2LOSS_SVC,
 	L1R_LR,
@@ -39,7 +39,9 @@ enum {
 	// e: 1000 iter or shrink
 	//for one-variable
 	ONE_L1_CY_1000 = 20111,
+	ONE_L1_CY_SH = 20112,
 	ONE_L2_CY_1000 = 20121,
+	ONE_L2_CY_SH = 20122,
 
 	ONE_L1_RD_1000 = 20211,
 	ONE_L1_RD_SH = 20212,

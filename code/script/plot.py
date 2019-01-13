@@ -94,6 +94,7 @@ class Plotter(object):
 						linewidth=3, markersize=6, markevery=0.1)
 				clridx += 1
 		self.setup_fig()
+		plt.close(self.fig)
 
 	def get_rlist(self, tp):
 		if is_semigd(tp):
@@ -127,11 +128,16 @@ class Plotter(object):
 
 	def get_minimal(self, tp):
 		if is_biasobj(tp):
-			return dobj["bias{}c{}".format(self.loss,self.c)][self.dstr]
+			dobj_key = "bias{}c{}".format(self.loss,self.c)
 		elif is_oneclass(tp):
-			return dobj["one{}c{}".format(self.loss,self.c)][self.dstr]
+			dobj_key = "one{}c{}".format(self.loss,self.c)
 		else:
-			return dobj["{}c{}".format(self.loss,self.c)][self.dstr]
+			dobj_key = "{}c{}".format(self.loss,self.c)
+		try:
+			return dobj[dobj_key][self.dstr]
+		except KeyError:
+			print("\"" + self.dstr + "\" is not in " + dobj_key)
+			raise KeyError
 
 	def setup_fig(self):
 		plt.legend(loc=0)

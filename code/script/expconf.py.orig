@@ -1,7 +1,11 @@
 from liblrconf import *
 
 logfolder='log_notime'
+<<<<<<< HEAD
+process_num=8
+=======
 process_num=96
+>>>>>>> hychou-feat-l1l2cyclic-number-and-exp
 
 runtype = [
 	"ONE_L1_SEMIGD_1000",
@@ -20,9 +24,16 @@ rlist = [
 	#1,0.99,0.98,0.97,0.96,0.95,0.94,0.93,0.92,0.91,0.9,0.8,0.7,0.6,0.5,0.1,0.001
 	#1,0.95,0.9,0.5,0.1,0.01,0.001
 	#1,2,4,8,16,32
+<<<<<<< HEAD
+	0.1,
+	0.3,
+	0.5,
+	#0.9,0.99
+=======
 	#0.1, 0.3,
 	#0.5,
 	0.6,0.7,0.8,0.9,0.99
+>>>>>>> hychou-feat-l1l2cyclic-number-and-exp
 	#1,0.95,0.9,0.5,0.1,0.001
 	#,0.5
 	#0.2, 0.1

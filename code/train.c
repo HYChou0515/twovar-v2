@@ -52,9 +52,9 @@ void exit_with_help()
 	"-C : find parameter C (only for -s 0 and 2)\n"
 	"-q : quiet mode (no outputs)\n"
 	"L2R_LR, \n"
-	"ONE_L2_CY_SH,\n"
+	"OLD_ONE_L2_CY_SH,\n"
 	"L2R_L2LOSS_SVC, \n"
-	"ONE_L1_CY_SH,\n"
+	"OLD_ONE_L1_CY_SH,\n"
 	"MCSVM_CS,\n"
 	"L1R_L2LOSS_SVC,\n"
 	"L1R_LR,\n"
@@ -70,7 +70,9 @@ void exit_with_help()
 	"// e: 1000 iter or shrink\n"
 	"//for one-variable\n"
 	"ONE_L1_CY_1000 = 20111,\n"
+	"ONE_L1_CY_SH = 20112,\n"
 	"ONE_L2_CY_1000 = 20121,\n"
+	"ONE_L2_CY_SH = 20122,\n"
 	"ONE_L1_RD_1000 = 20211,\n"
 	"ONE_L1_RD_SH = 20212,\n"
 	"ONE_L2_RD_1000 = 20221,\n"
@@ -428,8 +430,8 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 			case L2R_L2LOSS_SVR:
 				param.eps = 0.001;
 				break;
-			case ONE_L2_CY_SH:
-			case ONE_L1_CY_SH:
+			case OLD_ONE_L2_CY_SH:
+			case OLD_ONE_L1_CY_SH:
 			case MCSVM_CS:
 			case L2R_LR_DUAL:
 				param.eps = 0.1;
@@ -442,7 +444,9 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 			case L2R_L2LOSS_SVR_DUAL:
 			//for L1L2
 			case ONE_L1_CY_1000:
+			case ONE_L1_CY_SH:
 			case ONE_L2_CY_1000:
+			case ONE_L2_CY_SH:
 			case ONE_L1_RD_1000:
 			case ONE_L2_RD_1000:
 			case ONE_L1_RD_SH:
