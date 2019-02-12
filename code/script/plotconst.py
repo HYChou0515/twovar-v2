@@ -1,37 +1,69 @@
 dobj = {
-	"oneL2c0.1":{
-	"a9a": 94360681.2818033695120,
-	"ijcnn1": 6412124.210081208359921,
-	"ijcnn1": 6412124.2100812522,
-	"news20.binary": 229824.45181480217973,
-	"rcv1_train.binary": 55051.248030351656,
-	"real-sim": 282831.52505727799,
-	"yahoojp": 2867829.835220990236848,
-	},
 	"oneL1c0.2":{
-	"a9a": 94360681.2818033695120,
-	"ijcnn1": 6412124.210081208359921,
-	"ijcnn1": 6412124.2100812522,
-	"news20.binary": 229824.45181480217973,
-	"rcv1_train.binary": 55051.248030351656,
-	"real-sim": 282831.52505727799,
-	"yahoojp": 2867829.835220990236848,
+	"a9a": 94360681.2818032,
+	"covtype.libsvm.binary.scale": 15998261919.4817,
+	"heart_scale": 569.605594688184,
+	"ijcnn1": 6412124.2100812,
+	"news20.binary": 229824.451814291,
+	"rcv1_train.binary": 55051.2480303512,
+	"real-sim": 282831.525057276,
+	"yahoojp": 2867829.83522082,
+	"yahookr": 57428996.6299343,
 	},
 	"oneL1c0.1":{
-	"a9a": 21622408.022816251963376,
+	"covtype.libsvm.binary.scale": 3759261358.04078,
+	"a9a": 21622408.0228162,
 	"ijcnn1": 1569167.1684923134,
-	"news20.binary": 41283.88197281755,
+	"news20.binary": 41283.8819728067,
 	"rcv1_train.binary": 11331.28987903422420,
-	"real-sim": 47167.016173025476745,
-	"yahoojp": 197132.995628784934521,
+	"real-sim": 47167.0161730252,
+	"yahoojp": 197132.995628771,
+	"yahookr": 5086930.16632071,
+	"heart_scale": 70.8845085605538,
 	},
 	"oneL1c0.01":{
-	"a9a": 180123.032132618769533,
-	"ijcnn1": 15027.123809602508,
-	"news20.binary": 101.48107272922547,
-	"rcv1_train.binary": 97.713305188030290,
-	"real-sim": 205.475956164127350,
-	"yahoojp": 442.799337673292710,
+	"a9a": 180123.032132617,
+	"covtype.libsvm.binary.scale": 32739180.6283298,
+	"heart_scale": 0.299259595544861,
+	"ijcnn1": 15027.1238094813,
+	"news20.binary": 101.481072729142,
+	"rcv1_train.binary": 97.713305188029,
+	"real-sim": 205.475956164124,
+	"yahoojp": 442.799337672646,
+	"yahookr": 4224.80646945933,
+	},
+	"oneL2c0.2":{
+	"a9a": 65823033.8654497,
+	"covtype.libsvm.binary.scale": 10308228606.7728,
+	"heart_scale": 119.703838217422,
+	"ijcnn1": 5908661.26178342,
+	"news20.binary": 6.9983436381368e-25,
+	"rcv1_train.binary": 39085.3220752111,
+	"real-sim": 1.03192699510598e-24,
+	"yahoojp": 177119.735069133,
+	"yahookr": 1551229.42836906,
+	},
+	"oneL2c0.1":{
+	"a9a": 16455758.4663624,
+	"ijcnn1": 1477165.31544591,
+	"news20.binary": 1.51434914721828e-25,
+	"rcv1_train.binary": 9771.33051880289,
+	"real-sim": 1.46593096230421e-25,
+	"yahoojp": 44279.9337672745,
+	"yahookr": 387807.357091962,
+	"covtype.libsvm.binary.scale": 2577057151.69264,
+	"heart_scale": 29.9259595543602,
+	},
+	"oneL2c0.01":{
+	"a9a": 164557.584663624,
+	"covtype.libsvm.binary.scale": 25770571.5169239,
+	"heart_scale": 0.299259595544861,
+	"ijcnn1": 14771.6531544591,
+	"news20.binary": 2.0401849695585e-28,
+	"rcv1_train.binary": 97.7133051880297,
+	"real-sim": 1.95271488542202e-28,
+	"yahoojp": 442.799337672587,
+	"yahookr": 3878.07357092254,
 	},
 	"L1c8192":{
 	"a9a": -93532332.6676734685897827,
@@ -388,17 +420,17 @@ dobj = {
 	"biasL2c1":{
 	"breast-cancer_scale": -59.43064203128018,
 	"australian_scale": -270.2818072480945,
-	"heart_scale": -114.9144550166213,
+	"heart_scale": -114.914455016622,
 	"a1a": -637.7516571562145,
-	"a9a": -13742.30343972653,
+	"a9a": -13742.3034397268,
 	"ijcnn1": -11021.42356208828,
-	"news20.binary": -1943.053582171131,
-	"rcv1_train.binary": -1380.777284961636,
-	"real-sim": -4344.395126381159,
-	"yahoojp": -23717.47272737786,
+	"news20.binary": -1943.05358217286,
+	"rcv1_train.binary": -1380.77728496165,
+	"real-sim": -4344.3951263812,
+	"yahoojp": -23717.4727273967,
 	"covtype.libsvm.binary":-4354.712314,
 	"yahookr": -139947.251207661116496,
-	"covtype.libsvm.binary.scale": -403422.79422253957
+	"covtype.libsvm.binary.scale": -403422.794222552,
 	},
 	"biasL2c2":{
 	"a9a": -27481.613283583359589,
@@ -429,15 +461,16 @@ dobj = {
 	"real-sim": -16805.424806433442427,
 	},
 	"biasL2c32":{
+	"covtype.libsvm.binary.scale": -12908825.6,
 	"breast-cancer_scale": -1879.836599213785,
 	"australian_scale": -8502.418933943414,
-	"heart_scale": -3656.426734390486,
+	"heart_scale": -3656.42773439049,
 	"a1a": -20057.68582954491,
 	"a9a": -439655.9494012388,
-	"ijcnn1": -352116.9639732051,
-	"news20.binary": -4723.837069179705,
-	"rcv1_train.binary": -4140.82075436665,
-	"real-sim": -24053.94159888949,
+	"ijcnn1": -352116.963973211,
+	"news20.binary": -4723.83706918279,
+	"rcv1_train.binary": -4140.82075436672,
+	"real-sim": -24053.9415988898,
 	"yahoojp":-173345.5089274935,
 	},
 	"biasL2c64":{
@@ -460,29 +493,32 @@ dobj = {
 	},
 	"biasL2c0.03125":
 	{
+	"covtype.libsvm.binary.scale":-12627.5518355014,
 	"breast-cancer_scale": -2.295708688115122,
 	"australian_scale": -9.024280329477792,
-	"heart_scale": -3.977967876909248,
+	"heart_scale": -3.97796787690925,
 	"a1a": -21.76590059953335,
-	"a9a": -431.2070362905467,
-	"ijcnn1": -359.1098274363673,
-	"news20.binary": -330.7927242777877,
-	"rcv1_train.binary": -219.4214901785117,
-	"real-sim": -541.4970983808082,
-	"yahoojp": -1238.511389715671,
+	"a9a": -431.207036290551,
+	"ijcnn1": -359.109827436373,
+	"news20.binary": -330.792724277953,
+	"rcv1_train.binary": -219.421490178513,
+	"real-sim": -541.497098380812,
+	"yahoojp": -1238.51138971578,
 	},
 	"biasL1c0.03125":
 	{
+	"covtype.libsvm.binary.scale":-10658.8,
 	"breast-cancer_scale": -2.276977998997026,
 	"australian_scale": -6.749138721482132,
 	"heart_scale": -3.720906294186185,
 	"a1a": -19.86103562388033,
 	"a9a": -362.411649520055,
-	"ijcnn1": -289.1172415285611,
-	"news20.binary": -406.8329557870090,
-	"rcv1_train.binary": -286.5870788920642,
-	"real-sim": -676.9317624201007,
+	"ijcnn1": -289.117241528562,
+	"news20.binary": -406.832955787075,
+	"rcv1_train.binary": -286.587078892065,
+	"real-sim": -676.931762420104,
 	"yahoojp": -973.7819315032502,
+	"yahookr": -7175.065,
 	},
 	"biasL1c0.25":{
 	"a9a": -2864.449193292481596,
@@ -499,15 +535,16 @@ dobj = {
 	"real-sim": -3656.116728320576385,
 	},
 	"biasL1c1":{
+	"covtype.libsvm.binary.scale":-337938,
 	"breast-cancer_scale": -46.00399013664471,
 	"australian_scale": -199.6504829745745,
-	"heart_scale": -92.47337462016957,
+	"heart_scale": -92.4733746201697,
 	"a1a": -540.5750672979575,
 	"a9a": -11433.387236617831149,
 	"ijcnn1": -8590.159909824076749,
-	"news20.binary": -2561.182971907652732,
+	"news20.binary": -2561.18297190815,
 	"rcv1_train.binary": -1745.667985918439186,
-	"real-sim": -5345.122136598187353,
+	"real-sim": -5345.12213737126,
 	"yahoojp":-23351.524127158492774,
 	"yahookr":-143389.304898,
 	"covtype.libsvm.binary": -4383.23183543,
@@ -530,16 +567,18 @@ dobj = {
 	},
 	"biasL1c32":
 	{
+	"covtype.libsvm.binary.scale":-10799000,
 	"breast-cancer_scale": -1408.737046024731,
 	"australian_scale": -6356.178279425147,
 	"heart_scale": -3656.427734390489,
 	"a1a": -16588.37269656481,
 	"a9a" : -365534.5682798115,
 	"ijcnn1" : -273293.1496785236,
-	"rcv1_train.binary": -4313.039575816452,
-	"news20.binary": -4522.361358841757,
+	"rcv1_train.binary": -4313.03957581649,
+	"news20.binary": -4522.36135884592,
 	"real-sim":-24858.86588074639,
 	"yahoojp":-172087.6931881657,
+	"yahookr":-1433449.62823562,
 	},
 	"biasL1c128":{
 	"breast-cancer_scale": -5628.278659012924,
@@ -659,4 +698,58 @@ legend = {
 	"pass": "Async-CD",
 	"ori": "LIBLINEAR"
 }
+
+from subprocess import Popen, PIPE
+from liblrconf import *
+import sys, os
+LOG_SUMMARY_LINES = 10
+class LogInfo(object):
+	def __init__(self, filepath):
+		filename = os.path.basename(filepath)
+		print(filename)
+		self.data = "_s".join(filename.split('_s')[:-1])
+		tokens = filename.split('_s')[-1].split('_')
+		self.stype = int(tokens[0])
+
+		self.c = None
+		self.e = None
+		self.r = None
+		self.n = None
+		for i in range(1, len(tokens)):
+			token = tokens[i]
+			if token[0] == 'c':
+				self.c = float(token[1:])
+			if token[0] == 'e':
+				self.e = float(token[1:])
+			if token[0] == 'r':
+				self.r = float(token[1:])
+			if token[0] == 'n':
+				self.n = float(token[1:])
+
+		self.loss = "L1" if is_L1(self.stype) else "L2"
+		def true_and_notNone(a, b):
+			if (a and b is not None) or ((not a) and b is None):
+				return True
+			return False
+		if not (
+				true_and_notNone(is_oneclass(self.stype), self.n) or \
+				true_and_notNone(is_semigd(self.stype), self.r) \
+			):
+			raise Exception('log name not good: '+filename)
+	def get_dobj_key(self):
+		if is_biasobj(self.stype):
+			dobj_key = "bias%sc%g" % (self.loss, self.c)
+		elif is_oneclass(self.stype):
+			dobj_key = "one%sc%g" % (self.loss, self.n)
+		else:
+			dobj_key = "%sc%g" % (self.loss, self.c)
+		return dobj_key
+
+	def get_obj_minimal(self):
+		dobj_key = self.get_dobj_key()
+		try:
+			return float(dobj[dobj_key][self.data])
+		except KeyError:
+			print("\"" + self.data + "\" is not in " + dobj_key)
+			raise KeyError
 

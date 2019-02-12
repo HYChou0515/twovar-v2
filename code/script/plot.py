@@ -32,6 +32,18 @@ def expo_slice_avg(l,base):
 		length = length*base
 	return ret
 
+def exponent_of(x):
+	# return the exponent of x
+	# input +-0.3, then return +-0.1
+	# input 0.01, then return 0.01
+	if x==0:
+		return 0
+	if x > 0:
+		flag=1
+	else:
+		flag=-1
+	return flag * 10**int(("%e"%x).split('e')[-1])
+
 
 class Plotter(object):
 	def __init__(self, stype, loss, dataset, clist, eps, args):
@@ -46,7 +58,6 @@ class Plotter(object):
 		matplotlib.rc('xtick', labelsize=20)
 		matplotlib.rc('ytick', labelsize=20)
 
-		self.MIN_SQUASH = MIN_SQUASH # the min value of a curve's width / figure's width
 		self.YLIM = YLIM # the range of Y (this value is set for relval)
 
 	def draw_all(self):
@@ -147,9 +158,7 @@ class CdPlotter(Plotter):
 	PLOTTYPE = "cd"
 	XLIM = (0, 1e12)
 	def init_new_fig(self):
-		self.min_y = 10
-		self.min_x = CdPlotter.XLIM[1] # min of max of x, for CdPlotter, it's the min of CDsteps
-		self.max_x = CdPlotter.XLIM[0] # max of max of x, for CdPlotter, it's the max of CDsteps
+		self.xy_range = []
 	def get_xlim(self, tp):
 		key = "s%d_c%g_iter" % (tp, self.c)
 		if key in dlim.keys():
@@ -174,6 +183,10 @@ class CdPlotter(Plotter):
 		CDsteps = 0
 		minimal = self.get_minimal(tp)
 
+		min_x = None
+		max_x = None
+		max_y = 0
+		min_y = 1e10
 		for line in logfile:
 			line = line.split(' ')
 			if 'iter' in line and 'obj' in line:
@@ -186,21 +199,28 @@ class CdPlotter(Plotter):
 					break;
 				ys.append(relval)
 				xs.append(CDsteps)
-				self.min_y = min(relval,self.min_y)
+				if min_x is None:
+					min_x = CDsteps
+				max_x = CDsteps
+				min_y = min(relval,min_y)
+				max_y = max(relval,max_y)
 				#print('CDsteps: %.16g\t relval: %.16g' % (CDsteps, relval))
-		self.min_x = min(CDsteps,self.min_x)
-		self.max_x = max(CDsteps,self.max_x)
+		xy_range = (min_x, max_x, min_y, max_y)
+		if all(xy_range):
+			self.xy_range.append(xy_range)
+		print("xy_range={}".format(xy_range))
 		logfile.close()
 		return ys, xs
 	def setup_fig(self):
-		plt.ylim(self.min_y,1)
-		plt.xlim(0, min(self.min_x / self.MIN_SQUASH, self.max_x))
-		if(self.min_y > 1.0e-2):
+		min_xs, max_xs, min_ys, max_ys = zip(*self.xy_range) # list of tuples to tuple of lists
+		plt.ylim(min(min_ys)/Y_BUFFER,max(max_ys)*Y_BUFFER)
+		plt.xlim(0, min(max(max_xs), max(min_xs)+min(max_xs)))
+		if(min(min_ys) > 1.0e-2):
 			subsyy = [2,3,4,5,7]
 		else:
 			subsyy = []
 		plt.yscale('log', subsy=subsyy, figure=self.fig)
-		if(self.min_y > 1.0e-2):
+		if(min(min_ys) > 1.0e-2):
 			plt.tick_params(axis='y', which='minor', labelsize=14)
 			plt.gca().yaxis.set_minor_formatter(FuncFormatter(format_label))
 		else:
@@ -211,11 +231,9 @@ class CdPlotter(Plotter):
 
 class TimePlotter(Plotter):
 	PLOTTYPE = "time"
-	XLIM = (0, 100)
+	XLIM = (0, 1e9)
 	def init_new_fig(self):
-		self.min_y = 10
-		self.min_x = TimePlotter.XLIM[1] # min of max of x, for TimePlotter, it's the min of total time
-		self.max_x = TimePlotter.XLIM[0] # max of max of x, for TimePlotter, it's the max of total time
+		self.xy_range = []
 	def get_xlim(self, tp):
 		key = "s%d_c%g_shrink" % (tp, self.c)
 		if key in dlim.keys() and self.dstr in dlim[key]:
@@ -236,8 +254,11 @@ class TimePlotter(Plotter):
 		ys = []
 		xs = []
 		minimal = self.get_minimal(tp)
-		xlim = self.get_xlim(tp)
 
+		min_x = None
+		max_x = None
+		max_y = 0
+		min_y = 1e10
 		for line in logfile:
 			line = line.split(' ')
 			if 't' in line and'obj' in line:
@@ -248,25 +269,30 @@ class TimePlotter(Plotter):
 					continue
 				if relval < self.YLIM[0] or t > TimePlotter.XLIM[1]:
 					break;
-				if t > xlim:
-					break
 				xs.append(t)
 				ys.append(relval)
-				self.min_y = min(relval,self.min_y)
+				if min_x is None:
+					min_x = t
+				max_x = t
+				min_y = min(relval,min_y)
+				max_y = max(relval,max_y)
 				#print('t: %.16g\t relval: %.16g' % (t, relval))
-		self.min_x = min(t,self.min_x)
-		self.max_x = max(t,self.max_x)
+		xy_range = (min_x, max_x, min_y, max_y)
+		if all(xy_range):
+			self.xy_range.append(xy_range)
+		print("xy_range={}".format(xy_range))
 		logfile.close()
 		return ys, xs
 	def setup_fig(self):
-		plt.ylim(self.min_y,1)
-		plt.xlim(0, min(self.min_x / self.MIN_SQUASH, self.max_x))
-		if(self.min_y > 1.0e-2):
+		min_xs, max_xs, min_ys, max_ys = zip(*self.xy_range) # list of tuples to tuple of lists
+		plt.ylim(min(min_ys)/Y_BUFFER,max(max_ys)*Y_BUFFER)
+		plt.xlim(0, min(max(max_xs), max(min_xs)+min(max_xs)))
+		if(min(min_ys) > 1.0e-2):
 			subsyy = [2,3,4,5,7]
 		else:
 			subsyy = []
 		plt.yscale('log', subsy=subsyy, figure=self.fig)
-		if(self.min_y > 1.0e-2):
+		if(min(min_ys) > 1.0e-2):
 			plt.tick_params(axis='y', which='minor', labelsize=14)
 			plt.gca().yaxis.set_minor_formatter(FuncFormatter(format_label))
 		else:
@@ -407,4 +433,6 @@ def main():
 	plotter.draw_all()
 
 if __name__ == '__main__':
+	assert sys.version_info[:3] == (2,7,12)
+	assert matplotlib.__version__ == '1.5.3'
 	main()

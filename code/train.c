@@ -51,6 +51,9 @@ void exit_with_help()
 	"-v n: n-fold cross validation mode\n"
 	"-C : find parameter C (only for -s 0 and 2)\n"
 	"-q : quiet mode (no outputs)\n"
+	"-m : max iteration\n"
+	"-t : timeout (in second)\n"
+	"-o : minimum objective value\n"
 	"L2R_LR, \n"
 	"OLD_ONE_L2_CY_SH,\n"
 	"L2R_L2LOSS_SVC, \n"
@@ -291,6 +294,7 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 	param.r = 1;
 	param.max_iter = 1000;
 	param.timeout = 0;
+	param.opt_val = -INF;
 	param.nu = 0.1;
 	param.nr_weight = 0;
 	param.weight_label = NULL;
@@ -312,6 +316,10 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 		{
 			case 'm':
 				param.max_iter = atoi(argv[i]);
+				break;
+
+			case 'o':
+				param.opt_val = atof(argv[i]);
 				break;
 
 			case 't':
