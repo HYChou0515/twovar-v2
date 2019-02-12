@@ -30,7 +30,7 @@ template <class S, class T> static inline void clone(T*& dst, S* src, int n)
 static void print_string_stdout(const char *s)
 {
 	fputs(s,stdout);
-	//fflush(stdout);
+	fflush(stdout);
 }
 static void print_null(const char *s) {}
 
@@ -810,6 +810,13 @@ void Solver_MCSVM_CS::Solve(double *w)
 		break;\
 	}\
 }
+#define EXIT_IF_OPTIMAL(obj)\
+{\
+	if (obj < opt_val)\
+	{\
+		break;\
+	}\
+}
 class Solver
 {
 public:
@@ -831,6 +838,7 @@ public:
 	int *index;
 	int max_iter;
 	int timeout;
+	double opt_val;
 
 	// logged variables
 	int iter;
@@ -1240,6 +1248,7 @@ void Solver::summary()
 	info("solver = %s\n", solver_name);
 	info("max_iter = %d\n", max_iter);
 	info("timeout = %d\n", timeout);
+	info("opt_val = %d\n", opt_val);
 	info("obj = %.16g rho = %.16g\n", calculate_obj(), calculate_rho());
 
 	countSVs();
@@ -1372,6 +1381,7 @@ void Solver::one_random_shrink()
 		if (PGmin_old >= 0)
 			PGmin_old = -INF;
 		EXIT_IF_TIMEOUT(duration);
+		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
 }
@@ -1418,6 +1428,7 @@ void Solver::one_random_1000()
 		duration += clock() - start;
 		log_message();
 		EXIT_IF_TIMEOUT(duration);
+		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
 }
@@ -1519,6 +1530,7 @@ void Solver::one_cyclic_shrink()
 		if (PGmin_old >= 0)
 			PGmin_old = -INF;
 		EXIT_IF_TIMEOUT(duration);
+		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
 }
@@ -1564,6 +1576,7 @@ void Solver::one_cyclic_1000()
 		duration += clock() -start;
 		log_message();
 		EXIT_IF_TIMEOUT(duration);
+		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
 }
@@ -1594,6 +1607,7 @@ void Solver::one_semigd_1000()
 		success_pair = 0;
 		nr_pos_y = 0;
 		nr_neg_y = 0;
+		// TODO: shuffle should not be in semigd
 		for (i=0; i<active_size; i++)
 		{
 			int j = i+rand()%(active_size-i);
@@ -1697,6 +1711,7 @@ void Solver::one_semigd_1000()
 		duration += clock() - start;
 		log_message();
 		EXIT_IF_TIMEOUT(duration);
+		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
 }
@@ -1812,6 +1827,7 @@ void Solver::one_semigd_dualobj_1000()
 		duration += clock() - start;
 		log_message();
 		EXIT_IF_TIMEOUT(duration);
+		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
 }
@@ -2000,6 +2016,7 @@ void Solver::two_semicyclic_1000()
 		duration += clock() - start;
 		log_message();
 		EXIT_IF_TIMEOUT(duration);
+		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
 }
@@ -2255,6 +2272,7 @@ void Solver::two_random_shrink2()
 		if(PGmin_old >= 0)
 			PGmin_old = -INF;
 		EXIT_IF_TIMEOUT(duration);
+		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
 }
@@ -2515,6 +2533,7 @@ void Solver::two_random_shrink()
 		if(PGmin_old >= 0)
 			PGmin_old = -INF;
 		EXIT_IF_TIMEOUT(duration);
+		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
 }
@@ -2708,6 +2727,7 @@ void Solver::two_cyclic_1000()
 		duration += clock() - start;
 		log_message();
 		EXIT_IF_TIMEOUT(duration);
+		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
 }
@@ -2885,6 +2905,7 @@ void Solver::two_semirandom2_1000()
 		duration += clock() - start;
 		log_message();
 		EXIT_IF_TIMEOUT(duration);
+		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
 }
@@ -3063,6 +3084,7 @@ void Solver::two_semirandom1_1000()
 		duration += clock() - start;
 		log_message();
 		EXIT_IF_TIMEOUT(duration);
+		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
 }
@@ -3212,6 +3234,7 @@ void Solver::two_random_1000()
 		duration += clock() - start;
 		log_message();
 		EXIT_IF_TIMEOUT(duration);
+		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
 }
@@ -3723,6 +3746,7 @@ void Solver::bias_semigd_shrink()
 		duration += clock() - start;
 		log_message();
 		EXIT_IF_TIMEOUT(duration);
+		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();	
 	delete [] alpha_status;
@@ -3760,9 +3784,10 @@ void Solver::bias_semigd_1000()
 
 		//TODO: rlist as number not ratio
 		//update_size = int(active_size*ratio_update);
-		update_size = int(ratio_update/2);
-		if(update_size < 1)
-			update_size = 1;
+		if(ratio_update < 2)
+			update_size = int(active_size*ratio_update/2);
+		else
+			update_size = int(ratio_update/2);
 
 		for(i=0; i<active_size; i++)
 		{
@@ -3998,6 +4023,7 @@ void Solver::bias_semigd_1000()
 		duration += clock() - start;
 		log_message();
 		EXIT_IF_TIMEOUT(duration);
+		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();	
 	delete [] alpha_status;
@@ -4273,6 +4299,7 @@ void Solver::bias_random_shrink()
 		duration += clock() - start;
 		log_message();
 		EXIT_IF_TIMEOUT(duration);
+		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
 	delete [] alpha_status;
@@ -4451,6 +4478,7 @@ void Solver::bias_random_1000()
 		duration += clock() - start;
 		log_message();
 		EXIT_IF_TIMEOUT(duration);
+		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
 	delete [] alpha_status;
@@ -4669,6 +4697,7 @@ void Solver::oneclass_random_shrink()
 			Gmin_old = Gmin;
 		}
 		EXIT_IF_TIMEOUT(duration);
+		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
 }
@@ -4802,6 +4831,7 @@ void Solver::oneclass_random_1000()
 		duration += clock() - start;
 		log_message();
 		EXIT_IF_TIMEOUT(duration);
+		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
 }
@@ -4940,6 +4970,7 @@ void Solver::oneclass_first_1000()
 		duration += clock() - start;
 		log_message();
 		EXIT_IF_TIMEOUT(duration);
+		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
 	delete [] G;
@@ -5089,6 +5120,7 @@ void Solver::oneclass_second_1000()
 		duration += clock() - start;
 		log_message();
 		EXIT_IF_TIMEOUT(duration);
+		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
 	delete [] G;
@@ -5284,6 +5316,7 @@ void Solver::oneclass_semigd_1000()
 		log_message();
 		success_all += success_pair;
 		EXIT_IF_TIMEOUT(duration);
+		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
 	delete [] Max_order_index;
@@ -5536,6 +5569,7 @@ void Solver::oneclass_semigd_shrink()
 		log_message();
 		success_all += success_pair;
 		EXIT_IF_TIMEOUT(duration);
+		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
 	delete [] Max_order_index;
@@ -5560,11 +5594,11 @@ static void oneclass_update(
 	enum {LOWER_BOUND, UPPER_BOUND, FREE};
 
 	if(param->solver_type == ONECLASS_L1_RD_1000
-	|| param->solver_type == ONECLASS_L1_SEMIGD_1000
 	|| param->solver_type == ONECLASS_L1_RD_SH
-	|| param->solver_type == ONECLASS_L1_SECOND_1000
+	|| param->solver_type == ONECLASS_L1_SEMIGD_1000
+	|| param->solver_type == ONECLASS_L1_SEMIGD_SH
 	|| param->solver_type == ONECLASS_L1_FIRST_1000
-	|| param->solver_type == ONECLASS_L1_SEMIGD_SH)
+	|| param->solver_type == ONECLASS_L1_SECOND_1000)
 	{
 		diag[0] = 0;
 		diag[2] = 0;
@@ -5608,6 +5642,7 @@ static void oneclass_update(
 	solver.ratio_update = param->r;
 	solver.max_iter = param->max_iter;
 	solver.timeout = param->timeout;
+	solver.opt_val = param->opt_val;
 	switch(solver_type)
 	{
 		
@@ -5715,6 +5750,7 @@ static void two_bias_update(
 	solver.ratio_update = param->r;
 	solver.max_iter = param->max_iter;
 	solver.timeout = param->timeout;
+	solver.opt_val = param->opt_val;
 	switch(solver_type)
 	{
 		case BIAS_L1_RD_SH:
@@ -5845,6 +5881,7 @@ static void onetwo_nobias_update(
 	solver.upper_bound = upper_bound;
 	solver.max_iter = param->max_iter;
 	solver.timeout = param->timeout;
+	solver.opt_val = param->opt_val;
 	switch(solver_type)
 	{
 		case ONE_L1_RD_SH:
