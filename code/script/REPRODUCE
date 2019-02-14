@@ -1,16 +1,33 @@
-# exp-2019-01-11b
+# exp-2019-02-16
 # generate log
 ./runexp.py print
-bash out_run.bash
+parallel --jobs 8 < out_run.bash
 
-20 log files
+540 log files
 
 # generate plot
-We want to show it is because the r is too small 
-to make SemiGD bad for covtype_scale,
-and find out that r=0.6 is enough.
-Comment out r other than 0.6,
-uncomment "ONE_L1_CY_1000" and "ONE_L1_RD_1000"
-to see the result.
+As expconf.py contains oneclass/bias with l1/l2 loss
+and plot.py require same category of logs at a time,
+you need to do the 4 groups seperately:
+
+-------------------------
+"ONECLASS_L1_RD_1000",
+"ONECLASS_L1_SEMIGD_1000",
+"ONECLASS_L1_FIRST_1000",
+"ONECLASS_L1_SECOND_1000",
+-------------------------
+"ONECLASS_L2_RD_1000",
+"ONECLASS_L2_SEMIGD_1000",
+"ONECLASS_L2_FIRST_1000",
+"ONECLASS_L2_SECOND_1000",
+-------------------------
+"BIAS_L1_RD_1000",
+"BIAS_L1_SEMIGD_1000",
+-------------------------
+"BIAS_L2_RD_1000",
+"BIAS_L2_SEMIGD_1000",
+-------------------------
+
+For a group, use
 
 ./plot.py --logpath ../log/ cd

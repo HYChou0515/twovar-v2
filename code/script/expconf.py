@@ -9,12 +9,12 @@ runtype = [
 	"ONECLASS_L2_SEMIGD_1000",
 	"ONECLASS_L2_FIRST_1000",
 	"ONECLASS_L2_SECOND_1000",
-	#"BIAS_L1_RD_1000",
-	#"BIAS_L1_SEMIGD_1000",
-	#"BIAS_L2_RD_1000",
-	#"BIAS_L2_SEMIGD_1000",
+	"BIAS_L1_RD_1000",
+	"BIAS_L1_SEMIGD_1000",
+	"BIAS_L2_RD_1000",
+	"BIAS_L2_SEMIGD_1000",
 ]
-nlist = [0.1]
+nlist = [0.1, 0.2, 0.01]
 clist = [1.0/32, 1, 32]
 elist = [1e-12]
 rlist = [
@@ -48,9 +48,14 @@ dataset = [
 
 MARKER = ["--","--","o-.","o-.","-.","-."]
 Y_BUFFER = 2
-YLIM = (1e-9, 1e3)
+MIN_SQUASH = 0.2
+YLIM = (1e-9, 1e20)
 
 uselabel = {
+		40111:"l1-random",
+		40121:"l2-random",
+		40211:"l1-semigd",
+		40221:"l2-semigd",
 		50111:"l1-random",
 		50211:"l1-semigd",
 		50311:"l1-first",

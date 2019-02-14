@@ -78,20 +78,20 @@ dobj = {
 	"covtype.libsvm.binary.scale": -2765352655.81279516
 	},
 	"L1c32":{
-	"heart_scale": -3038.43429389414,
-	"news20.binary": -5191.225594965,
+	"heart_scale": -3038.43429389419,
+	"news20.binary": -5191.2255949702,
 	"a9a": -365535.0613,
 	"ijcnn1": -273298.871245,
 	"rcv1_train.binary": -4415.13148310,
-	"real-sim": -26466.1241815967,
+	"real-sim": -26466.1241815974,
 	"covtype.libsvm.binary.scale": -10811065.427,
-	"yahoojp": -183009.81295,
-	"yahookr": -1441547.2,
+	"yahoojp": -183009.813003167,
+	"yahookr": -1441547.60159204,
 	},
 	"L1c1": {
 	"rcv1_test": -39031.082174,
 	"covtype.libsvm.binary.scale": -337953.029319151713,
-	"yahookr": -144380.9835506559466012,
+	"yahookr": -144380.983550754,
 	"australian_scale": -200.500000,
 	"splice_scale": -556.698396,
 	"webspam": -12096.542471,
@@ -109,15 +109,15 @@ dobj = {
 	"url_combined": -10736.121324,
 	"heart_scale": -96.4982779946964513,
 	"a9a": -11433.8076970376823738,
-	"ijcnn1": -8596.0038722944773326,
-	"news20.binary": -2562.5427771712793401,
-	"rcv1_train.binary": -1781.7303640360603367,
-	"real-sim": -5402.0548794539135997,
-	"yahoojp": -25932.1394146107923007,
+	"ijcnn1": -8596.00423922705,
+	"news20.binary": -2562.5427771726,
+	"rcv1_train.binary": -1781.73036403769,
+	"real-sim": -5402.05487945714,
+	"yahoojp": -25932.1394160065,
 	"covtype.libsvm.binary": -7555.482649466,
 	},
 	"L1c0.03125":{
-	"heart_scale": -3.73747048323755,
+	"heart_scale": -3.73747048323756,
 	"a9a": -362.699648110258,
 	"ijcnn1": -294.963417390445,
 	"news20.binary": -406.896000499557,
@@ -125,7 +125,7 @@ dobj = {
 	"real-sim": -699.423367607873,
 	"covtype.libsvm.binary.scale": -10659.0987048636,
 	"yahoojp": -1362.1900637683,
-	"yahookr": -7362.90468917678,
+	"yahookr": -7362.90468917698,
 	},
 	"L1c0.25":{
 	"a9a": -2864.8765262514107235,
@@ -429,7 +429,7 @@ dobj = {
 	"real-sim": -4344.3951263812,
 	"yahoojp": -23717.4727273967,
 	"covtype.libsvm.binary":-4354.712314,
-	"yahookr": -139947.251207661116496,
+	"yahookr": -139947.251207691,
 	"covtype.libsvm.binary.scale": -403422.794222552,
 	},
 	"biasL2c2":{
@@ -466,12 +466,13 @@ dobj = {
 	"australian_scale": -8502.418933943414,
 	"heart_scale": -3656.42773439049,
 	"a1a": -20057.68582954491,
-	"a9a": -439655.9494012388,
+	"a9a": -439655.859401243,
 	"ijcnn1": -352116.963973211,
 	"news20.binary": -4723.83706918279,
 	"rcv1_train.binary": -4140.82075436672,
 	"real-sim": -24053.9415988898,
 	"yahoojp":-173345.5089274935,
+	"yahookr":-1225915.84927535,
 	},
 	"biasL2c64":{
 	"a9a": -879308.131385275861248,
@@ -504,10 +505,11 @@ dobj = {
 	"rcv1_train.binary": -219.421490178513,
 	"real-sim": -541.497098380812,
 	"yahoojp": -1238.51138971578,
+	"yahookr": -7570.39060547265,
 	},
 	"biasL1c0.03125":
 	{
-	"covtype.libsvm.binary.scale":-10658.8,
+	"covtype.libsvm.binary.scale":-10658.78166034402,
 	"breast-cancer_scale": -2.276977998997026,
 	"australian_scale": -6.749138721482132,
 	"heart_scale": -3.720906294186185,
@@ -518,7 +520,7 @@ dobj = {
 	"rcv1_train.binary": -286.587078892065,
 	"real-sim": -676.931762420104,
 	"yahoojp": -973.7819315032502,
-	"yahookr": -7175.065,
+	"yahookr": -7175.06508170017,
 	},
 	"biasL1c0.25":{
 	"a9a": -2864.449193292481596,
@@ -546,7 +548,7 @@ dobj = {
 	"rcv1_train.binary": -1745.667985918439186,
 	"real-sim": -5345.12213737126,
 	"yahoojp":-23351.524127158492774,
-	"yahookr":-143389.304898,
+	"yahookr":-143389.305176846,
 	"covtype.libsvm.binary": -4383.23183543,
 	"covtype.libsvm.binary.scale":-337952.75811474106, #100,000
 	},
@@ -567,12 +569,12 @@ dobj = {
 	},
 	"biasL1c32":
 	{
-	"covtype.libsvm.binary.scale":-10799000,
+	"covtype.libsvm.binary.scale":-10799004,
 	"breast-cancer_scale": -1408.737046024731,
 	"australian_scale": -6356.178279425147,
-	"heart_scale": -3656.427734390489,
+	"heart_scale": -2877.83170881376,
 	"a1a": -16588.37269656481,
-	"a9a" : -365534.5682798115,
+	"a9a" : -365507.473917247,
 	"ijcnn1" : -273293.1496785236,
 	"rcv1_train.binary": -4313.03957581649,
 	"news20.binary": -4522.36135884592,
@@ -706,7 +708,6 @@ LOG_SUMMARY_LINES = 10
 class LogInfo(object):
 	def __init__(self, filepath):
 		filename = os.path.basename(filepath)
-		print(filename)
 		self.data = "_s".join(filename.split('_s')[:-1])
 		tokens = filename.split('_s')[-1].split('_')
 		self.stype = int(tokens[0])

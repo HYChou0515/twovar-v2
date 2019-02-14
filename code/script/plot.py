@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import math
+import math, bisect
 import sys
 import os
 import numpy as np
@@ -44,6 +44,15 @@ def exponent_of(x):
 		flag=-1
 	return flag * 10**int(("%e"%x).split('e')[-1])
 
+def calculate_relval(measure_val, true_val):
+	diff = math.fabs(measure_val-true_val)
+	true_val_abs = math.fabs(true_val)
+	if true_val_abs < 1e-16:
+		return diff
+		#return math.fabs(2*math.atan(true_val/measure_val)-math.pi/2)
+	if diff < 1e-16:
+		return 0.0
+	return diff/true_val_abs
 
 class Plotter(object):
 	def __init__(self, stype, loss, dataset, clist, eps, args):
@@ -150,6 +159,17 @@ class Plotter(object):
 			print("\"" + self.dstr + "\" is not in " + dobj_key)
 			raise KeyError
 
+	def set_xy_lim(self, min_xs, max_xs, min_ys, max_ys):
+		# set xlim
+		if max(min_xs) > min(max_xs):
+			plt.xlim(0, min(max(max_xs), max(min_xs)+min(max_xs)))
+		else:
+			plt.xlim(0, min(min(max_xs) / MIN_SQUASH, max(max_xs)))
+		# set ylim
+		y_exponents = [1e1,1e3,1e7,1e12, float('Inf')]
+		y_max = y_exponents[bisect.bisect_right(y_exponents, exponent_of(max(max_ys)))]
+		plt.ylim(1e-9/2, y_max)
+
 	def setup_fig(self):
 		plt.legend(loc=0)
 		self.fig.savefig(self.figpath+self.get_figname_fmt()%(self.dstr, self.c),format='png',dpi=100)
@@ -191,7 +211,7 @@ class CdPlotter(Plotter):
 			line = line.split(' ')
 			if 'iter' in line and 'obj' in line:
 				val = float(line[line.index('obj')+1])
-				relval = math.fabs((val - minimal)/minimal)
+				relval = calculate_relval(val, minimal)
 				CDsteps = CDsteps + (float(line[line.index('updsize')+1]))
 				if relval > self.YLIM[1] or CDsteps < CdPlotter.XLIM[0]:
 					continue
@@ -213,8 +233,7 @@ class CdPlotter(Plotter):
 		return ys, xs
 	def setup_fig(self):
 		min_xs, max_xs, min_ys, max_ys = zip(*self.xy_range) # list of tuples to tuple of lists
-		plt.ylim(min(min_ys)/Y_BUFFER,max(max_ys)*Y_BUFFER)
-		plt.xlim(0, min(max(max_xs), max(min_xs)+min(max_xs)))
+		Plotter.set_xy_lim(self, min_xs, max_xs, min_ys, max_ys)
 		if(min(min_ys) > 1.0e-2):
 			subsyy = [2,3,4,5,7]
 		else:
@@ -263,7 +282,7 @@ class TimePlotter(Plotter):
 			line = line.split(' ')
 			if 't' in line and'obj' in line:
 				val = float(line[line.index('obj')+1])
-				relval = math.fabs((val - minimal)/minimal)
+				relval = calculate_relval(val, minimal)
 				t =  float(line[line.index('t')+1])
 				if relval > self.YLIM[1] or t < TimePlotter.XLIM[0]:
 					continue
@@ -285,8 +304,7 @@ class TimePlotter(Plotter):
 		return ys, xs
 	def setup_fig(self):
 		min_xs, max_xs, min_ys, max_ys = zip(*self.xy_range) # list of tuples to tuple of lists
-		plt.ylim(min(min_ys)/Y_BUFFER,max(max_ys)*Y_BUFFER)
-		plt.xlim(0, min(max(max_xs), max(min_xs)+min(max_xs)))
+		Plotter.set_xy_lim(self, min_xs, max_xs, min_ys, max_ys)
 		if(min(min_ys) > 1.0e-2):
 			subsyy = [2,3,4,5,7]
 		else:
@@ -360,7 +378,7 @@ class ObjSucPlotter(Plotter):
 			line = line.split(' ')
 			if 'iter' in line and 'obj' in line:
 				val = float(line[line.index('obj')+1])
-				relval = math.fabs((val - minimal)/minimal)
+				relval = calculate_relval(val, minimal)
 				sucpair = sucpair + (float(line[line.index('sucpair')+1]))
 				if relval > self.YLIM[1]:
 					continue
