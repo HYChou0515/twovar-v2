@@ -1,14 +1,14 @@
-# exp-2019-02-17
+# exp-2019-02-16
 # generate log
 ./runexp.py print
 parallel --jobs 8 < out_run.bash
 
-108 log files
+540 log files
 
 # generate plot
-As expconf.py contains oneclass with l1/l2 loss
+As expconf.py contains oneclass/bias with l1/l2 loss
 and plot.py require same category of logs at a time,
-you need to do the 2 groups seperately:
+you need to do the 4 groups seperately:
 
 -------------------------
 "ONECLASS_L1_RD_1000",
@@ -21,7 +21,13 @@ you need to do the 2 groups seperately:
 "ONECLASS_L2_FIRST_1000",
 "ONECLASS_L2_SECOND_1000",
 -------------------------
+"BIAS_L1_RD_1000",
+"BIAS_L1_SEMIGD_1000",
+-------------------------
+"BIAS_L2_RD_1000",
+"BIAS_L2_SEMIGD_1000",
+-------------------------
 
 For a group, use
 
-./plot.py --logpath ../log/ time
+./plot.py --logpath ../log/ cd

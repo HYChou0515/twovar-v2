@@ -1199,7 +1199,7 @@ void Solver::log_message()
 {
 	
 	info("iter %d ", iter);
-	info("t %5f ", (double)(duration)/CLOCKS_PER_SEC);
+	info("t %f ", (double)(duration)/CLOCKS_PER_SEC);
 	
 	double new_obj = calculate_obj();
 	info("obj %.16g ", new_obj);
