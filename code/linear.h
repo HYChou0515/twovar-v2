@@ -132,6 +132,7 @@ struct parameter
 	double r;       /* update ratio for semi-gd*/ 
 	int max_iter;     
 	int timeout; // in second     
+	double opt_val;
 	double nu;	/* for one-class formulation */
 };
 
