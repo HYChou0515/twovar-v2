@@ -3546,10 +3546,10 @@ void Solver::bias_semigd()
 			}
 		}
 
-		if(ratio_update < 2)
-			update_size = int(active_size*ratio_update/2);
+		if(ratio_update < 1)
+			update_size = int(active_size*ratio_update);
 		else
-			update_size = int(ratio_update/2);
+			update_size = int(ratio_update);
 		if(update_size < 1)
 			update_size = 1;
 
