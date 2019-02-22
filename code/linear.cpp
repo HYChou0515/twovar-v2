@@ -870,6 +870,8 @@ public:
 	};
 	enum WssMode
 	{
+		SEMIGD_G,
+		SEMIGD_G_RAND,
 		SEMIGD_PG,
 		SEMIGD_PG_RAND,
 		SEMIGD_DUALOBJ,
@@ -999,6 +1001,10 @@ Solver::Solver(int _solver_type)
 		case BIAS_L2_SEMIGD_1000:
 		case BIAS_L1_SEMIGD_SH:
 		case BIAS_L2_SEMIGD_SH:
+		case BIAS_L1_SEMIGD_RAND_1000:
+		case BIAS_L2_SEMIGD_RAND_1000:
+		case BIAS_L1_SEMIGD_RAND_SH:
+		case BIAS_L2_SEMIGD_RAND_SH:
 			category = TWO_BIAS; 
 			break;
 		case ONECLASS_L1_RD_SH:
@@ -1071,6 +1077,10 @@ Solver::Solver(int _solver_type)
 		SAVE_NAME(BIAS_L2_SEMIGD_1000);
 		SAVE_NAME(BIAS_L1_SEMIGD_SH);
 		SAVE_NAME(BIAS_L2_SEMIGD_SH);
+		SAVE_NAME(BIAS_L1_SEMIGD_RAND_1000);
+		SAVE_NAME(BIAS_L2_SEMIGD_RAND_1000);
+		SAVE_NAME(BIAS_L1_SEMIGD_RAND_SH);
+		SAVE_NAME(BIAS_L2_SEMIGD_RAND_SH);
 		SAVE_NAME(ONECLASS_L1_RD_SH);
 		SAVE_NAME(ONECLASS_L2_RD_SH);
 		SAVE_NAME(ONECLASS_L1_RD_1000);
@@ -3600,8 +3610,11 @@ void Solver::bias_semigd()
 			Min_order_index[update_size-1-i] = Max_order_queue.top().index;
 			Max_order_queue.pop();
 		}
-		// std::random_shuffle(Max_order_index, Max_order_index+update_size);
-		// std::random_shuffle(Min_order_index, Min_order_index+update_size);
+		if(wss_mode == SEMIGD_G_RAND)
+		{
+			std::random_shuffle(Max_order_index, Max_order_index+update_size);
+			std::random_shuffle(Min_order_index, Min_order_index+update_size);
+		}
 		for(int index_i = 0; index_i < update_size; index_i++)
 		{
 			i = Max_order_index[index_i];
@@ -5447,9 +5460,11 @@ static void two_bias_update(
 	int *index = new int[l];
 
 	if( solver_type == BIAS_L1_RD_1000 ||
+		solver_type == BIAS_L1_RD_SH ||
 		solver_type == BIAS_L1_SEMIGD_1000 ||
 		solver_type == BIAS_L1_SEMIGD_SH ||
-		solver_type == BIAS_L1_RD_SH )
+		solver_type == BIAS_L1_SEMIGD_RAND_1000 ||
+		solver_type == BIAS_L1_SEMIGD_RAND_SH )
 	{
 		diag[0] = 0;
 		diag[2] = 0;
@@ -5517,6 +5532,7 @@ static void two_bias_update(
 		case BIAS_L1_SEMIGD_1000:
 		case BIAS_L2_SEMIGD_1000:
 		{
+			solver.wss_mode = Solver::SEMIGD_G;
 			solver.sh_mode = Solver::SH_OFF;
 			solver.bias_semigd();
 			break;
@@ -5524,6 +5540,23 @@ static void two_bias_update(
 		case BIAS_L1_SEMIGD_SH:
 		case BIAS_L2_SEMIGD_SH:
 		{
+			solver.wss_mode = Solver::SEMIGD_G;
+			solver.sh_mode = Solver::SH_ON;
+			solver.bias_semigd();
+			break;
+		}
+		case BIAS_L1_SEMIGD_RAND_1000:
+		case BIAS_L2_SEMIGD_RAND_1000:
+		{
+			solver.wss_mode = Solver::SEMIGD_G_RAND;
+			solver.sh_mode = Solver::SH_OFF;
+			solver.bias_semigd();
+			break;
+		}
+		case BIAS_L1_SEMIGD_RAND_SH:
+		case BIAS_L2_SEMIGD_RAND_SH:
+		{
+			solver.wss_mode = Solver::SEMIGD_G_RAND;
 			solver.sh_mode = Solver::SH_ON;
 			solver.bias_semigd();
 			break;
@@ -7102,12 +7135,16 @@ static void train_one(const problem *prob, const parameter *param, double *w, do
 			break;
 		case BIAS_L1_RD_1000:
 		case BIAS_L2_RD_1000:
+		case BIAS_L1_RD_SH:
+		case BIAS_L2_RD_SH:
 		case BIAS_L1_SEMIGD_1000:
 		case BIAS_L2_SEMIGD_1000:
 		case BIAS_L1_SEMIGD_SH:
 		case BIAS_L2_SEMIGD_SH:
-		case BIAS_L1_RD_SH:
-		case BIAS_L2_RD_SH:
+		case BIAS_L1_SEMIGD_RAND_1000:
+		case BIAS_L2_SEMIGD_RAND_1000:
+		case BIAS_L1_SEMIGD_RAND_SH:
+		case BIAS_L2_SEMIGD_RAND_SH:
 			two_bias_update(prob, w, eps, Cp, Cn, param);
 			break;
 		default:
@@ -7705,12 +7742,16 @@ class Solver_type_table
 		//for two-variable linear constraints
 		SAVE_NAME(BIAS_L1_RD_1000);
 		SAVE_NAME(BIAS_L2_RD_1000);
-		SAVE_NAME(BIAS_L1_SEMIGD_1000);
-		SAVE_NAME(BIAS_L2_SEMIGD_1000);
 		SAVE_NAME(BIAS_L1_RD_SH);
 		SAVE_NAME(BIAS_L2_RD_SH);
+		SAVE_NAME(BIAS_L1_SEMIGD_1000);
+		SAVE_NAME(BIAS_L2_SEMIGD_1000);
 		SAVE_NAME(BIAS_L1_SEMIGD_SH);
 		SAVE_NAME(BIAS_L2_SEMIGD_SH);
+		SAVE_NAME(BIAS_L1_SEMIGD_RAND_1000);
+		SAVE_NAME(BIAS_L2_SEMIGD_RAND_1000);
+		SAVE_NAME(BIAS_L1_SEMIGD_RAND_SH);
+		SAVE_NAME(BIAS_L2_SEMIGD_RAND_SH);
 		//for one-class svm
 		SAVE_NAME(ONECLASS_L1_RD_1000);
 		SAVE_NAME(ONECLASS_L1_SEMIGD_1000);
@@ -8094,12 +8135,16 @@ const char *check_parameter(const problem *prob, const parameter *param)
 		&& param->solver_type != TWO_L2_SEMIGD_SH
 		&& param->solver_type != BIAS_L1_RD_1000
 		&& param->solver_type != BIAS_L2_RD_1000
+		&& param->solver_type != BIAS_L1_RD_SH
+		&& param->solver_type != BIAS_L2_RD_SH
 		&& param->solver_type != BIAS_L1_SEMIGD_1000
 		&& param->solver_type != BIAS_L2_SEMIGD_1000
 		&& param->solver_type != BIAS_L1_SEMIGD_SH
 		&& param->solver_type != BIAS_L2_SEMIGD_SH
-		&& param->solver_type != BIAS_L1_RD_SH
-		&& param->solver_type != BIAS_L2_RD_SH
+		&& param->solver_type != BIAS_L1_SEMIGD_RAND_1000
+		&& param->solver_type != BIAS_L2_SEMIGD_RAND_1000
+		&& param->solver_type != BIAS_L1_SEMIGD_RAND_SH
+		&& param->solver_type != BIAS_L2_SEMIGD_RAND_SH
 	 	&& param->solver_type != ONECLASS_L1_RD_1000
 	 	&& param->solver_type != ONECLASS_L1_SEMIGD_1000
 	 	&& param->solver_type != ONECLASS_L1_RD_SH

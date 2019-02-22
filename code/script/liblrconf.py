@@ -72,6 +72,11 @@ runs = {
 	"BIAS_L2_SEMIGD_1000" : 40221,
 	"BIAS_L2_SEMIGD_SH" : 40222,
 
+	"BIAS_L1_SEMIGD_RAND_1000" : 40311,
+	"BIAS_L1_SEMIGD_RAND_SH" : 40312,
+	"BIAS_L2_SEMIGD_RAND_1000" : 40321,
+	"BIAS_L2_SEMIGD_RAND_SH" : 40322,
+
 	"ONECLASS_L1_RD_1000" : 50111,
 	"ONECLASS_L1_RD_SH" : 50112,
 	"ONECLASS_L2_RD_1000" : 50121,
@@ -100,7 +105,7 @@ def is_semigd(code):
 	if len(str_code) != 5:
 		return False
 	else:
-		semigd_prefix = [203, 204, 205, 206, 402, 502]
+		semigd_prefix = [203, 204, 205, 206, 402, 403, 502]
 		return str_code[:3] in map(str, semigd_prefix)
 
 def is_shrink(code):
