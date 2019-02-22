@@ -875,9 +875,15 @@ public:
 		SEMIGD_DUALOBJ,
 		SEMIGD_DUALOBJ_RAND
 	};
+	enum ShrinkMode
+	{
+		SH_ON,
+		SH_OFF
+	};
 	enum {LOWER_BOUND, UPPER_BOUND, FREE};
 	SolverCate category;
 	WssMode wss_mode;
+	ShrinkMode sh_mode;
 	const char* solver_name;
 	//other function
 	double calculate_obj();
@@ -906,8 +912,7 @@ public:
 	void two_semigd_1000();
 	void two_semigd_shrink();
 	//two_bias_update
-	void bias_semigd_shrink();
-	void bias_semigd_1000();
+	void bias_semigd();
 	void bias_random_shrink();
 	void bias_random_1000();
 	//oneclass_update
@@ -3422,7 +3427,7 @@ void Solver::two_semigd_shrink()
 	// TODO:test
 }
 
-void Solver::bias_semigd_shrink()
+void Solver::bias_semigd()
 {
 	int l = prob->l;
 	int i, j;
@@ -3430,337 +3435,8 @@ void Solver::bias_semigd_shrink()
 	double G_i, G_j;
 	int counter = min(l,3);
 	enum {LOWER_BOUND, UPPER_BOUND, FREE};
-	Gmax = -INF;
-	Gmin = INF;
 	time_t start;
-	
-	int *Max_order_index = new int[l];
-	int *Min_order_index = new int[l];
-	
-	std::priority_queue<struct feature_node, std::vector<feature_node>, mincomp> Min_order_queue;
-	std::priority_queue<struct feature_node, std::vector<feature_node>, maxcomp> Max_order_queue;
 
-	double *G = new double[l];
-	while(iter < max_iter)
-	{
-		start = clock();
-		success_pair = 0;
-		Gmax = -INF;
-		Gmin = INF;
-
-		for(i=0; i<active_size; i++)
-		{
-			int G_index = index[i];
-			feature_node * const xi = prob->x[G_index];
-			G[i] = -y[G_index] * (y[G_index]*sparse_operator::dot(w, xi) -1 +alpha[G_index]*diag[GETI(G_index)]);
-			
-			if(y[G_index] == 1)
-			{
-				if(alpha_status[G_index] != UPPER_BOUND)
-					Gmax = max(Gmax, G[i]);
-				if(alpha_status[G_index] != LOWER_BOUND)
-					Gmin = min(Gmin, G[i]);
-			}
-			else
-			{
-				if(alpha_status[G_index] != UPPER_BOUND)
-					Gmin = min(Gmin, G[i]);
-				if(alpha_status[G_index] != LOWER_BOUND)
-					Gmax = max(Gmax, G[i]);
-			}
-		}
-
-		if(Gmax - Gmin < eps && iter>1)
-		{
-			if(active_size == l)
-				break;
-			else
-			{
-				active_size = l;
-				counter = 0;
-				continue;
-			}
-		}
-		else if(counter-- == 0) //do shrinking
-		{
-			for(i=active_size-1; i>=0; i--)
-			{
-				bool be_shunk = false;
-				int sh_idx = index[i];
-				if(y[sh_idx] == 1)
-				{
-					if(alpha_status[sh_idx] == UPPER_BOUND)
-					{
-						if(G[i] > Gmax)
-							be_shunk = true;
-					}
-					else if(alpha_status[sh_idx] == LOWER_BOUND)
-					{
-						if(G[i] < Gmin)
-							be_shunk = true;
-					}
-				}
-				else if(y[sh_idx] == -1)
-				{
-					if(alpha_status[sh_idx] == LOWER_BOUND)
-					{
-						if(G[i] > Gmax)
-							be_shunk = true;
-					}
-					else if(alpha_status[sh_idx] == UPPER_BOUND)
-					{
-						if(G[i] < Gmin)
-							be_shunk = true;
-					}
-				}
-				if(be_shunk)
-				{
-					swap(index[i],index[--active_size]);
-					swap(G[i], G[active_size]);
-				}
-				
-
-			}
-			counter = min(l,1);
-		}
-		update_size = int(active_size*ratio_update);
-		if(update_size < 1)
-		update_size = 1;
-
-		for(i=0; i<active_size; i++)
-		{
-			struct feature_node comp;
-			comp.index = index[i];
-			comp.value = G[i];
-			int yc = y[comp.index];
-			if( (alpha_status[comp.index] != UPPER_BOUND && yc==+1) ||
-					(alpha_status[comp.index] != LOWER_BOUND && yc==-1) )
-			{
-				if((int) Min_order_queue.size() < update_size)
-				{
-					Min_order_queue.push(comp);
-				}
-				else
-				{
-					if(Min_order_queue.top().value < comp.value)
-					{
-						Min_order_queue.pop();
-						Min_order_queue.push(comp);
-					}
-				}
-			}
-			if( (alpha_status[comp.index] != UPPER_BOUND && yc==-1) ||
-					(alpha_status[comp.index] != LOWER_BOUND && yc==+1) )
-			{
-				if((int) Max_order_queue.size() < update_size)
-				{
-					Max_order_queue.push(comp);
-				}
-				else
-				{
-					if(Max_order_queue.top().value > comp.value)
-					{
-						Max_order_queue.pop();
-						Max_order_queue.push(comp);
-					}
-				}
-			}
-		}
-		update_size = min((int)Min_order_queue.size(), (int)Max_order_queue.size());
-		while((int)Max_order_queue.size() > update_size)
-		{
-			Max_order_queue.pop();
-		}
-		while((int)Min_order_queue.size() > update_size)
-		{
-			Min_order_queue.pop();
-		}
-
-		for(i=0; i<update_size; i++)
-		{
-			Max_order_index[update_size-1-i] = Min_order_queue.top().index;
-			Min_order_queue.pop();
-
-			Min_order_index[update_size-1-i] = Max_order_queue.top().index;
-			Max_order_queue.pop();
-		}
-		for(int index_i = 0; index_i < update_size; index_i++)
-		{
-			i = Max_order_index[index_i];
-			j = Min_order_index[index_i];
-
-			feature_node const * xi = prob->x[i];
-			feature_node const * xj = prob->x[j];
-			
-			const schar yi = y[i];
-			const schar yj = y[j];
-			double C_i = upper_bound[GETI(i)];
-			double C_j = upper_bound[GETI(j)];
-			
-			G_i = 0;
-			G_j = 0;
-			double Q_ij = 0;
-			while(xi->index != -1 && xj->index != -1)
-			{
-				if(xi->index == xj->index)
-				{
-					Q_ij += xi->value * xj->value;
-					G_i += xi->value * w[xi->index-1];
-					G_j += xj->value * w[xj->index-1];
-					++xi;
-					++xj;
-				}
-				else
-				{
-					if(xi->index > xj->index)
-					{
-						G_j += xj->value * w[xj->index-1];
-						++xj;
-					}
-					else
-					{
-						G_i += xi->value * w[xi->index-1];
-						++xi;
-					}
-				}
-			}
-			while(xi->index != -1)
-			{
-				G_i += xi->value * w[xi->index-1];
-				++xi;
-			}
-			while(xj->index != -1)
-			{
-				G_j += xj->value * w[xj->index-1];
-				++xj;
-			}
-			G_i = yi*G_i -1 +alpha[i]*diag[GETI(i)];
-			G_j = yj*G_j -1 +alpha[j]*diag[GETI(j)];
-			Q_ij = yi * yj * Q_ij;
-			
-			double old_alpha_i = alpha[i];
-			double old_alpha_j = alpha[j];
-
-			if(y[i] == y[j])
-			{
-				double quad_coef = QD[i] + QD[j] - 2*Q_ij;
-				if(quad_coef <= 0)
-					quad_coef = 1e-12;
-				double delta = (G_i-G_j)/quad_coef;
-				double sum = alpha[i] + alpha[j];
-				alpha[i] -= delta;
-				alpha[j] += delta;
-
-				if(sum > C_i)
-				{
-					if(alpha[i] > C_i)
-					{
-						alpha[i] = C_i;
-						alpha[j] = sum -C_i;
-					}
-				}
-				else
-				{
-					if(alpha[j] < 0)
-					{
-						alpha[j] = 0;
-						alpha[i] = sum;
-					}
-				}
-				if(sum > C_j)
-				{
-					if(alpha[j] > C_j)
-					{
-						alpha[j] = C_j;
-						alpha[i] = sum -C_j;
-					}
-				}
-				else
-				{
-					if(alpha[i] < 0)
-					{
-						alpha[i] = 0;
-						alpha[j] = sum;
-					}
-				}
-			}
-			else
-			{
-				double quad_coef = QD[i] + QD[j] + 2*Q_ij;
-				if(quad_coef <= 0)
-					quad_coef = 1e-12;
-				double delta = (-G_i-G_j)/quad_coef;
-				double diff = alpha[i] - alpha[j];
-				alpha[i] += delta;
-				alpha[j] += delta;
-				if(diff > 0)
-				{
-					if(alpha[j] < 0)
-					{
-						alpha[j] = 0;
-						alpha[i] = diff;
-					}
-				}
-				else
-				{
-					if(alpha[i] < 0)
-					{
-						alpha[i] = 0;
-						alpha[j] = -diff;
-					}
-				}
-				if(diff > C_i - C_j)
-				{
-					if(alpha[i] > C_i)
-					{
-						alpha[i] = C_i;
-						alpha[j] = C_i - diff;
-					}
-				}
-				else
-				{
-					if(alpha[j] > C_j)
-					{
-						alpha[j] = C_j;
-						alpha[i] = C_j + diff;
-					}
-				}
-			}
-
-			// update alpha status and w
-			if(fabs(alpha[i]-old_alpha_i) > 1e-16)
-			{
-				success_pair++;
-				sparse_operator::axpy(y[i]*(alpha[i]-old_alpha_i), prob->x[i], w);
-				sparse_operator::axpy(y[j]*(alpha[j]-old_alpha_j), prob->x[j], w);
-				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[GETI(i)]);
-				alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[GETI(j)]);
-			}
-			else
-			{
-				alpha[i] = old_alpha_i;
-				alpha[j] = old_alpha_j;
-			}
-		}
-		iter++;
-		duration += clock() - start;
-		log_message();
-		EXIT_IF_TIMEOUT(duration);
-		EXIT_IF_OPTIMAL(last_obj);
-	}
-	summary();	
-	delete [] alpha_status;
-}
-
-void Solver::bias_semigd_1000()
-{
-	int l = prob->l;
-	int i, j;
-	active_size = l;
-	double G_i, G_j;
-	enum {LOWER_BOUND, UPPER_BOUND, FREE};
-	time_t start;
-	
 	int *Max_order_index = new int[l];
 	int *Min_order_index = new int[l];
 	
@@ -3774,20 +3450,98 @@ void Solver::bias_semigd_1000()
 		success_pair = 0;
 		nr_pos_y = 0;
 		nr_neg_y = 0;
+		if(sh_mode == SH_ON)
+		{
+			Gmax = -INF;
+			Gmin = INF;
+		}
 
 		for(i=0; i<active_size; i++)
 		{
 			int G_index = index[i];
 			feature_node * const xi = prob->x[G_index];
-			G[i] = -y[G_index] * (y[G_index]*sparse_operator::dot(w, xi) -1 +alpha[i]*diag[GETI(i)]);
+			G[i] = -y[G_index] * (y[G_index]*sparse_operator::dot(w, xi) -1 +alpha[G_index]*diag[GETI(G_index)]);
+			
+
+			if(sh_mode == SH_ON)
+			{
+				if(y[G_index] == 1)
+				{
+					if(alpha_status[G_index] != UPPER_BOUND)
+						Gmax = max(Gmax, G[i]);
+					if(alpha_status[G_index] != LOWER_BOUND)
+						Gmin = min(Gmin, G[i]);
+				}
+				else
+				{
+					if(alpha_status[G_index] != UPPER_BOUND)
+						Gmin = min(Gmin, G[i]);
+					if(alpha_status[G_index] != LOWER_BOUND)
+						Gmax = max(Gmax, G[i]);
+				}
+			}
+		}
+		if(sh_mode == SH_ON)
+		{
+			if(Gmax - Gmin < eps && iter>1)
+			{
+				if(active_size == l)
+					break;
+				else
+				{
+					active_size = l;
+					counter = 0;
+					continue;
+				}
+			}
+			else if(counter-- == 0) //do shrinking
+			{
+				for(i=active_size-1; i>=0; i--)
+				{
+					bool be_shunk = false;
+					int sh_idx = index[i];
+					if(y[sh_idx] == 1)
+					{
+						if(alpha_status[sh_idx] == UPPER_BOUND)
+						{
+							if(G[i] > Gmax)
+								be_shunk = true;
+						}
+						else if(alpha_status[sh_idx] == LOWER_BOUND)
+						{
+							if(G[i] < Gmin)
+								be_shunk = true;
+						}
+					}
+					else if(y[sh_idx] == -1)
+					{
+						if(alpha_status[sh_idx] == LOWER_BOUND)
+						{
+							if(G[i] > Gmax)
+								be_shunk = true;
+						}
+						else if(alpha_status[sh_idx] == UPPER_BOUND)
+						{
+							if(G[i] < Gmin)
+								be_shunk = true;
+						}
+					}
+					if(be_shunk)
+					{
+						swap(index[i],index[--active_size]);
+						swap(G[i], G[active_size]);
+					}
+				}
+				counter = min(l,1);
+			}
 		}
 
-		//TODO: rlist as number not ratio
-		//update_size = int(active_size*ratio_update);
 		if(ratio_update < 2)
 			update_size = int(active_size*ratio_update/2);
 		else
 			update_size = int(ratio_update/2);
+		if(update_size < 1)
+			update_size = 1;
 
 		for(i=0; i<active_size; i++)
 		{
@@ -3840,13 +3594,10 @@ void Solver::bias_semigd_1000()
 
 		for(i=0; i<update_size; i++)
 		{
-			
 			Max_order_index[update_size-1-i] = Min_order_queue.top().index;
-		//info("%d %g\n",Min_order_queue.top().index, Min_order_queue.top().value);
 			Min_order_queue.pop();
 
 			Min_order_index[update_size-1-i] = Max_order_queue.top().index;
-		//info("%d %g\n",Max_order_queue.top().index, Max_order_queue.top().value);
 			Max_order_queue.pop();
 		}
 		// std::random_shuffle(Max_order_index, Max_order_index+update_size);
@@ -3855,8 +3606,6 @@ void Solver::bias_semigd_1000()
 		{
 			i = Max_order_index[index_i];
 			j = Min_order_index[index_i];
-			//i = rand()%active_size;
-			//j = rand()%active_size;
 
 			feature_node const * xi = prob->x[i];
 			feature_node const * xj = prob->x[j];
@@ -3873,7 +3622,7 @@ void Solver::bias_semigd_1000()
 				++nr_neg_y;
 			double C_i = upper_bound[GETI(i)];
 			double C_j = upper_bound[GETI(j)];
-			
+
 			G_i = 0;
 			G_j = 0;
 			double Q_ij = 0;
@@ -5768,13 +5517,15 @@ static void two_bias_update(
 		case BIAS_L1_SEMIGD_1000:
 		case BIAS_L2_SEMIGD_1000:
 		{
-			solver.bias_semigd_1000();
+			solver.sh_mode = Solver::SH_OFF;
+			solver.bias_semigd();
 			break;
 		}
 		case BIAS_L1_SEMIGD_SH:
 		case BIAS_L2_SEMIGD_SH:
 		{
-			solver.bias_semigd_shrink();
+			solver.sh_mode = Solver::SH_ON;
+			solver.bias_semigd();
 			break;
 		}
 	}
