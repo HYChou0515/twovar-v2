@@ -520,7 +520,7 @@ dobj = {
 	"rcv1_train.binary": -286.587078892065,
 	"real-sim": -676.931762420104,
 	"yahoojp": -973.7819315032502,
-	"yahookr": -7175.06508170017,
+	"yahookr": -7175.06509482369,
 	},
 	"biasL1c0.25":{
 	"a9a": -2864.449193292481596,
@@ -537,7 +537,6 @@ dobj = {
 	"real-sim": -3656.116728320576385,
 	},
 	"biasL1c1":{
-	"covtype.libsvm.binary.scale":-337938,
 	"breast-cancer_scale": -46.00399013664471,
 	"australian_scale": -199.6504829745745,
 	"heart_scale": -92.4733746201697,
@@ -548,9 +547,9 @@ dobj = {
 	"rcv1_train.binary": -1745.667985918439186,
 	"real-sim": -5345.12213737126,
 	"yahoojp":-23351.524127158492774,
-	"yahookr":-143389.305176846,
+	"yahookr":-143389.305184881,
 	"covtype.libsvm.binary": -4383.23183543,
-	"covtype.libsvm.binary.scale":-337952.75811474106, #100,000
+	"covtype.libsvm.binary.scale":-337952.758612049,
 	},
 	"biasL1c2":{
 	"a9a": -22854.314487569292396,
@@ -569,18 +568,18 @@ dobj = {
 	},
 	"biasL1c32":
 	{
-	"covtype.libsvm.binary.scale":-10799004,
+	"covtype.libsvm.binary.scale":-10799026.4932501,
 	"breast-cancer_scale": -1408.737046024731,
 	"australian_scale": -6356.178279425147,
 	"heart_scale": -2877.83170881376,
 	"a1a": -16588.37269656481,
-	"a9a" : -365507.473917247,
+	"a9a" : -365507.475692028,
 	"ijcnn1" : -273293.1496785236,
 	"rcv1_train.binary": -4313.03957581649,
 	"news20.binary": -4522.36135884592,
 	"real-sim":-24858.86588074639,
 	"yahoojp":-172087.6931881657,
-	"yahookr":-1433449.62823562,
+	"yahookr":-1433450.22095902,
 	},
 	"biasL1c128":{
 	"breast-cancer_scale": -5628.278659012924,

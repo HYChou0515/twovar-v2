@@ -6,6 +6,7 @@ from itertools import islice
 from liblrconf import *
 from plotconst import *
 from expconf import *
+import traceback
 
 LOGDIR = '../log_notime/tmp/'
 TOLERANCE = 1e-9
@@ -160,6 +161,7 @@ def cut_key_column_to(filepath, outpath, key):
 
 def compress(filepath, filetmp, max_line):
 	cmpr_line = int(math.ceil((line_number(filepath)-LOG_SUMMARY_LINES)*1.0/max_line))
+        MAX_FILE_LINES = 4000000
 	BUFF_READ_LINE = 4000
 	SUM='sum'
 	EXACT='exact'
@@ -200,7 +202,6 @@ def compress(filepath, filetmp, max_line):
 			assert self.cmpr_line >= 1
 
 		def append(self, vals):
-			assert len(vals) == len(self.colnames)
 			self.counter += 1
 			for i in range(len(self.colnames)):
 				colname = self.colnames[i]
@@ -244,16 +245,22 @@ def compress(filepath, filetmp, max_line):
 	def next_n_lines(f, n):
 	    return [x.strip() for x in islice(f, n)]
 	with open(filepath) as fin, open(filetmp, 'w') as fout:
-		while True:
+                line_count = 0
+		while line_count < MAX_FILE_LINES:
+                        line_count += BUFF_READ_LINE
 			lines = next_n_lines(fin, BUFF_READ_LINE)
 			if len(lines) == 0:
 				break
 			for line in lines:
 				if line == '':
 					break
-				out_str = aggregator.append(line.split(' ')[1::2])
+				vals = line.split(' ')[1::2]
+				if len(vals) != len(aggregator.colnames):
+					break
+				out_str = aggregator.append(vals)
 				if out_str is not None:
 					fout.write(out_str + os.linesep)
+                assert line_count < MAX_FILE_LINES, 'file too large'
 
 def exit_with_help():
 	print("USAGE: " + sys.argv[0] + " filepath")
@@ -291,7 +298,8 @@ def main():
 			print("%s\tbefore\t%d\tafter\t%d\ttrim\t%d" % (filename, before_line_num, after_line_num, before_line_num-after_line_num))
 		except Exception as e:
 			sys.stderr.write('error: ' + filename+os.linesep)
-			sys.stderr.write(str(e)+os.linesep)
+			_, _, tb = sys.exc_info()
+			traceback.print_tb(tb) # Fixed format
 
 if __name__ == '__main__':
 	main()
