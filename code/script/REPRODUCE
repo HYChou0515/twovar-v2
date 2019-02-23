@@ -1,21 +1,13 @@
-# exp-2019-02-21
+# exp-2019-02-24
 # generate log
 ./runexp.py run 
 
-216 log files
+2052 log files
 
 # generate plot
-As expconf.py contains bias with l1/l2 loss
-and plot.py require same category of logs at a time,
-you need to do the 2 groups seperately:
-
--------------------------
-"BIAS_L1_RD_1000",
-"BIAS_L1_SEMIGD_1000",
--------------------------
-"BIAS_L2_RD_1000",
-"BIAS_L2_SEMIGD_1000",
--------------------------
+Plot l1/l2, and compare semigd with random.
+First comment L2 things, and un-comment L1_RD.
+After plotting, change to L2 and then plot again.
 
 For a group, use
 
