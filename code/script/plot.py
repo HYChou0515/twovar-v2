@@ -358,7 +358,7 @@ class SucrCdPlotter(Plotter):
 class ObjSucPlotter(Plotter):
 	PLOTTYPE = "obj-suc"
 	def init_new_fig(self):
-		self.min_y = 10
+		self.xy_range = []
 	def get_figname_fmt(self):
 		sname = ''
 		for s in self.stype:
@@ -374,6 +374,10 @@ class ObjSucPlotter(Plotter):
 		sucpair = 0
 		minimal = self.get_minimal(tp)
 
+		min_x = None
+		max_x = None
+		max_y = 0
+		min_y = 1e10
 		for line in logfile:
 			line = line.split(' ')
 			if 'iter' in line and 'obj' in line:
@@ -385,19 +389,28 @@ class ObjSucPlotter(Plotter):
 				if relval < self.YLIM[0]:
 					break;
 				ys.append(relval)
-				self.min_y = min(relval,self.min_y)
 				xs.append(sucpair)
+				if min_x is None:
+					min_x = sucpair
+				max_x = sucpair
+				min_y = min(relval,min_y)
+				max_y = max(relval,max_y)
 				#print('sucpair: %.16g\t relval: %.16g' % (sucpair, relval))
+		xy_range = (min_x, max_x, min_y, max_y)
+		if all(xy_range):
+			self.xy_range.append(xy_range)
+		print("xy_range={}".format(xy_range))
 		logfile.close()
 		return ys, xs
 	def setup_fig(self):
-		plt.ylim(self.min_y,1)
-		if(self.min_y > 1.0e-2):
+		min_xs, max_xs, min_ys, max_ys = zip(*self.xy_range) # list of tuples to tuple of lists
+		Plotter.set_xy_lim(self, min_xs, max_xs, min_ys, max_ys)
+		if(min(min_ys) > 1.0e-2):
 			subsyy = [2,3,4,5,7]
 		else:
 			subsyy = []
 		plt.yscale('log', subsy=subsyy, figure=self.fig)
-		if(self.min_y > 1.0e-2):
+		if(min(min_ys) > 1.0e-2):
 			plt.tick_params(axis='y', which='minor', labelsize=14)
 			plt.gca().yaxis.set_minor_formatter(FuncFormatter(format_label))
 		else:
