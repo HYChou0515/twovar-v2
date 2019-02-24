@@ -10,6 +10,7 @@
 //for one-class 
 #include <vector>
 #include <queue>
+#include <limits>
 #include <time.h>
 typedef signed char schar;
 template <class T> static inline void swap(T& x, T& y) { T t=x; x=y; y=t; }
@@ -890,6 +891,7 @@ public:
 	//other function
 	double calculate_obj();
 	double calculate_rho();
+	void adjust_update_size();
 	void countSVs();	
 	void log_message();
 	void summary();
@@ -1019,6 +1021,10 @@ Solver::Solver(int _solver_type)
 		case ONECLASS_L2_SEMIGD_1000:
 		case ONECLASS_L1_SEMIGD_SH:
 		case ONECLASS_L2_SEMIGD_SH:
+		case ONECLASS_L1_SEMIGD_RAND_1000:
+		case ONECLASS_L2_SEMIGD_RAND_1000:
+		case ONECLASS_L1_SEMIGD_RAND_SH:
+		case ONECLASS_L2_SEMIGD_RAND_SH:
 			category = ONECLASS;
 			break;
 	}
@@ -1093,6 +1099,10 @@ Solver::Solver(int _solver_type)
 		SAVE_NAME(ONECLASS_L2_SEMIGD_1000);
 		SAVE_NAME(ONECLASS_L1_SEMIGD_SH);
 		SAVE_NAME(ONECLASS_L2_SEMIGD_SH);
+		SAVE_NAME(ONECLASS_L1_SEMIGD_RAND_1000);
+		SAVE_NAME(ONECLASS_L2_SEMIGD_RAND_1000);
+		SAVE_NAME(ONECLASS_L1_SEMIGD_RAND_SH);
+		SAVE_NAME(ONECLASS_L2_SEMIGD_RAND_SH);
 	}
 #undef SAVE_NAME
 }
@@ -1162,6 +1172,17 @@ double Solver::calculate_rho()
 	else
 		r = (lb + ub)/2;
 	return r;
+}
+void Solver:: adjust_update_size()
+{
+	if(ratio_update < 1)
+		update_size = int(active_size*ratio_update);
+	else if(ratio_update > std::numeric_limits<int>::max())
+		update_size = std::numeric_limits<int>::max();
+	else
+		update_size = int(ratio_update);
+	if(update_size < 1)
+		update_size = 1;
 }
 void Solver:: countSVs()
 {
@@ -1637,16 +1658,8 @@ void Solver::one_semigd_1000()
 			feature_node * const xi = prob->x[G_index];
 			G[i] = y[G_index]*sparse_operator::dot(w, xi) -1 +alpha[G_index]*diag[GETI(G_index)];
 		}
-		//TODO: rlist as number not ratio
-		//update_size = int(active_size*ratio_update);
-		if(ratio_update < 1)
-			update_size = int(active_size*ratio_update);
-		else
-			update_size = int(ratio_update);
-		if(update_size < 1)
-			update_size = 1;
+		adjust_update_size();
 		smgd_size = update_size;
-		//update_size = l;
 
 		for(s=0; s<active_size; s++)
 		{
@@ -1768,12 +1781,8 @@ void Solver::one_semigd_dualobj_1000()
 			feature_node * const xi = prob->x[G_index];
 			G[i] = y[G_index]*sparse_operator::dot(w, xi) -1 +alpha[G_index]*diag[GETI(G_index)];
 		}
-		if(ratio_update < 1)
-			update_size = int(active_size*ratio_update);
-		else
-			update_size = int(ratio_update);
-		if(update_size < 1)
-			update_size = 1;
+
+		adjust_update_size();
 
 		for(s=0; s<active_size; s++)
 		{
@@ -3546,12 +3555,7 @@ void Solver::bias_semigd()
 			}
 		}
 
-		if(ratio_update < 1)
-			update_size = int(active_size*ratio_update);
-		else
-			update_size = int(ratio_update);
-		if(update_size < 1)
-			update_size = 1;
+		adjust_update_size();
 
 		for(i=0; i<active_size; i++)
 		{
@@ -4909,10 +4913,8 @@ void Solver::oneclass_semigd_1000()
 		start = clock();
 		success_pair = 0;
 		n_exchange = 0;
-		//shrinking
-		update_size = int(active_size*ratio_update);
-		if(update_size < 1)
-			update_size = 1;
+
+		adjust_update_size();
 
 		for(i=0; i<active_size; i++)
 		{
@@ -4960,6 +4962,11 @@ void Solver::oneclass_semigd_1000()
 			Min_order_index[update_size-1-i] = Max_order_queue.top().index;
 			Min_order_queue.pop();
 			Max_order_queue.pop();
+		}
+		if(wss_mode == SEMIGD_G_RAND)
+		{
+			std::random_shuffle(Max_order_index, Max_order_index+update_size);
+			std::random_shuffle(Min_order_index, Min_order_index+update_size);
 		}
 		for(int index_i = 0; index_i<update_size; index_i++)
 		{
@@ -5164,9 +5171,8 @@ void Solver::oneclass_semigd_shrink()
 
 			}
 		}
-		update_size = int(active_size*ratio_update);
-		if(update_size < 1)
-			update_size = 1;
+
+		adjust_update_size();
 
 		for(i=0; i<active_size; i++)
 		{
@@ -5213,6 +5219,11 @@ void Solver::oneclass_semigd_shrink()
 			Min_order_index[update_size-1-i] = Max_order_queue.top().index;
 			Min_order_queue.pop();
 			Max_order_queue.pop();
+		}
+		if(wss_mode == SEMIGD_G_RAND)
+		{
+			std::random_shuffle(Max_order_index, Max_order_index+update_size);
+			std::random_shuffle(Min_order_index, Min_order_index+update_size);
 		}
 		for(int index_i = 0; index_i<update_size; index_i++)
 		{
@@ -5359,6 +5370,8 @@ static void oneclass_update(
 	|| param->solver_type == ONECLASS_L1_RD_SH
 	|| param->solver_type == ONECLASS_L1_SEMIGD_1000
 	|| param->solver_type == ONECLASS_L1_SEMIGD_SH
+	|| param->solver_type == ONECLASS_L1_SEMIGD_RAND_1000
+	|| param->solver_type == ONECLASS_L1_SEMIGD_RAND_SH
 	|| param->solver_type == ONECLASS_L1_FIRST_1000
 	|| param->solver_type == ONECLASS_L1_SECOND_1000)
 	{
@@ -5420,18 +5433,28 @@ static void oneclass_update(
 		case ONECLASS_L2_FIRST_1000:
 			solver.oneclass_first_1000();
 			break;
-		
 		case ONECLASS_L1_SECOND_1000:
 		case ONECLASS_L2_SECOND_1000:
 			solver.oneclass_second_1000();
 			break;
 		case ONECLASS_L1_SEMIGD_1000:
 		case ONECLASS_L2_SEMIGD_1000:
+			solver.wss_mode = Solver::SEMIGD_G;
 			solver.oneclass_semigd_1000();
 			break;
-		
 		case ONECLASS_L1_SEMIGD_SH:
 		case ONECLASS_L2_SEMIGD_SH:
+			solver.wss_mode = Solver::SEMIGD_G;
+			solver.oneclass_semigd_shrink();
+			break;
+		case ONECLASS_L1_SEMIGD_RAND_1000:
+		case ONECLASS_L2_SEMIGD_RAND_1000:
+			solver.wss_mode = Solver::SEMIGD_G_RAND;
+			solver.oneclass_semigd_1000();
+			break;
+		case ONECLASS_L1_SEMIGD_RAND_SH:
+		case ONECLASS_L2_SEMIGD_RAND_SH:
+			solver.wss_mode = Solver::SEMIGD_G_RAND;
 			solver.oneclass_semigd_shrink();
 			break;
 	}
@@ -7074,17 +7097,21 @@ static void train_one(const problem *prob, const parameter *param, double *w, do
 			solve_l2r_l1l2_svr(prob, w, param, L2R_L2LOSS_SVR_DUAL);
 			break;
 		case ONECLASS_L1_RD_1000:
-		case ONECLASS_L1_SEMIGD_1000:
+		case ONECLASS_L2_RD_1000:
 		case ONECLASS_L1_RD_SH:
-		case ONECLASS_L1_SEMIGD_SH:
+		case ONECLASS_L2_RD_SH:
 		case ONECLASS_L1_FIRST_1000:
+		case ONECLASS_L2_FIRST_1000:
 		case ONECLASS_L1_SECOND_1000:
 		case ONECLASS_L2_SECOND_1000:
-		case ONECLASS_L2_FIRST_1000:
-		case ONECLASS_L2_RD_1000:
+		case ONECLASS_L1_SEMIGD_1000:
 		case ONECLASS_L2_SEMIGD_1000:
-		case ONECLASS_L2_RD_SH:
+		case ONECLASS_L1_SEMIGD_SH:
 		case ONECLASS_L2_SEMIGD_SH:
+		case ONECLASS_L1_SEMIGD_RAND_1000:
+		case ONECLASS_L2_SEMIGD_RAND_1000:
+		case ONECLASS_L1_SEMIGD_RAND_SH:
+		case ONECLASS_L2_SEMIGD_RAND_SH:
 			oneclass_update(prob, w, param);
 			break;
 		case OLD_ONE_L1_CY_SH: // original algo
@@ -7203,30 +7230,38 @@ model* train(const problem *prob, const parameter *param)
 
 	if(check_regression_model(model_) 
 	|| param->solver_type == ONECLASS_L1_RD_1000
-	|| param->solver_type == ONECLASS_L1_SEMIGD_1000
+	|| param->solver_type == ONECLASS_L2_RD_1000
 	|| param->solver_type == ONECLASS_L1_RD_SH
-	|| param->solver_type == ONECLASS_L1_SEMIGD_SH
+	|| param->solver_type == ONECLASS_L2_RD_SH
 	|| param->solver_type == ONECLASS_L1_FIRST_1000
+	|| param->solver_type == ONECLASS_L2_FIRST_1000
 	|| param->solver_type == ONECLASS_L1_SECOND_1000
 	|| param->solver_type == ONECLASS_L2_SECOND_1000
-	|| param->solver_type == ONECLASS_L2_FIRST_1000
-	|| param->solver_type == ONECLASS_L2_RD_1000
+	|| param->solver_type == ONECLASS_L1_SEMIGD_1000
 	|| param->solver_type == ONECLASS_L2_SEMIGD_1000
-	|| param->solver_type == ONECLASS_L2_RD_SH
-	|| param->solver_type == ONECLASS_L2_SEMIGD_SH)
+	|| param->solver_type == ONECLASS_L1_SEMIGD_SH
+	|| param->solver_type == ONECLASS_L2_SEMIGD_SH
+	|| param->solver_type == ONECLASS_L1_SEMIGD_RAND_1000
+	|| param->solver_type == ONECLASS_L2_SEMIGD_RAND_1000
+	|| param->solver_type == ONECLASS_L1_SEMIGD_RAND_SH
+	|| param->solver_type == ONECLASS_L2_SEMIGD_RAND_SH)
 	{
 		if(param->solver_type == ONECLASS_L1_RD_1000
-		|| param->solver_type == ONECLASS_L1_SEMIGD_1000
+		|| param->solver_type == ONECLASS_L2_RD_1000
 		|| param->solver_type == ONECLASS_L1_RD_SH
-		|| param->solver_type == ONECLASS_L1_SEMIGD_SH
+		|| param->solver_type == ONECLASS_L2_RD_SH
 		|| param->solver_type == ONECLASS_L1_FIRST_1000
+		|| param->solver_type == ONECLASS_L2_FIRST_1000
 		|| param->solver_type == ONECLASS_L1_SECOND_1000
 		|| param->solver_type == ONECLASS_L2_SECOND_1000
-		|| param->solver_type == ONECLASS_L2_FIRST_1000
-		|| param->solver_type == ONECLASS_L2_RD_1000
+		|| param->solver_type == ONECLASS_L1_SEMIGD_1000
 		|| param->solver_type == ONECLASS_L2_SEMIGD_1000
-		|| param->solver_type == ONECLASS_L2_RD_SH
-		|| param->solver_type == ONECLASS_L2_SEMIGD_SH)
+		|| param->solver_type == ONECLASS_L1_SEMIGD_SH
+		|| param->solver_type == ONECLASS_L2_SEMIGD_SH
+		|| param->solver_type == ONECLASS_L1_SEMIGD_RAND_1000
+		|| param->solver_type == ONECLASS_L2_SEMIGD_RAND_1000
+		|| param->solver_type == ONECLASS_L1_SEMIGD_RAND_SH
+		|| param->solver_type == ONECLASS_L2_SEMIGD_RAND_SH)
 		{
 			w_size = w_size + 1;
 			model_->bias = 1;
@@ -7605,17 +7640,21 @@ double predict_values(const struct model *model_, const struct feature_node *x, 
 		if(check_regression_model(model_))
 			return dec_values[0];
 		else if(model_->param.solver_type != ONECLASS_L1_RD_1000
-		 	||model_->param.solver_type != ONECLASS_L1_SEMIGD_1000
 		 	||model_->param.solver_type != ONECLASS_L1_RD_SH
-		 	||model_->param.solver_type != ONECLASS_L1_SEMIGD_SH
+	 		||model_->param.solver_type != ONECLASS_L2_RD_1000
+		 	||model_->param.solver_type != ONECLASS_L2_RD_SH
 			||model_->param.solver_type != ONECLASS_L1_FIRST_1000
+			||model_->param.solver_type != ONECLASS_L2_FIRST_1000
 			||model_->param.solver_type != ONECLASS_L1_SECOND_1000
 			||model_->param.solver_type != ONECLASS_L2_SECOND_1000
-			||model_->param.solver_type != ONECLASS_L2_FIRST_1000
-	 		||model_->param.solver_type != ONECLASS_L2_RD_1000
+		 	||model_->param.solver_type != ONECLASS_L1_SEMIGD_1000
 		 	||model_->param.solver_type != ONECLASS_L2_SEMIGD_1000
-		 	||model_->param.solver_type != ONECLASS_L2_RD_SH
-	 		||model_->param.solver_type != ONECLASS_L2_SEMIGD_SH)
+		 	||model_->param.solver_type != ONECLASS_L1_SEMIGD_SH
+	 		||model_->param.solver_type != ONECLASS_L2_SEMIGD_SH
+		 	||model_->param.solver_type != ONECLASS_L1_SEMIGD_RAND_1000
+		 	||model_->param.solver_type != ONECLASS_L2_SEMIGD_RAND_1000
+		 	||model_->param.solver_type != ONECLASS_L1_SEMIGD_RAND_SH
+	 		||model_->param.solver_type != ONECLASS_L2_SEMIGD_RAND_SH)
 			return (dec_values[0]>0)?1:-1;
 		else
 			return (dec_values[0]>0)?model_->label[0]:model_->label[1];
@@ -7754,17 +7793,21 @@ class Solver_type_table
 		SAVE_NAME(BIAS_L2_SEMIGD_RAND_SH);
 		//for one-class svm
 		SAVE_NAME(ONECLASS_L1_RD_1000);
-		SAVE_NAME(ONECLASS_L1_SEMIGD_1000);
-		SAVE_NAME(ONECLASS_L1_FIRST_1000);
-		SAVE_NAME(ONECLASS_L1_SECOND_1000);
 		SAVE_NAME(ONECLASS_L1_RD_SH);
-		SAVE_NAME(ONECLASS_L1_SEMIGD_SH);
 		SAVE_NAME(ONECLASS_L2_RD_1000);
-		SAVE_NAME(ONECLASS_L2_SEMIGD_1000);
-		SAVE_NAME(ONECLASS_L2_FIRST_1000);
-		SAVE_NAME(ONECLASS_L2_SECOND_1000);
 		SAVE_NAME(ONECLASS_L2_RD_SH);
+		SAVE_NAME(ONECLASS_L1_FIRST_1000);
+		SAVE_NAME(ONECLASS_L2_FIRST_1000);
+		SAVE_NAME(ONECLASS_L1_SECOND_1000);
+		SAVE_NAME(ONECLASS_L2_SECOND_1000);
+		SAVE_NAME(ONECLASS_L1_SEMIGD_1000);
+		SAVE_NAME(ONECLASS_L1_SEMIGD_SH);
+		SAVE_NAME(ONECLASS_L2_SEMIGD_1000);
 		SAVE_NAME(ONECLASS_L2_SEMIGD_SH);
+		SAVE_NAME(ONECLASS_L1_SEMIGD_RAND_1000);
+		SAVE_NAME(ONECLASS_L1_SEMIGD_RAND_SH);
+		SAVE_NAME(ONECLASS_L2_SEMIGD_RAND_1000);
+		SAVE_NAME(ONECLASS_L2_SEMIGD_RAND_SH);
 #undef SAVE_NAME
 	}
 
@@ -7786,6 +7829,7 @@ class Solver_type_table
 
 int save_model(const char *model_file_name, const struct model *model_)
 {
+	return 0;
 	int i;
 	int nr_feature=model_->nr_feature;
 	int n;
@@ -8146,17 +8190,21 @@ const char *check_parameter(const problem *prob, const parameter *param)
 		&& param->solver_type != BIAS_L1_SEMIGD_RAND_SH
 		&& param->solver_type != BIAS_L2_SEMIGD_RAND_SH
 	 	&& param->solver_type != ONECLASS_L1_RD_1000
-	 	&& param->solver_type != ONECLASS_L1_SEMIGD_1000
 	 	&& param->solver_type != ONECLASS_L1_RD_SH
-	 	&& param->solver_type != ONECLASS_L1_SEMIGD_SH
+	 	&& param->solver_type != ONECLASS_L2_RD_1000
+	 	&& param->solver_type != ONECLASS_L2_RD_SH
 		&& param->solver_type != ONECLASS_L1_FIRST_1000
+		&& param->solver_type != ONECLASS_L2_FIRST_1000
 		&& param->solver_type != ONECLASS_L1_SECOND_1000
 		&& param->solver_type != ONECLASS_L2_SECOND_1000
-		&& param->solver_type != ONECLASS_L2_FIRST_1000
-	 	&& param->solver_type != ONECLASS_L2_RD_1000
+	 	&& param->solver_type != ONECLASS_L1_SEMIGD_1000
+	 	&& param->solver_type != ONECLASS_L1_SEMIGD_SH
 	 	&& param->solver_type != ONECLASS_L2_SEMIGD_1000
-	 	&& param->solver_type != ONECLASS_L2_RD_SH
-	 	&& param->solver_type != ONECLASS_L2_SEMIGD_SH)
+	 	&& param->solver_type != ONECLASS_L2_SEMIGD_SH
+	 	&& param->solver_type != ONECLASS_L1_SEMIGD_RAND_1000
+	 	&& param->solver_type != ONECLASS_L1_SEMIGD_RAND_SH
+	 	&& param->solver_type != ONECLASS_L2_SEMIGD_RAND_1000
+	 	&& param->solver_type != ONECLASS_L2_SEMIGD_RAND_SH)
 		return "unknown solver type";
 
 	if(param->init_sol != NULL 
