@@ -1,15 +1,15 @@
 logfolder='log_notime'
 
 runtype = [
-	"BIAS_L1_SEMIGD_1000",
-	"BIAS_L1_SEMIGD_RAND_1000",
-	#"BIAS_L1_RD_1000",
-	"BIAS_L2_SEMIGD_1000",
-	"BIAS_L2_SEMIGD_RAND_1000",
-	#"BIAS_L2_RD_1000",
+	"ONECLASS_L1_SEMIGD_1000",
+	"ONECLASS_L1_SEMIGD_RAND_1000",
+	#"ONECLASS_L1_RD_1000",
+	"ONECLASS_L2_SEMIGD_1000",
+	"ONECLASS_L2_SEMIGD_RAND_1000",
+	#"ONECLASS_L2_RD_1000",
 ]
-nlist = [0.1]
-clist = [1.0/32, 1, 32]
+nlist = [0.01, 0.1, 0.2]
+clist = [1]
 elist = [1e-12]
 rlist = [
 	#1,0.95,0.9,0.5,0.1,0.01,0.001
@@ -58,8 +58,10 @@ uselabel = {
 		50211:"l1-semigd",
 		50311:"l1-first",
 		50411:"l1-second",
+		50511:"l1-semigdrd",
 		50121:"l2-random",
 		50221:"l2-semigd",
 		50321:"l2-first",
 		50421:"l2-second",
+		50521:"l2-semigdrd",
 }
