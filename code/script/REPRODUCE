@@ -1,8 +1,8 @@
-# exp-2019-02-24
+# exp-2019-02-25
 # generate log
 ./runexp.py run 
 
-2052 log files
+1404 log files
 
 # generate plot
 Plot l1/l2, and compare semigd with random.

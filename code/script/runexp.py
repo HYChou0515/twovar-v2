@@ -72,7 +72,8 @@ for data in dataset:
 				sys.stderr.write('error: ' + filename+os.linesep)
 				sys.stderr.write(str(e)+os.linesep)
 				continue
-			cmd = "%s%s -s %d -c %g -e %g -m %d -t %d -o %.16g" % (ROOT_PATH, train, runs[tp], tc, e, m, timeout, opt_val)
+			#cmd = "%s%s -s %d -c %g -e %g -m %d -t %d -o %.16g" % (ROOT_PATH, train, runs[tp], tc, e, m, timeout, opt_val)
+			cmd = "%s%s -s %d -c %g -e %g -m %d -t %d" % (ROOT_PATH, train, runs[tp], tc, e, m, timeout)
 			if need_n:
 				cmd = cmd + " -n %g" % (n)
 			if need_r:
