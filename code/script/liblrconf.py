@@ -72,11 +72,6 @@ runs = {
 	"BIAS_L2_SEMIGD_1000" : 40221,
 	"BIAS_L2_SEMIGD_SH" : 40222,
 
-	"BIAS_L1_SEMIGD_RAND_1000" : 40311,
-	"BIAS_L1_SEMIGD_RAND_SH" : 40312,
-	"BIAS_L2_SEMIGD_RAND_1000" : 40321,
-	"BIAS_L2_SEMIGD_RAND_SH" : 40322,
-
 	"ONECLASS_L1_RD_1000" : 50111,
 	"ONECLASS_L1_RD_SH" : 50112,
 	"ONECLASS_L2_RD_1000" : 50121,
@@ -87,15 +82,12 @@ runs = {
 	"ONECLASS_L2_SEMIGD_1000" : 50221,
 	"ONECLASS_L2_SEMIGD_SH" : 50222,
 
-	"ONECLASS_L1_SEMIGD_RAND_1000" : 50511,
-	"ONECLASS_L1_SEMIGD_RAND_SH" : 50512,
-	"ONECLASS_L2_SEMIGD_RAND_1000" : 50521,
-	"ONECLASS_L2_SEMIGD_RAND_SH" : 50522,
-
 	"ONECLASS_L1_FIRST_1000" : 50311,
 	"ONECLASS_L2_FIRST_1000" : 50321,
 	"ONECLASS_L1_SECOND_1000" : 50411,
 	"ONECLASS_L2_SECOND_1000" : 50421,
+
+	"STUB" : None,
 }
 alltype = runs.values()
 def is_biasobj(code):
@@ -110,7 +102,7 @@ def is_semigd(code):
 	if len(str_code) != 5:
 		return False
 	else:
-		semigd_prefix = [203, 204, 205, 206, 402, 403, 502, 505, 506]
+		semigd_prefix = [203, 204, 205, 206, 402, 502]
 		return str_code[:3] in map(str, semigd_prefix)
 
 def is_shrink(code):
