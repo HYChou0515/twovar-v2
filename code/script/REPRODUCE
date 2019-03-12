@@ -1,14 +1,11 @@
-# exp-2019-02-25
+# exp-2019-03-12
 # generate log
 ./runexp.py run 
 
-1404 log files
+144 log files
 
 # generate plot
-Plot l1/l2, and compare semigd with random.
-First comment L2 things, and un-comment L1_RD.
-After plotting, change to L2 and then plot again.
-
-For a group, use
+Go to newton:/media/new/hychou0515/data_minexp/ for min and bal data,
+and then run the experiment.
 
 ./plot.py --logpath ../log/ cd
