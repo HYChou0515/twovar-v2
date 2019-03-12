@@ -85,7 +85,10 @@ How to Add New Solver Type (-s)
 2. train.c
 	append NEWTYPE info to exit_with_help()
 	append NEWTYPE info to param.eps default value 
-3. linear.cpp
+3. grid.cpp
+	append NEWTYPE info to exit_with_help()
+	append NEWTYPE info to param.eps default value 
+4. linear.cpp
 	a) Solver::Solver
 		i) 	determine category
 		ii) SAVE_NAME	
@@ -101,6 +104,17 @@ How to Add New Solver Type (-s)
 		SAVE_NAME to the solver type table
 	e) check_parameter()
 		exit if solver_type is not equal to NEWTYPE or other
-4. script/liblrconf.py
+5. script/liblrconf.py
 	a) append NEWTYPE code to runs = {}
 	b) modify semigd_prefix = []
+
+`grid' Usage
+============
+
+Usage; grid training_set_file < grid.job
+Each line of grid.job is a grid option of the training_set_file,
+the format is:
+[options] [log_file] [model_file]
+options: same as train
+log_file: the file to save the log of this grid, stdout if empty
+model_file: same as train

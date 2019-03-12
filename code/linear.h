@@ -68,6 +68,11 @@ enum {
 	ONE_L2_SEMIGD_DUALOBJ_RAND_1000 = 20621,
 	ONE_L2_SEMIGD_DUALOBJ_RAND_SH = 20622,
 
+	ONE_L1_SEMIGD_DUALOBJ_YBAL_1000 = 20711,
+	ONE_L1_SEMIGD_DUALOBJ_YBAL_SH = 20712,
+	ONE_L2_SEMIGD_DUALOBJ_YBAL_1000 = 20721,
+	ONE_L2_SEMIGD_DUALOBJ_YBAL_SH = 20722,
+
 	//for two-variable
 	TWO_L1_CY_1000 = 30111,
 	TWO_L2_CY_1000 = 30121,
@@ -144,6 +149,8 @@ struct parameter
 	int timeout; // in second     
 	double opt_val;
 	double nu;	/* for one-class formulation */
+
+	FILE* log_fp;
 };
 
 struct model

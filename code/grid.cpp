@@ -4,6 +4,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <errno.h>
+#include <omp.h>
 #include "linear.h"
 #define Malloc(type,n) (type *)malloc((n)*sizeof(type))
 #define INF HUGE_VAL
@@ -13,7 +14,8 @@ void print_null(const char *s) {}
 void exit_with_help()
 {
 	printf(
-	"Usage: train [options] training_set_file [log_file] [model_file]\n"
+	"Usage: train training_set_file [log_file] [model_file]\n"
+	"options are from stdin\n"
 	"options:\n"
 	"-s type : set type of solver (default 1)\n"
 	"  for multi-class classification\n"
@@ -159,6 +161,54 @@ void exit_input_error(int line_num)
 	exit(1);
 }
 
+static void ltrim(char* s)
+{
+	int slen = (int) strlen(s);
+	int trim_idx = 0;
+	bool end=false;
+	while(trim_idx < slen && !end)
+	{
+		switch(s[trim_idx])
+		{
+			case ' ':  case '\n':
+			case '\r': case '\t':
+				++trim_idx;
+				break;
+			default:
+				if(trim_idx-1 >= 0)
+					s[trim_idx-1]='\0';
+				end=true;
+		}
+	}
+}
+
+static void rtrim(char* s)
+{
+	int slen = (int) strlen(s);
+	int trim_idx = slen-1;
+	bool end=false;
+	while(trim_idx >= 0 && !end)
+	{
+		switch(s[trim_idx])
+		{
+			case ' ':  case '\n':
+			case '\r': case '\t':
+				--trim_idx;
+				break;
+			default:
+				if(trim_idx+1 < slen)
+					s[trim_idx+1]='\0';
+				end=true;
+		}
+	}
+}
+
+static void trim(char* s)
+{
+	ltrim(s);
+	rtrim(s);
+}
+
 static char *line = NULL;
 static int max_line_len;
 
@@ -180,13 +230,20 @@ static char* readline(FILE *input)
 	return line;
 }
 
-void parse_command_line(int argc, char **argv, char *input_file_name, char *model_file_name);
+class GridItem
+{
+public:
+	struct parameter param;
+	char *model_file_name;
+};
+
+void parse_command_line(int argc, char **argv, char *input_file_name);
+void parse_stdin(char *input_file_name, GridItem* grid_item, char *param_str);
 void read_problem(const char *filename);
-void do_cross_validation();
-void do_find_parameter_C();
+void do_cross_validation(struct parameter* param);
+void do_find_parameter_C(struct parameter* param);
 
 struct feature_node *x_space;
-struct parameter param;
 struct problem prob;
 struct model* model_;
 int flag_cross_validation;
@@ -198,39 +255,54 @@ double bias;
 
 int main(int argc, char **argv)
 {
+	int GRID_MAX=1024;
 	char input_file_name[1024];
-	char model_file_name[1024];
 	const char *error_msg;
+	GridItem grid_items[GRID_MAX];
 
-	parse_command_line(argc, argv, input_file_name, model_file_name);
+	parse_command_line(argc, argv, input_file_name);
+	char param_str[1024];
+	int param_num = 0;
+	for(param_num = 0; fgets(param_str, sizeof(param_str), stdin); param_num++)
+	{
+		grid_items[param_num].model_file_name = Malloc(char, 1024);
+		parse_stdin(input_file_name, &(grid_items[param_num]), param_str);
+	}
 	read_problem(input_file_name);
-	error_msg = check_parameter(&prob,&param);
 
-	if(error_msg)
+	#pragma omp parallel for
+	for(int i = 0; i < param_num; i++)
 	{
-		fprintf(stderr,"ERROR: %s\n",error_msg);
-		exit(1);
-	}
+		struct parameter param = grid_items[i].param;
+		error_msg = check_parameter(&prob,&param);
 
-	if (flag_find_C)
-	{
-		do_find_parameter_C();
-	}
-	else if(flag_cross_validation)
-	{
-		do_cross_validation();
-	}
-	else
-	{
-		model_=train(&prob, &param);
-		if(save_model(model_file_name, model_))
+		if(error_msg)
 		{
-			fprintf(stderr,"can't save model to file %s\n",model_file_name);
+			fprintf(stderr,"ERROR: %s\n",error_msg);
 			exit(1);
 		}
-		free_and_destroy_model(&model_);
+
+		if (flag_find_C)
+		{
+			do_find_parameter_C(&param);
+		}
+		else if(flag_cross_validation)
+		{
+			do_cross_validation(&param);
+		}
+		else
+		{
+			model_=train(&prob, &param);
+			if(save_model(grid_items[i].model_file_name, model_))
+			{
+				fprintf(stderr,"can't save model to file %s\n",grid_items[i].model_file_name);
+				exit(1);
+			}
+			free_and_destroy_model(&model_);
+		}
+		fclose(param.log_fp);
+		destroy_param(&param);
 	}
-	destroy_param(&param);
 	free(prob.y);
 	free(prob.x);
 	free(x_space);
@@ -239,20 +311,20 @@ int main(int argc, char **argv)
 	return 0;
 }
 
-void do_find_parameter_C()
+void do_find_parameter_C(struct parameter* param)
 {
 	double start_C, best_C, best_rate;
 	double max_C = 1024;
 	if (flag_C_specified)
-		start_C = param.C;
+		start_C = param->C;
 	else
 		start_C = -1.0;
 	printf("Doing parameter search with %d-fold cross validation.\n", nr_fold);
-	find_parameter_C(&prob, &param, nr_fold, start_C, max_C, &best_C, &best_rate);
+	find_parameter_C(&prob, param, nr_fold, start_C, max_C, &best_C, &best_rate);
 	printf("Best C = %g  CV accuracy = %g%%\n", best_C, 100.0*best_rate);
 }
 
-void do_cross_validation()
+void do_cross_validation(struct parameter* param)
 {
 	int i;
 	int total_correct = 0;
@@ -260,10 +332,10 @@ void do_cross_validation()
 	double sumv = 0, sumy = 0, sumvv = 0, sumyy = 0, sumvy = 0;
 	double *target = Malloc(double, prob.l);
 
-	cross_validation(&prob,&param,nr_fold,target);
-	if(param.solver_type == L2R_L2LOSS_SVR ||
-	   param.solver_type == L2R_L1LOSS_SVR_DUAL ||
-	   param.solver_type == L2R_L2LOSS_SVR_DUAL)
+	cross_validation(&prob,param,nr_fold,target);
+	if(param->solver_type == L2R_L2LOSS_SVR ||
+	   param->solver_type == L2R_L1LOSS_SVR_DUAL ||
+	   param->solver_type == L2R_L2LOSS_SVR_DUAL)
 	{
 		for(i=0;i<prob.l;i++)
 		{
@@ -293,92 +365,113 @@ void do_cross_validation()
 	free(target);
 }
 
-void parse_command_line(int argc, char **argv, char *input_file_name, char *model_file_name)
+void parse_command_line(int argc, char **argv, char *input_file_name)
 {
-	int i;
-	void (*print_func)(const char*) = NULL;	// default printing to stdout
+	// determine filenames
+	if(argc != 2)
+		exit_with_help();
 
+	strcpy(input_file_name, argv[1]);
+}
+void parse_stdin(char *input_file_name, GridItem* grid_item, char *param_str)
+{
 	// default values
-	param.solver_type = ONE_L2_CY_SH;
-	param.C = 1;
-	param.eps = INF; // see setting below
-	param.p = 0.1;
-	param.r = 1;
-	param.max_iter = 1000;
-	param.timeout = 0;
-	param.opt_val = -INF;
-	param.nu = 0.1;
-	param.nr_weight = 0;
-	param.weight_label = NULL;
-	param.weight = NULL;
-	param.init_sol = NULL;
+	grid_item->param.solver_type = ONE_L2_CY_SH;
+	grid_item->param.C = 1;
+	grid_item->param.eps = INF; // see setting below
+	grid_item->param.p = 0.1;
+	grid_item->param.r = 1;
+	grid_item->param.max_iter = 1000;
+	grid_item->param.timeout = 0;
+	grid_item->param.opt_val = -INF;
+	grid_item->param.nu = 0.1;
+	grid_item->param.nr_weight = 0;
+	grid_item->param.weight_label = NULL;
+	grid_item->param.weight = NULL;
+	grid_item->param.init_sol = NULL;
 	flag_cross_validation = 0;
 	flag_C_specified = 0;
 	flag_solver_specified = 0;
 	flag_find_C = 0;
 	bias = -1;
 
+	printf("%s", param_str);
+	char * key_token = strtok(param_str, " ");
+	char * val_token;
 	// parse options
-	for(i=1;i<argc;i++)
+	while(key_token != NULL)
 	{
-		if(argv[i][0] != '-') break;
-		if(++i>=argc)
-			exit_with_help();
-		switch(argv[i-1][1])
+		if(key_token[0] != '-')
+		{
+			break;
+		}
+		switch(key_token[1])
 		{
 			case 'm':
-				param.max_iter = atoi(argv[i]);
+				val_token = strtok(NULL, " ");
+				grid_item->param.max_iter = atoi(val_token);
 				break;
 
 			case 'o':
-				param.opt_val = atof(argv[i]);
+				val_token = strtok(NULL, " ");
+				grid_item->param.opt_val = atof(val_token);
 				break;
 
 			case 't':
-				param.timeout = atoi(argv[i]);
+				val_token = strtok(NULL, " ");
+				grid_item->param.timeout = atoi(val_token);
 				break;
 
 			case 'r':
-				param.r = atof(argv[i]);
+				val_token = strtok(NULL, " ");
+				grid_item->param.r = atof(val_token);
 				break;
 
 			case 'n':
-				param.nu = atof(argv[i]);
+				val_token = strtok(NULL, " ");
+				grid_item->param.nu = atof(val_token);
 				break;
 
 			case 's':
-				param.solver_type = atoi(argv[i]);
+				val_token = strtok(NULL, " ");
+				grid_item->param.solver_type = atoi(val_token);
 				flag_solver_specified = 1;
 				break;
 
 			case 'c':
-				param.C = atof(argv[i]);
+				val_token = strtok(NULL, " ");
+				grid_item->param.C = atof(val_token);
 				flag_C_specified = 1;
 				break;
 
 			case 'p':
-				param.p = atof(argv[i]);
+				val_token = strtok(NULL, " ");
+				grid_item->param.p = atof(val_token);
 				break;
 
 			case 'e':
-				param.eps = atof(argv[i]);
+				val_token = strtok(NULL, " ");
+				grid_item->param.eps = atof(val_token);
 				break;
 
 			case 'B':
-				bias = atof(argv[i]);
+				val_token = strtok(NULL, " ");
+				bias = atof(val_token);
 				break;
 
 			case 'w':
-				++param.nr_weight;
-				param.weight_label = (int *) realloc(param.weight_label,sizeof(int)*param.nr_weight);
-				param.weight = (double *) realloc(param.weight,sizeof(double)*param.nr_weight);
-				param.weight_label[param.nr_weight-1] = atoi(&argv[i-1][2]);
-				param.weight[param.nr_weight-1] = atof(argv[i]);
+				val_token = strtok(NULL, " ");
+				++(grid_item->param.nr_weight);
+				grid_item->param.weight_label = (int *) realloc(grid_item->param.weight_label,sizeof(int)*grid_item->param.nr_weight);
+				grid_item->param.weight = (double *) realloc(grid_item->param.weight,sizeof(double)*grid_item->param.nr_weight);
+				grid_item->param.weight_label[grid_item->param.nr_weight-1] = atoi(&key_token[2]);
+				grid_item->param.weight[grid_item->param.nr_weight-1] = atof(val_token);
 				break;
 
 			case 'v':
+				val_token = strtok(NULL, " ");
 				flag_cross_validation = 1;
-				nr_fold = atoi(argv[i]);
+				nr_fold = atoi(val_token);
 				if(nr_fold < 2)
 				{
 					fprintf(stderr,"n-fold cross validation: n must >= 2\n");
@@ -387,45 +480,42 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 				break;
 
 			case 'q':
-				print_func = &print_null;
-				i--;
+				set_print_string_function(print_null);
 				break;
 
 			case 'C':
 				flag_find_C = 1;
-				i--;
 				break;
 
 			default:
-				fprintf(stderr,"unknown option: -%c\n", argv[i-1][1]);
+				fprintf(stderr,"unknown option: -%c\n", key_token[1]);
 				exit_with_help();
 				break;
 		}
+		key_token = strtok(NULL, " ");
 	}
-
-	set_print_string_function(print_func);
-
-	// determine filenames
-	if(i>=argc)
-		exit_with_help();
-
-	strcpy(input_file_name, argv[i]);
-
-	if(i<argc-1)
-		param.log_fp = fopen(argv[i+1], "w");
+	if(key_token != NULL)
+	{
+		trim(key_token);
+		grid_item->param.log_fp = fopen(key_token, "w");
+	}
 	else
-		param.log_fp = stdout;
+		grid_item->param.log_fp = stdout;
 
-	if(i<argc-2)
-		strcpy(model_file_name,argv[i+2]);
+	key_token = strtok(NULL, " ");
+	if(key_token != NULL)
+	{
+		trim(key_token);
+		strcpy(grid_item->model_file_name, key_token);
+	}
 	else
 	{
-		char *p = strrchr(argv[i],'/');
+		char *p = strrchr(input_file_name,'/');
 		if(p==NULL)
-			p = argv[i];
+			p = input_file_name;
 		else
 			++p;
-		sprintf(model_file_name,"%s.model",p);
+		sprintf(grid_item->model_file_name,"%s.model",p);
 	}
 
 	// default solver for parameter selection is L2R_L2LOSS_SVC
@@ -436,34 +526,34 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 		if(!flag_solver_specified)
 		{
 			fprintf(stderr, "Solver not specified. Using -s 2\n");
-			param.solver_type = L2R_L2LOSS_SVC;
+			grid_item->param.solver_type = L2R_L2LOSS_SVC;
 		}
-		else if(param.solver_type != L2R_LR && param.solver_type != L2R_L2LOSS_SVC)
+		else if(grid_item->param.solver_type != L2R_LR && grid_item->param.solver_type != L2R_L2LOSS_SVC)
 		{
 			fprintf(stderr, "Warm-start parameter search only available for -s 0 and -s 2\n");
 			exit_with_help();
 		}
 	}
-	if(param.eps == INF)
+	if(grid_item->param.eps == INF)
 	{
-		switch(param.solver_type)
+		switch(grid_item->param.solver_type)
 		{
 			case L2R_LR:
 			case L2R_L2LOSS_SVC:
-				param.eps = 0.01;
+				grid_item->param.eps = 0.01;
 				break;
 			case L2R_L2LOSS_SVR:
-				param.eps = 0.001;
+				grid_item->param.eps = 0.001;
 				break;
 			case OLD_ONE_L2_CY_SH:
 			case OLD_ONE_L1_CY_SH:
 			case MCSVM_CS:
 			case L2R_LR_DUAL:
-				param.eps = 0.1;
+				grid_item->param.eps = 0.1;
 				break;
 			case L1R_L2LOSS_SVC:
 			case L1R_LR:
-				param.eps = 0.01;
+				grid_item->param.eps = 0.01;
 				break;
 			case L2R_L1LOSS_SVR_DUAL:
 			case L2R_L2LOSS_SVR_DUAL:
@@ -542,7 +632,7 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 			case ONECLASS_L1_SEMIGD_RAND_SH:
 			case ONECLASS_L2_SEMIGD_RAND_1000:
 			case ONECLASS_L2_SEMIGD_RAND_SH:
-				param.eps = 0.01;
+				grid_item->param.eps = 0.01;
 				break;
 		}
 	}
