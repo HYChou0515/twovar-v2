@@ -1,14 +1,12 @@
-# exp-2019-02-25
+# exp-2019-03-13
 # generate log
 ./runexp.py run 
 
-1404 log files
+270 log files
 
 # generate plot
-Plot l1/l2, and compare semigd with random.
-First comment L2 things, and un-comment L1_RD.
-After plotting, change to L2 and then plot again.
-
-For a group, use
+Plot l1 separately.
+Uncomment other than YABL to plot
+For L2 setting, YBAL and CY are not ready, so cannot plot.
 
 ./plot.py --logpath ../log/ cd

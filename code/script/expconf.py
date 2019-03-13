@@ -1,6 +1,8 @@
 logfolder='log_notime'
 
 runtype = [
+	#"ONE_L1_CY_1000",
+	#"ONE_L1_SEMIGD_DUALOBJ_1000",
 	"ONE_L1_SEMIGD_DUALOBJ_YBAL_1000",
 	"ONE_L2_SEMIGD_DUALOBJ_YBAL_1000",
 ]
@@ -46,21 +48,8 @@ MIN_SQUASH = 0.2
 YLIM = (1e-9, 1e20)
 
 uselabel = {
-		40111:"l1-random",
-		40121:"l2-random",
-		40211:"l1-semigd",
-		40221:"l2-semigd",
-		40311:"l1-semigdrd",
-		40321:"l2-semigdrd",
-		50111:"l1-random",
-		50211:"l1-semigd",
-		50311:"l1-first",
-		50411:"l1-second",
-		50511:"l1-semigdrd",
-		50121:"l2-random",
-		50221:"l2-semigd",
-		50321:"l2-first",
-		50421:"l2-second",
-		50521:"l2-semigdrd",
+		20111: "random",
+		20411: "semigd",
+		20711: "semigd_ybal",
 }
 
