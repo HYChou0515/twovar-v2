@@ -1,8 +1,8 @@
-# exp-2019-03-13
+# exp-2019-03-14
 # generate log
 ./runexp.py run 
 
-270 log files
+600 log files
 
 # generate plot
 Plot l1 separately.
