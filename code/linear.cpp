@@ -848,6 +848,7 @@ public:
 	double eps;
 	int *alpha_status;
 	int max_set;
+	int w_size;
 	int *index;
 	int max_iter;
 	int timeout;
@@ -876,6 +877,9 @@ public:
 	struct timeval start_tv;
 	struct timeval now_tv;
 	FILE* log_fp;
+	struct resume* _resume;
+	int nr_rand_calls;
+	int resume_count;
 	std::default_random_engine generator;
 	std::uniform_int_distribution<int> distribution;
 	double last_obj; //the obj calculated in the last log_message
@@ -916,6 +920,8 @@ public:
 	void debug(const char *fmt, ...);
 	void log_info(const char *fmt, ...);
 	int non_static_rand();
+	void save_resume();
+	void use_resume();
 
 	//onetwo_nobias_update
 	void one_random_shrink();
@@ -949,11 +955,13 @@ public:
 };
 int Solver::non_static_rand()
 {
+	nr_rand_calls++;
 	return distribution(generator);
 }
 Solver::Solver(int _solver_type)
 {
 	std::uniform_int_distribution<int> distribution(0,RAND_MAX);
+	_resume = NULL;
 	iter = 0;
 	duration = 0;
 	PGmax_new = nan("");
@@ -961,6 +969,7 @@ Solver::Solver(int _solver_type)
 	Gmax = nan("");
 	Gmin = nan("");
 	last_obj = nan("");
+	w_size = -1;
 	active_size = -1;
 	success_pair = -1;
 	n_exchange = -1;
@@ -969,6 +978,8 @@ Solver::Solver(int _solver_type)
 	alpha_diff = nan("");
 	nr_pos_y = -1;
 	nr_neg_y = -1;
+	nr_rand_calls = 0;
+	resume_count = 0;
 	gettimeofday(&start_tv, NULL);
 
 	switch(solver_type)
@@ -1346,6 +1357,36 @@ void Solver::debug(const char *fmt, ...)
 	fprintf( stderr, "%s", buf);
 	fflush(stderr);
 }
+void Solver::save_resume()
+{
+	if(_resume == NULL)
+		return;
+	gettimeofday(&now_tv, NULL);
+	//if((now_tv.tv_sec-start_tv.tv_sec)/60 < resume_count)
+	//if(iter%100!=0)
+	if(iter != 3)
+		return;
+	++resume_count;
+	FILE* fp = fopen(_resume->fname, "a");
+	fprintf(fp, "iter\n%d\n", iter);
+	fprintf(fp, "duration\n%ju\n", (uintmax_t) duration);
+	fprintf(fp, "nr_rand_calls\n%d\n", nr_rand_calls);
+	fprintf(fp, "alpha_size\n%d\n", prob->l);
+	fprintf(fp, "index\n");
+	for(int i=0;i<prob->l;i++)
+		fprintf(fp, "%d ", index[i]);
+	fprintf(fp, "\n");
+	fprintf(fp, "alpha\n");
+	for(int i=0;i<prob->l;i++)
+		fprintf(fp, "%.17g ", alpha[i]);
+	fprintf(fp, "\n");
+	fprintf(fp, "w_size\n%d\n", w_size);
+	fprintf(fp, "w\n");
+	for(int i=0;i<w_size;i++)
+		fprintf(fp, "%.17g ", w[i]);
+	fprintf(fp, "\n=====\n");
+	fclose(fp);
+}
 
 static int updateAlphaStatus(double alpha, double C)
 {
@@ -1355,6 +1396,30 @@ static int updateAlphaStatus(double alpha, double C)
 		return 1;
 	else 
 		return 2;
+}
+
+void Solver::use_resume()
+{
+	if(_resume == NULL)
+		return;
+	if(!_resume->read_resume)
+		return;
+	if(prob->l != _resume->alpha_size)
+		fprintf(stderr, "ERROR: resume alpha_size not consistent to prob->l\n");
+	if(w_size != _resume->w_size)
+		fprintf(stderr, "ERROR: resume w_size not consistent\n");
+	iter = _resume->iter;
+	duration = _resume->duration;
+	for(int i=0; i<_resume->nr_rand_calls; i++)
+		non_static_rand();
+	for(int i=0; i<w_size; i++)
+		w[i] = _resume->w[i];
+	for(int i=0; i<prob->l; i++)
+	{
+		index[i] = _resume->index[i];
+		alpha[i] = _resume->alpha[i];
+		alpha_status[index[i]] = updateAlphaStatus(alpha[i],upper_bound[2]);
+	}
 }
 
 struct mincomp
@@ -1441,6 +1506,7 @@ void Solver::one_random_shrink()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		save_resume();
 		if(PGmax_new - PGmin_new <= eps)
 		{
 			if(active_size == l)
@@ -1506,6 +1572,7 @@ void Solver::one_random_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
@@ -1590,6 +1657,7 @@ void Solver::one_cyclic_shrink()
 		iter++;
 		duration += clock()- start;
 		log_message();
+		save_resume();
 		if(PGmax_new - PGmin_new <= eps)
 		{
 			if(active_size == l)
@@ -1654,6 +1722,7 @@ void Solver::one_cyclic_1000()
 		iter++;
 		duration += clock() -start;
 		log_message();
+		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
@@ -1781,6 +1850,7 @@ void Solver::one_semigd_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
@@ -1927,6 +1997,7 @@ void Solver::one_semigd_dualobj_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
@@ -2116,6 +2187,7 @@ void Solver::two_semicyclic_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
@@ -2354,6 +2426,7 @@ void Solver::two_random_shrink2()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		save_resume();
 		if(PGmax_new - PGmin_new <= eps)
 		{
 			if(active_size == l)
@@ -2615,6 +2688,7 @@ void Solver::two_random_shrink()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		save_resume();
 		if(PGmax_new - PGmin_new <= eps)
 		{
 			if(active_size == l)
@@ -2827,6 +2901,7 @@ void Solver::two_cyclic_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
@@ -3005,6 +3080,7 @@ void Solver::two_semirandom2_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
@@ -3184,6 +3260,7 @@ void Solver::two_semirandom1_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
@@ -3334,6 +3411,7 @@ void Solver::two_random_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
@@ -3511,6 +3589,7 @@ void Solver::two_semigd_1000()
 //		iter++;
 //		duration += clock() - start;
 //		log_message();
+		save_resume();
 //	}
 //	summary();
 }
@@ -3865,6 +3944,7 @@ void Solver::bias_semigd()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
@@ -4141,6 +4221,7 @@ void Solver::bias_random_shrink()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
@@ -4320,6 +4401,7 @@ void Solver::bias_random_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
@@ -4523,6 +4605,7 @@ void Solver::oneclass_random_shrink()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		save_resume();
 		if(Gmax-Gmin< eps)
 		{
 			if(active_size == l)
@@ -4673,6 +4756,7 @@ void Solver::oneclass_random_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
@@ -4812,6 +4896,7 @@ void Solver::oneclass_first_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
@@ -4962,6 +5047,7 @@ void Solver::oneclass_second_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
@@ -5160,6 +5246,7 @@ void Solver::oneclass_semigd_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		save_resume();
 		success_all += success_pair;
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
@@ -5417,6 +5504,7 @@ void Solver::oneclass_semigd_shrink()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		save_resume();
 		success_all += success_pair;
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
@@ -5473,6 +5561,8 @@ static void oneclass_update(
 	{
 		alpha[i] = 0;
 	}
+	for(i=0; i<prob->n; i++)
+		w[i] = 0;
 	for(i=0; i<l; i++)
 	{
 		alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[2]);
@@ -5484,6 +5574,7 @@ static void oneclass_update(
 	Solver solver = Solver(solver_type);
 	solver.prob = prob;
 	solver.w = w;
+	solver.w_size = prob->n;
 	solver.alpha = alpha;
 	solver.eps = param->eps;
 	solver.QD = QD;
@@ -5496,6 +5587,8 @@ static void oneclass_update(
 	solver.timeout = param->timeout;
 	solver.opt_val = param->opt_val;
 	solver.log_fp = param->log_fp;
+	solver._resume = param->_resume;
+	solver.use_resume();
 	switch(solver_type)
 	{
 		
@@ -5604,6 +5697,7 @@ static void two_bias_update(
 	Solver solver = Solver(solver_type);
 	solver.prob = prob;
 	solver.w = w;
+	solver.w_size = w_size;
 	solver.alpha = alpha;
 	solver.eps = eps;
 	solver.QD = QD;
@@ -5617,6 +5711,8 @@ static void two_bias_update(
 	solver.timeout = param->timeout;
 	solver.opt_val = param->opt_val;
 	solver.log_fp = param->log_fp;
+	solver._resume = param->_resume;
+	solver.use_resume();
 	switch(solver_type)
 	{
 		case BIAS_L1_RD_SH:
@@ -5757,6 +5853,7 @@ static void onetwo_nobias_update(
 	Solver solver = Solver(solver_type);
 	solver.prob = prob;
 	solver.w = w;
+	solver.w_size = w_size;
 	solver.alpha = alpha;
 	solver.eps = eps;
 	solver.QD = QD;
@@ -5771,6 +5868,8 @@ static void onetwo_nobias_update(
 	solver.timeout = param->timeout;
 	solver.opt_val = param->opt_val;
 	solver.log_fp = param->log_fp;
+	solver._resume = param->_resume;
+	solver.use_resume();
 	switch(solver_type)
 	{
 		case ONE_L1_RD_SH:
@@ -8123,6 +8222,126 @@ struct model *load_model(const char *model_file_name)
 	if (ferror(fp) != 0 || fclose(fp) != 0) return NULL;
 
 	return model_;
+}
+#undef FSCANF
+#define FSCANF(_stream, _format, _var)do\
+{\
+	if (fscanf(_stream, _format, _var) != 1)\
+	{\
+		fprintf(stderr, "ERROR: fscanf failed to read the resume\n");\
+		EXIT_LOAD_RESUME()\
+	}\
+}while(0)
+#define EXIT_LOAD_RESUME()\
+{\
+	setlocale(LC_ALL, old_locale);\
+	free(_resume);\
+	free(old_locale);\
+	return NULL;\
+}
+struct resume *load_resume(const char *resume_file_name)
+{
+	struct resume* _resume = Malloc(struct resume, 1);
+	strcpy(_resume->fname, resume_file_name);
+	FILE* fp = fopen(_resume->fname, "r");
+	if(fp==NULL)
+	{
+		_resume->read_resume=false;
+		fp = fopen(_resume->fname, "w");
+		if(fp==NULL) return NULL;
+		else
+		{
+			if (ferror(fp) != 0 || fclose(fp) != 0) return NULL;
+			return _resume;
+		}
+	}
+	// read resume
+	_resume->read_resume=true;
+	char *old_locale = setlocale(LC_ALL, NULL);
+	if (old_locale)
+	{
+		old_locale = strdup(old_locale);
+	}
+	setlocale(LC_ALL, "C");
+
+	int last_resume=0;
+	char cmd[81];
+	while((fscanf(fp, "%80s", cmd) != EOF))
+	{
+		if(strcmp(cmd, "=====")==0)
+		{
+			if(fscanf(fp, "%80s", cmd) == EOF)
+				break;
+			last_resume++;
+		}
+	}
+	fclose(fp);
+	fp = fopen(_resume->fname, "r");
+
+	while(1)
+	{
+		FSCANF(fp, "%80s", cmd);
+		if(last_resume != 0)
+		{
+			if(strcmp(cmd, "=====")==0)
+				last_resume--;
+			continue;
+		}
+		if(strcmp(cmd, "iter")==0)
+		{
+			FSCANF(fp, "%d", &_resume->iter);
+		}
+		else if(strcmp(cmd, "duration")==0)
+		{
+			FSCANF(fp, "%ju", &_resume->duration);
+		}
+		else if(strcmp(cmd, "nr_rand_calls")==0)
+		{
+			FSCANF(fp, "%d", &_resume->nr_rand_calls);
+		}
+		else if(strcmp(cmd, "alpha_size")==0)
+		{
+			FSCANF(fp, "%d", &_resume->alpha_size);
+		}
+		else if(strcmp(cmd, "index")==0)
+		{
+			_resume->index = Malloc(int, _resume->alpha_size);
+			for(int i=0; i<_resume->alpha_size; i++)
+				FSCANF(fp, "%d", &_resume->index[i]);
+		}
+		else if(strcmp(cmd, "alpha")==0)
+		{
+			_resume->alpha = Malloc(double, _resume->alpha_size);
+			for(int i=0; i<_resume->alpha_size; i++)
+				FSCANF(fp, "%lf", &_resume->alpha[i]);
+		}
+		else if(strcmp(cmd, "w_size")==0)
+		{
+			FSCANF(fp, "%d", &_resume->w_size);
+		}
+		else if(strcmp(cmd, "w")==0)
+		{
+			_resume->w = Malloc(double, _resume->w_size);
+			for(int i=0; i<_resume->w_size; i++)
+				FSCANF(fp, "%lf", &_resume->w[i]);
+		}
+		else if(strcmp(cmd, "=====")==0)
+		{
+			break;
+		}
+		else
+		{
+			fprintf(stderr,"unknown text in resume file: [%s]\n",cmd);
+			EXIT_LOAD_RESUME()
+		}
+	}
+
+	setlocale(LC_ALL, old_locale);
+	free(old_locale);
+
+	if (ferror(fp) != 0 || fclose(fp) != 0) return NULL;
+
+	return _resume;
 }
 
 int get_nr_feature(const model *model_)

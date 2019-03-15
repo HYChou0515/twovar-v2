@@ -312,6 +312,7 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 	param.weight_label = NULL;
 	param.weight = NULL;
 	param.init_sol = NULL;
+	param._resume = NULL;
 	flag_cross_validation = 0;
 	flag_C_specified = 0;
 	flag_solver_specified = 0;
@@ -417,7 +418,16 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 		param.log_fp = stdout;
 
 	if(i<argc-2)
-		strcpy(model_file_name,argv[i+2]);
+	{
+		if((param._resume = load_resume(argv[i+2])) == NULL)
+		{
+			fprintf(stderr,"can't open resume file %s\n",argv[i+2]);
+			exit(1);
+		}
+	}
+
+	if(i<argc-3)
+		strcpy(model_file_name,argv[i+3]);
 	else
 	{
 		char *p = strrchr(argv[i],'/');

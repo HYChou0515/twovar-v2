@@ -133,6 +133,20 @@ enum {
 	ONECLASS_L2_SECOND_1000 = 50421,
 	}; /* solver_type */
 
+struct resume
+{
+	char fname[1024];
+	bool read_resume;
+	int iter;
+	clock_t duration;
+	int nr_rand_calls;
+	int alpha_size;
+	double *alpha;
+	int *index;
+	int w_size;
+	double *w;
+};
+
 struct parameter
 {
 	int solver_type;
@@ -150,6 +164,7 @@ struct parameter
 	double opt_val;
 	double nu;	/* for one-class formulation */
 
+	struct resume *_resume;
 	FILE* log_fp;
 };
 
@@ -170,6 +185,8 @@ void find_parameter_C(const struct problem *prob, const struct parameter *param,
 double predict_values(const struct model *model_, const struct feature_node *x, double* dec_values);
 double predict(const struct model *model_, const struct feature_node *x);
 double predict_probability(const struct model *model_, const struct feature_node *x, double* prob_estimates);
+
+struct resume *load_resume(const char *resume_file_name);
 
 int save_model(const char *model_file_name, const struct model *model_);
 struct model *load_model(const char *model_file_name);
