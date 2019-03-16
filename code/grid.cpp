@@ -14,7 +14,7 @@ void print_null(const char *s) {}
 void exit_with_help()
 {
 	printf(
-	"Usage: train training_set_file [log_file] [model_file]\n"
+	"Usage: train training_set_file [log_file] [resume_file] [model_file]\n"
 	"options are from stdin\n"
 	"options:\n"
 	"-s type : set type of solver (default 1)\n"
@@ -389,6 +389,7 @@ void parse_stdin(char *input_file_name, GridItem* grid_item, char *param_str)
 	grid_item->param.weight_label = NULL;
 	grid_item->param.weight = NULL;
 	grid_item->param.init_sol = NULL;
+	grid_item->param._resume = NULL;
 	flag_cross_validation = 0;
 	flag_C_specified = 0;
 	flag_solver_specified = 0;
@@ -501,6 +502,17 @@ void parse_stdin(char *input_file_name, GridItem* grid_item, char *param_str)
 	}
 	else
 		grid_item->param.log_fp = stdout;
+
+	key_token = strtok(NULL, " ");
+	if(key_token != NULL)
+	{
+		trim(key_token);
+		if((grid_item->param._resume = load_resume(key_token)) == NULL)
+		{
+			fprintf(stderr,"can't open resume file %s\n",key_token);
+			exit(1);
+		}
+	}
 
 	key_token = strtok(NULL, " ");
 	if(key_token != NULL)

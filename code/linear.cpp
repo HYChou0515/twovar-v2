@@ -982,6 +982,10 @@ Solver::Solver(int _solver_type)
 	alpha_diff = nan("");
 	nr_pos_y = -1;
 	nr_neg_y = -1;
+	PGmax_old = nan("");
+	PGmin_old = nan("");
+	Gmax_old = nan("");
+	Gmin_old = nan("");
 	nr_rand_calls = 0;
 	resume_count = 0;
 	gettimeofday(&start_tv, NULL);
@@ -1368,9 +1372,9 @@ void Solver::save_resume()
 	gettimeofday(&now_tv, NULL);
 	//if((now_tv.tv_sec-start_tv.tv_sec)/60 < resume_count)
 	//if(iter != 3)
-	if(iter/100 < resume_count)
+	if(iter/10 < resume_count)
 		return;
-	resume_count = iter/100+1;
+	resume_count = iter/10+1;
 	FILE* fp = fopen(_resume->fname, "a");
 	fprintf(fp, "iter\n%d\n", iter);
 	fprintf(fp, "duration\n%ju\n", (uintmax_t) duration);
@@ -1424,7 +1428,6 @@ void Solver::use_resume()
 	active_size = _resume->active_size;
 	Gmax_old = _resume->Gmax_old;
 	Gmin_old = _resume->Gmin_old;
-	printf("aaa:%g %g\n", Gmax_old, Gmin_old);
 	PGmax_old = _resume->PGmax_old;
 	PGmin_old = _resume->PGmin_old;
 	nr_rand_calls = 0;
@@ -1463,6 +1466,10 @@ void Solver::one_random_shrink()
 	// PG: projected gradient, for shrinking and stopping
 	double PG;
 	clock_t start;
+	if(isnan(PGmax_old))
+		PGmax_old = INF;
+	if(isnan(PGmin_old))
+		PGmin_old = -INF;
 
 	while (iter < max_iter)
 	{
@@ -1600,6 +1607,10 @@ void Solver::one_cyclic_shrink()
 	clock_t start;
 	// PG: projected gradient, for shrinking and stopping
 	double PG;
+	if(isnan(PGmax_old))
+		PGmax_old = INF;
+	if(isnan(PGmin_old))
+		PGmin_old = -INF;
 	
 	start = clock();
 	while (iter < max_iter)
@@ -2207,6 +2218,10 @@ void Solver::two_random_shrink2()
 	int i, j, s;
 	double C_i, C_j, G_i, G_j;
 	double PG_i , PG_j;
+	if(isnan(PGmax_old))
+		PGmax_old = INF;
+	if(isnan(PGmin_old))
+		PGmin_old = -INF;
 	
 	clock_t start;
 	while (iter < max_iter)
@@ -2461,6 +2476,10 @@ void Solver::two_random_shrink()
 	int i, j, s;
 	double C_i, C_j, G_i, G_j;
 	double PG_i , PG_j;
+	if(isnan(PGmax_old))
+		PGmax_old = INF;
+	if(isnan(PGmin_old))
+		PGmin_old = -INF;
 	
 	clock_t start;
 	while (iter < max_iter)
@@ -3949,6 +3968,11 @@ void Solver::bias_random_shrink()
 	double G_i, G_j;
 	enum {LOWER_BOUND, UPPER_BOUND, FREE};
 	clock_t start;
+	if(isnan(PGmax_old))
+		PGmax_old = INF;
+	if(isnan(PGmin_old))
+		PGmin_old = -INF;
+
 	while(iter < max_iter)
 	{
 		start = clock();
@@ -4401,6 +4425,10 @@ void Solver::oneclass_random_shrink()
 	int i, j;
 	double G_i, G_j;
 	enum {LOWER_BOUND, UPPER_BOUND, FREE};
+	if(isnan(Gmax_old))
+		Gmax_old = INF;
+	if(isnan(Gmin_old))
+		Gmin_old = -INF;
 	
 	while(iter < max_iter)
 	{
@@ -5464,9 +5492,6 @@ void Solver::oneclass_semigd_shrink()
 					n_exchange++;
 				sparse_operator::axpy(alpha[i]-old_alpha_i, prob->x[i], w);
 				sparse_operator::axpy(alpha[j]-old_alpha_j, prob->x[j], w);
-				double nG_i = sparse_operator::dot(w, prob->x[i]);
-				double nG_j = sparse_operator::dot(w, prob->x[j]);
-				info("%g %g %g %g | %g %g\n", alpha[i], alpha[j], nG_i, nG_j, G_i, G_j);
 				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[2]);
 				alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[2]);
 			}
@@ -5680,14 +5705,16 @@ static void two_bias_update(
 	solver.QD = QD;
 	solver.y = y;
 	solver.diag = diag;
-	solver.index = index;
-	solver.upper_bound = upper_bound;
 	solver.alpha_status = alpha_status;
 	solver.ratio_update = param->r;
+	solver.index = index;
+	solver.upper_bound = upper_bound;
 	solver.max_iter = param->max_iter;
 	solver.timeout = param->timeout;
 	solver.opt_val = param->opt_val;
 	solver.log_fp = param->log_fp;
+	solver.PGmax_old = INF;
+	solver.PGmin_old = -INF;
 	solver.active_size = l;
 	solver._resume = param->_resume;
 	solver.use_resume();
