@@ -140,6 +140,12 @@ struct resume
 	int iter;
 	clock_t duration;
 	int nr_rand_calls;
+	double last_obj;
+	int active_size;
+	double PGmax_old;
+	double PGmin_old;
+	double Gmax_old;
+	double Gmin_old;
 	int alpha_size;
 	double *alpha;
 	int *index;

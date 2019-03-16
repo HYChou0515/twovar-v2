@@ -13,7 +13,7 @@ void print_null(const char *s) {}
 void exit_with_help()
 {
 	printf(
-	"Usage: train [options] training_set_file [log_file] [model_file]\n"
+	"Usage: train [options] training_set_file [log_file] [resume_file] [model_file]\n"
 	"options:\n"
 	"-s type : set type of solver (default 1)\n"
 	"  for multi-class classification\n"
