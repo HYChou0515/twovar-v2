@@ -68,6 +68,11 @@ enum {
 	ONE_L2_SEMIGD_DUALOBJ_RAND_1000 = 20621,
 	ONE_L2_SEMIGD_DUALOBJ_RAND_SH = 20622,
 
+	ONE_L1_SEMIGD_DUALOBJ_YBAL_1000 = 20711,
+	ONE_L1_SEMIGD_DUALOBJ_YBAL_SH = 20712,
+	ONE_L2_SEMIGD_DUALOBJ_YBAL_1000 = 20721,
+	ONE_L2_SEMIGD_DUALOBJ_YBAL_SH = 20722,
+
 	//for two-variable
 	TWO_L1_CY_1000 = 30111,
 	TWO_L2_CY_1000 = 30121,
@@ -128,6 +133,26 @@ enum {
 	ONECLASS_L2_SECOND_1000 = 50421,
 	}; /* solver_type */
 
+struct resume
+{
+	char fname[1024];
+	bool read_resume;
+	int iter;
+	clock_t duration;
+	int nr_rand_calls;
+	double last_obj;
+	int active_size;
+	double PGmax_old;
+	double PGmin_old;
+	double Gmax_old;
+	double Gmin_old;
+	int alpha_size;
+	double *alpha;
+	int *index;
+	int w_size;
+	double *w;
+};
+
 struct parameter
 {
 	int solver_type;
@@ -144,6 +169,9 @@ struct parameter
 	int timeout; // in second     
 	double opt_val;
 	double nu;	/* for one-class formulation */
+
+	struct resume *_resume;
+	FILE* log_fp;
 };
 
 struct model
@@ -163,6 +191,8 @@ void find_parameter_C(const struct problem *prob, const struct parameter *param,
 double predict_values(const struct model *model_, const struct feature_node *x, double* dec_values);
 double predict(const struct model *model_, const struct feature_node *x);
 double predict_probability(const struct model *model_, const struct feature_node *x, double* prob_estimates);
+
+struct resume *load_resume(const char *resume_file_name);
 
 int save_model(const char *model_file_name, const struct model *model_);
 struct model *load_model(const char *model_file_name);

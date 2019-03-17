@@ -1,4 +1,5 @@
 #include <math.h>
+#include <random>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,6 +13,8 @@
 #include <queue>
 #include <limits>
 #include <time.h>
+#include <sys/time.h>
+
 typedef signed char schar;
 template <class T> static inline void swap(T& x, T& y) { T t=x; x=y; y=t; }
 #ifndef min
@@ -804,9 +807,10 @@ void Solver_MCSVM_CS::Solve(double *w)
 #undef GETI
 #define GETI(i) (y[i]+1)
 // To support weights for instances, use GETI(i) (i)
-#define EXIT_IF_TIMEOUT(time)\
+#define EXIT_IF_TIMEOUT()\
 {\
-	if (timeout > 0 && (double)(time)/CLOCKS_PER_SEC > timeout)\
+	gettimeofday(&now_tv, NULL);\
+	if (timeout > 0 &&  now_tv.tv_sec - start_tv.tv_sec > timeout)\
 	{\
 		break;\
 	}\
@@ -816,6 +820,14 @@ void Solver_MCSVM_CS::Solve(double *w)
 	if (obj < opt_val)\
 	{\
 		break;\
+	}\
+}
+#define RAND_SHUFFLE(arr,arrsize)\
+{\
+	for (int i=0; i<arrsize; i++)\
+	{\
+		int j = i+non_static_rand()%(arrsize-i);\
+		swap(arr[i], arr[j]);\
 	}\
 }
 class Solver
@@ -836,6 +848,7 @@ public:
 	double eps;
 	int *alpha_status;
 	int max_set;
+	int w_size;
 	int *index;
 	int max_iter;
 	int timeout;
@@ -861,6 +874,18 @@ public:
 	int nr_neg_y;
 
 	// local variables
+	struct timeval start_tv;
+	struct timeval now_tv;
+	FILE* log_fp;
+	struct resume* _resume;
+	int nr_rand_calls;
+	int resume_count;
+	double PGmax_old;
+	double PGmin_old;
+	double Gmax_old;
+	double Gmin_old;
+	std::default_random_engine generator;
+	std::uniform_int_distribution<int> distribution;
 	double last_obj; //the obj calculated in the last log_message
 	enum SolverCate 
 	{
@@ -876,7 +901,8 @@ public:
 		SEMIGD_PG,
 		SEMIGD_PG_RAND,
 		SEMIGD_DUALOBJ,
-		SEMIGD_DUALOBJ_RAND
+		SEMIGD_DUALOBJ_RAND,
+		SEMIGD_DUALOBJ_YBAL
 	};
 	enum ShrinkMode
 	{
@@ -896,6 +922,10 @@ public:
 	void log_message();
 	void summary();
 	void debug(const char *fmt, ...);
+	void log_info(const char *fmt, ...);
+	int non_static_rand();
+	void save_resume();
+	void use_resume();
 
 	//onetwo_nobias_update
 	void one_random_shrink();
@@ -927,8 +957,15 @@ public:
 	void oneclass_semigd_1000();	
 	void oneclass_semigd_shrink();
 };
+int Solver::non_static_rand()
+{
+	nr_rand_calls++;
+	return distribution(generator);
+}
 Solver::Solver(int _solver_type)
 {
+	std::uniform_int_distribution<int> distribution(0,RAND_MAX);
+	_resume = NULL;
 	iter = 0;
 	duration = 0;
 	PGmax_new = nan("");
@@ -936,6 +973,7 @@ Solver::Solver(int _solver_type)
 	Gmax = nan("");
 	Gmin = nan("");
 	last_obj = nan("");
+	w_size = -1;
 	active_size = -1;
 	success_pair = -1;
 	n_exchange = -1;
@@ -944,6 +982,13 @@ Solver::Solver(int _solver_type)
 	alpha_diff = nan("");
 	nr_pos_y = -1;
 	nr_neg_y = -1;
+	PGmax_old = nan("");
+	PGmin_old = nan("");
+	Gmax_old = nan("");
+	Gmin_old = nan("");
+	nr_rand_calls = 0;
+	resume_count = 0;
+	gettimeofday(&start_tv, NULL);
 
 	switch(solver_type)
 	{
@@ -973,6 +1018,10 @@ Solver::Solver(int _solver_type)
 		case ONE_L1_SEMIGD_DUALOBJ_RAND_SH:
 		case ONE_L2_SEMIGD_DUALOBJ_RAND_1000:
 		case ONE_L2_SEMIGD_DUALOBJ_RAND_SH:
+		case ONE_L1_SEMIGD_DUALOBJ_YBAL_1000:
+		case ONE_L1_SEMIGD_DUALOBJ_YBAL_SH:
+		case ONE_L2_SEMIGD_DUALOBJ_YBAL_1000:
+		case ONE_L2_SEMIGD_DUALOBJ_YBAL_SH:
 			category = ONE_NOBIAS; 
 			break;
 		case TWO_L1_SEMICY_1000:
@@ -1057,6 +1106,10 @@ Solver::Solver(int _solver_type)
 		SAVE_NAME(ONE_L1_SEMIGD_DUALOBJ_RAND_SH);
 		SAVE_NAME(ONE_L2_SEMIGD_DUALOBJ_RAND_1000);
 		SAVE_NAME(ONE_L2_SEMIGD_DUALOBJ_RAND_SH);
+		SAVE_NAME(ONE_L1_SEMIGD_DUALOBJ_YBAL_1000);
+		SAVE_NAME(ONE_L1_SEMIGD_DUALOBJ_YBAL_SH);
+		SAVE_NAME(ONE_L2_SEMIGD_DUALOBJ_YBAL_1000);
+		SAVE_NAME(ONE_L2_SEMIGD_DUALOBJ_YBAL_SH);
 		SAVE_NAME(TWO_L1_SEMICY_1000);
 		SAVE_NAME(TWO_L2_SEMICY_1000);
 		SAVE_NAME(TWO_L1_SEMIRDONE_1000);
@@ -1233,13 +1286,12 @@ void Solver:: countSVs()
 }
 void Solver::log_message()
 {
-	
-	info("iter %d ", iter);
-	info("t %f ", (double)(duration)/CLOCKS_PER_SEC);
+	log_info("iter %d ", iter);
+	log_info("t %f ", (double)(duration)/CLOCKS_PER_SEC);
 	
 	double new_obj = calculate_obj();
-	info("obj %.16g ", new_obj);
-	info("decr_rate %.3e ", (last_obj-new_obj)/fabs(new_obj));
+	log_info("obj %.16g ", new_obj);
+	log_info("decr_rate %.3e ", (last_obj-new_obj)/fabs(new_obj));
 	last_obj = new_obj;
 
 	int pseudo_updsize;
@@ -1248,50 +1300,60 @@ void Solver::log_message()
 		pseudo_updsize = active_size;
 	else
 		pseudo_updsize = update_size;
-	info("actsize %d ", active_size);
-	info("updsize %d ", pseudo_updsize);
-	info("sucpair %d ", success_pair);
-	info("sucs_rate %.2f%% ", (double)success_pair/pseudo_updsize*100);
+	log_info("actsize %d ", active_size);
+	log_info("updsize %d ", pseudo_updsize);
+	log_info("sucpair %d ", success_pair);
+	log_info("sucs_rate %.2f%% ", (double)success_pair/pseudo_updsize*100);
 	
 	countSVs();
-	info("nSV %d ", sv);
-	info("nBSV %d ", bsv);
-	info("nFree %d ", freesv);
-	info("nNonSV %d ", nonsv);
+	log_info("nSV %d ", sv);
+	log_info("nBSV %d ", bsv);
+	log_info("nFree %d ", freesv);
+	log_info("nNonSV %d ", nonsv);
 
-	info("PGmax %.16g ", PGmax_new);
-	info("PGmin %.16g ", PGmin_new);
-	info("PGdiff %.3f ", PGmax_new-PGmin_new);
+	log_info("PGmax %.16g ", PGmax_new);
+	log_info("PGmin %.16g ", PGmin_new);
+	log_info("PGdiff %.3f ", PGmax_new-PGmin_new);
 	
-	info("Gmax %.16g ", Gmax);
-	info("Gmin %.16g ", Gmin);
-	info("Gdiff %.3f ", Gmax-Gmin);
+	log_info("Gmax %.16g ", Gmax);
+	log_info("Gmin %.16g ", Gmin);
+	log_info("Gdiff %.3f ", Gmax-Gmin);
 
-	info("n_exchange %d ", n_exchange);
+	log_info("n_exchange %d ", n_exchange);
 
-	info("alpha_diff %.16g ", alpha_diff);
+	log_info("alpha_diff %.16g ", alpha_diff);
 
-	info("nr_pos_y %d ", nr_pos_y);
-	info("nr_neg_y %d ", nr_neg_y);
+	log_info("nr_pos_y %d ", nr_pos_y);
+	log_info("nr_neg_y %d ", nr_neg_y);
 
-	info("\n");
+	log_info("\n");
 }
 void Solver::summary()
 {
-	info("\n");
-	info("l = %d n = %d\n", prob->l, prob->n);
-	info("eps = %f ratio_update = %f\n", eps, ratio_update);
-	info("solver = %s\n", solver_name);
-	info("max_iter = %d\n", max_iter);
-	info("timeout = %d\n", timeout);
-	info("opt_val = %d\n", opt_val);
-	info("obj = %.16g rho = %.16g\n", calculate_obj(), calculate_rho());
+	log_info("\n");
+	log_info("l = %d n = %d\n", prob->l, prob->n);
+	log_info("eps = %f ratio_update = %f\n", eps, ratio_update);
+	log_info("solver = %s\n", solver_name);
+	log_info("max_iter = %d\n", max_iter);
+	log_info("timeout = %d\n", timeout);
+	log_info("opt_val = %d\n", opt_val);
+	log_info("obj = %.16g rho = %.16g\n", calculate_obj(), calculate_rho());
 
 	countSVs();
-	info("nSV = %d : %.2lf%% of l\n", sv, (double)sv/prob->l*100);
-	info("nBSV = %d : %.2lf%% of nSV %.2lf%% of l\n", bsv, (double)bsv/sv*100, (double)bsv/prob->l*100);
-	info("nFree = %d : %.2lf%% of nSV %.2lf%% of l\n", freesv, (double)freesv/sv*100, (double)freesv/prob->l*100);
-	info("nNonSV = %d : %.2lf%% of l\n", nonsv, (double)nonsv/prob->l*100);
+	log_info("nSV = %d : %.2lf%% of l\n", sv, (double)sv/prob->l*100);
+	log_info("nBSV = %d : %.2lf%% of nSV %.2lf%% of l\n", bsv, (double)bsv/sv*100, (double)bsv/prob->l*100);
+	log_info("nFree = %d : %.2lf%% of nSV %.2lf%% of l\n", freesv, (double)freesv/sv*100, (double)freesv/prob->l*100);
+	log_info("nNonSV = %d : %.2lf%% of l\n", nonsv, (double)nonsv/prob->l*100);
+}
+void Solver::log_info(const char *fmt, ...)
+{
+	char buf[BUFSIZ];
+	va_list ap;
+	va_start(ap,fmt);
+	vsprintf(buf,fmt,ap);
+	va_end(ap);
+	fprintf(log_fp, "%s", buf);
+	fflush(log_fp);
 }
 void Solver::debug(const char *fmt, ...)
 {
@@ -1300,8 +1362,44 @@ void Solver::debug(const char *fmt, ...)
 	va_start(ap,fmt);
 	vsprintf(buf,fmt,ap);
 	va_end(ap);
-	fprintf( stderr, "%s", buf);
+	fprintf(stderr, "%s", buf);
 	fflush(stderr);
+}
+void Solver::save_resume()
+{
+	if(_resume == NULL)
+		return;
+	gettimeofday(&now_tv, NULL);
+	//if((now_tv.tv_sec-start_tv.tv_sec)/60 < resume_count)
+	//if(iter != 3)
+	if(iter/10 < resume_count)
+		return;
+	resume_count = iter/10+1;
+	FILE* fp = fopen(_resume->fname, "a");
+	fprintf(fp, "iter\n%d\n", iter);
+	fprintf(fp, "duration\n%ju\n", (uintmax_t) duration);
+	fprintf(fp, "nr_rand_calls\n%d\n", nr_rand_calls);
+	fprintf(fp, "last_obj\n%.17g\n", last_obj);
+	fprintf(fp, "active_size\n%d\n", active_size);
+	fprintf(fp, "Gmax_old\n%.17g\n", Gmax_old);
+	fprintf(fp, "Gmin_old\n%.17g\n", Gmin_old);
+	fprintf(fp, "PGmax_old\n%.17g\n", PGmax_old);
+	fprintf(fp, "PGmin_old\n%.17g\n", PGmin_old);
+	fprintf(fp, "alpha_size\n%d\n", prob->l);
+	fprintf(fp, "index\n");
+	for(int i=0;i<prob->l;i++)
+		fprintf(fp, "%d ", index[i]);
+	fprintf(fp, "\n");
+	fprintf(fp, "alpha\n");
+	for(int i=0;i<prob->l;i++)
+		fprintf(fp, "%.17g ", alpha[i]);
+	fprintf(fp, "\n");
+	fprintf(fp, "w_size\n%d\n", w_size);
+	fprintf(fp, "w\n");
+	for(int i=0;i<w_size;i++)
+		fprintf(fp, "%.17g ", w[i]);
+	fprintf(fp, "\n=====\n");
+	fclose(fp);
 }
 
 static int updateAlphaStatus(double alpha, double C)
@@ -1312,6 +1410,37 @@ static int updateAlphaStatus(double alpha, double C)
 		return 1;
 	else 
 		return 2;
+}
+
+void Solver::use_resume()
+{
+	if(_resume == NULL)
+		return;
+	if(!_resume->read_resume)
+		return;
+	if(prob->l != _resume->alpha_size)
+		fprintf(stderr, "ERROR: resume alpha_size not consistent to prob->l\n");
+	if(w_size != _resume->w_size)
+		fprintf(stderr, "ERROR: resume w_size not consistent\n");
+	iter = _resume->iter;
+	duration = _resume->duration;
+	last_obj = _resume->last_obj;
+	active_size = _resume->active_size;
+	Gmax_old = _resume->Gmax_old;
+	Gmin_old = _resume->Gmin_old;
+	PGmax_old = _resume->PGmax_old;
+	PGmin_old = _resume->PGmin_old;
+	nr_rand_calls = 0;
+	for(int i=0; i<_resume->nr_rand_calls; i++)
+		non_static_rand();
+	for(int i=0; i<w_size; i++)
+		w[i] = _resume->w[i];
+	for(int i=0; i<prob->l; i++)
+	{
+		index[i] = _resume->index[i];
+		alpha[i] = _resume->alpha[i];
+		alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[2]);
+	}
 }
 
 struct mincomp
@@ -1336,10 +1465,11 @@ void Solver::one_random_shrink()
 	double C, d, G;
 	// PG: projected gradient, for shrinking and stopping
 	double PG;
-	double PGmax_old = INF;
-	double PGmin_old = -INF;
 	clock_t start;
-	active_size = l;
+	if(isnan(PGmax_old))
+		PGmax_old = INF;
+	if(isnan(PGmin_old))
+		PGmin_old = -INF;
 
 	while (iter < max_iter)
 	{
@@ -1349,7 +1479,7 @@ void Solver::one_random_shrink()
 		PGmin_new = INF;
 		for (s=0; s<active_size; s++)
 		{
-			si = rand()%active_size;
+			si = non_static_rand()%active_size;
 			i = index[si];
 			const schar yi = y[i];
 			feature_node * const xi = prob->x[i];
@@ -1416,7 +1546,8 @@ void Solver::one_random_shrink()
 			PGmax_old = INF;
 		if (PGmin_old >= 0)
 			PGmin_old = -INF;
-		EXIT_IF_TIMEOUT(duration);
+		save_resume();
+		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -1424,11 +1555,9 @@ void Solver::one_random_shrink()
 
 void Solver::one_random_1000()
 {
-	int l = max_set;
 	int i, s;
 	double C, d, G;
 	clock_t start;
-	active_size = l;
 	
 	while (iter < max_iter)
 	{
@@ -1439,7 +1568,7 @@ void Solver::one_random_1000()
 		for (s=0; s<active_size; s++)
 		{
 			
-			i = index[rand()%active_size];
+			i = index[non_static_rand()%active_size];
 			const schar yi = y[i];
 			if(yi == +1)
 				++nr_pos_y;
@@ -1463,7 +1592,8 @@ void Solver::one_random_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
-		EXIT_IF_TIMEOUT(duration);
+		save_resume();
+		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -1477,10 +1607,11 @@ void Solver::one_cyclic_shrink()
 	clock_t start;
 	// PG: projected gradient, for shrinking and stopping
 	double PG;
-	double PGmax_old = INF;
-	double PGmin_old = -INF;
+	if(isnan(PGmax_old))
+		PGmax_old = INF;
+	if(isnan(PGmin_old))
+		PGmin_old = -INF;
 	
-	active_size = l;
 	start = clock();
 	while (iter < max_iter)
 	{
@@ -1490,7 +1621,7 @@ void Solver::one_cyclic_shrink()
 		success_pair = 0;
 		for (i=0; i<active_size; i++)
 		{
-			int j = i+rand()%(active_size-i);
+			int j = i+non_static_rand()%(active_size-i);
 			swap(index[i], index[j]);
 		}
 		for (s=0; s<active_size; s++)
@@ -1565,7 +1696,8 @@ void Solver::one_cyclic_shrink()
 			PGmax_old = INF;
 		if (PGmin_old >= 0)
 			PGmin_old = -INF;
-		EXIT_IF_TIMEOUT(duration);
+		save_resume();
+		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -1573,11 +1705,9 @@ void Solver::one_cyclic_shrink()
 
 void Solver::one_cyclic_1000()
 {
-	int l = max_set;
 	int i, s;
 	double C, d, G;
 	clock_t start;
-	active_size = l;
 	
 	while (iter < max_iter)
 	{
@@ -1585,7 +1715,7 @@ void Solver::one_cyclic_1000()
 		success_pair = 0;
 		for (i=0; i<active_size; i++)
 		{
-			int j = i+rand()%(active_size-i);
+			int j = i+non_static_rand()%(active_size-i);
 			swap(index[i], index[j]);
 		}
 		for (s=0; s<active_size; s++)
@@ -1611,7 +1741,8 @@ void Solver::one_cyclic_1000()
 		iter++;
 		duration += clock() -start;
 		log_message();
-		EXIT_IF_TIMEOUT(duration);
+		save_resume();
+		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -1632,11 +1763,10 @@ void Solver::one_semigd_1000()
 	enum {LOWER_BOUND, UPPER_BOUND, FREE};
 	double *G = new double[l];
 	double PG;
-	std::priority_queue<struct feature_node, std::vector<feature_node>, mincomp> Min_order_queue;
+	std::priority_queue<struct feature_node, std::vector<feature_node>, mincomp> min_heap;
 	int *workset = new int[l];
 	int smgd_size;
 
-	active_size = l;
 	while (iter < max_iter)
 	{
 		start = clock();
@@ -1646,7 +1776,7 @@ void Solver::one_semigd_1000()
 		// TODO: shuffle should not be in semigd
 		for (i=0; i<active_size; i++)
 		{
-			int j = i+rand()%(active_size-i);
+			int j = i+non_static_rand()%(active_size-i);
 			swap(index[i], index[j]);
 		}
 		PGmax_new = -INF;
@@ -1685,31 +1815,31 @@ void Solver::one_semigd_1000()
 			struct feature_node comp;
 			comp.index = i;
 			comp.value = fabs(PG);
-			if((int) Min_order_queue.size() < smgd_size)
+			if((int) min_heap.size() < smgd_size)
 			{
-				Min_order_queue.push(comp);
+				min_heap.push(comp);
 			}
-			else if ((int) Min_order_queue.size() <= 0)
+			else if ((int) min_heap.size() <= 0)
 			{
 				// nothing
 			}
-			else if (Min_order_queue.top().value < comp.value)
+			else if (min_heap.top().value < comp.value)
 			{
-				Min_order_queue.pop();
-				Min_order_queue.push(comp);
+				min_heap.pop();
+				min_heap.push(comp);
 			}
 		}
-		smgd_size = (int) Min_order_queue.size();
+		smgd_size = (int) min_heap.size();
 		update_size = smgd_size;
 
 		for(i=0; i<smgd_size; i++)
 		{
-			workset[smgd_size-1-i] = Min_order_queue.top().index;
-			Min_order_queue.pop();
+			workset[smgd_size-1-i] = min_heap.top().index;
+			min_heap.pop();
 		}
 		if (wss_mode == SEMIGD_PG_RAND)
 		{
-			std::random_shuffle(workset, workset+update_size);
+			RAND_SHUFFLE(workset, update_size);
 		}
 		for(s=0; s<update_size; s++)
 		{
@@ -1738,7 +1868,8 @@ void Solver::one_semigd_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
-		EXIT_IF_TIMEOUT(duration);
+		save_resume();
+		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -1758,11 +1889,11 @@ void Solver::one_semigd_dualobj_1000()
 	double G_i, C_i;
 	enum {LOWER_BOUND, UPPER_BOUND, FREE};
 	double *G = new double[l];
-	std::priority_queue<struct feature_node, std::vector<feature_node>, maxcomp> Max_order_queue;
+	std::priority_queue<struct feature_node, std::vector<feature_node>, maxcomp> max_heap;// if YBAL; then for y=+1
+	std::priority_queue<struct feature_node, std::vector<feature_node>, maxcomp> max_heap2; // if YBAL; then for y=-1
 	int *workset = new int[l];
 	double dualobj_drop;
 
-	active_size = l;
 	while (iter < max_iter)
 	{
 		start = clock();
@@ -1771,7 +1902,7 @@ void Solver::one_semigd_dualobj_1000()
 		nr_neg_y = 0;
 		for (i=0; i<active_size; i++)
 		{
-			int j = i+rand()%(active_size-i);
+			int j = i+non_static_rand()%(active_size-i);
 			swap(index[i], index[j]);
 		}
 		
@@ -1787,6 +1918,7 @@ void Solver::one_semigd_dualobj_1000()
 		for(s=0; s<active_size; s++)
 		{
 			i = index[s];
+			const schar yi = y[i];
 			G_i = G[s];
 			C_i = upper_bound[GETI(i)];
 			double alpha_new = min(max(alpha[i] - G_i/QD[i], 0.0), C_i);
@@ -1797,31 +1929,63 @@ void Solver::one_semigd_dualobj_1000()
 			struct feature_node comp;
 			comp.index = i;
 			comp.value = dualobj_drop;
-			if((int) Max_order_queue.size() < update_size)
+			
+			if(yi==-1 && wss_mode == SEMIGD_DUALOBJ_YBAL && fabs(comp.value) > 1e-12)
 			{
-				Max_order_queue.push(comp);
+				if((int) max_heap2.size() < update_size)
+				{
+					max_heap2.push(comp);
+				}
+				else if ((int) max_heap2.size() <= 0)
+				{
+					// nothing
+				}
+				else if (max_heap2.top().value > comp.value)
+				{
+					max_heap2.pop();
+					max_heap2.push(comp);
+				}
 			}
-			else if ((int) Max_order_queue.size() <= 0)
+			else //if YBAL and comp.value<1e-12, it goes here, but max_heap will get rid of it as it's small
 			{
-				// nothing
-			}
-			else if (Max_order_queue.top().value > comp.value)
-			{
-				Max_order_queue.pop();
-				Max_order_queue.push(comp);
+				if((int) max_heap.size() < update_size)
+				{
+					max_heap.push(comp);
+				}
+				else if ((int) max_heap.size() <= 0)
+				{
+					// nothing
+				}
+				else if (max_heap.top().value > comp.value)
+				{
+					max_heap.pop();
+					max_heap.push(comp);
+				}
 			}
 		}
-		update_size = (int) Max_order_queue.size();
+		update_size = max((int) max_heap.size(), (int) max_heap2.size());
 
 		for(i=0; i<update_size; i++)
 		{
-			workset[update_size-1-i] = Max_order_queue.top().index;
-			Max_order_queue.pop();
+			if((wss_mode==SEMIGD_DUALOBJ_YBAL && i%2==1 && !max_heap2.empty()) || max_heap.empty())
+			{
+				workset[update_size-1-i] = max_heap2.top().index;
+				max_heap2.pop();
+			}
+			else
+			{
+				workset[update_size-1-i] = max_heap.top().index;
+				max_heap.pop();
+			}
 		}
+		while(!max_heap.empty())
+			max_heap.pop();
+		while(!max_heap2.empty())
+			max_heap2.pop();
 
 		if (wss_mode == SEMIGD_DUALOBJ_RAND)
 		{
-			std::random_shuffle(workset, workset+update_size);
+			RAND_SHUFFLE(workset, update_size);
 		}
 		for(s=0; s<update_size; s++)
 		{
@@ -1850,7 +2014,8 @@ void Solver::one_semigd_dualobj_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
-		EXIT_IF_TIMEOUT(duration);
+		save_resume();
+		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -1861,18 +2026,19 @@ void Solver::two_semicyclic_1000()
 	int l = max_set;
 	int i, j, si;
 	int k=0;
-	active_size = l;
 	double C_i, C_j, G_i, G_j;
 	clock_t start;
 	int *pickindex = new int[l];
 	
 	for (i=0; i<active_size; i++)
 	{
-		pickindex[i] = index[i];
+		pickindex[i] = i;
 	}
+	std::uniform_int_distribution<int> _d(0,RAND_MAX);
+	std::default_random_engine _re;
 	for (i=0; i<active_size; i++)
 	{
-		int j = i+rand()%(active_size-i);
+		int j = i+_d(_re)%(active_size-i);
 		swap(pickindex[i], pickindex[j]);
 	}
 	while (iter < max_iter)
@@ -1881,7 +2047,7 @@ void Solver::two_semicyclic_1000()
 		success_pair = 0;
 		for (i=0; i<active_size; i++)
 		{
-			int j = i+rand()%(active_size-i);
+			int j = i+non_static_rand()%(active_size-i);
 			swap(index[i], index[j]);
 		}
 		k = k%active_size;
@@ -2039,7 +2205,8 @@ void Solver::two_semicyclic_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
-		EXIT_IF_TIMEOUT(duration);
+		save_resume();
+		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -2049,11 +2216,12 @@ void Solver::two_random_shrink2()
 {
 	int l = max_set;
 	int i, j, s;
-	active_size = l;
 	double C_i, C_j, G_i, G_j;
 	double PG_i , PG_j;
-	double PGmax_old = INF;
-	double PGmin_old = -INF;
+	if(isnan(PGmax_old))
+		PGmax_old = INF;
+	if(isnan(PGmin_old))
+		PGmin_old = -INF;
 	
 	clock_t start;
 	while (iter < max_iter)
@@ -2064,12 +2232,12 @@ void Solver::two_random_shrink2()
 		success_pair = 0;
 		for(s=0; s<active_size; s++)
 		{
-			int si = rand()%active_size;
-			int sj = rand()%active_size;
+			int si = non_static_rand()%active_size;
+			int sj = non_static_rand()%active_size;
 			
 			while(si==sj)
 			{
-				sj = rand()%active_size;
+				sj = non_static_rand()%active_size;
 			}
 			
 			i = index[si];
@@ -2295,7 +2463,8 @@ void Solver::two_random_shrink2()
 			PGmax_old = INF;
 		if(PGmin_old >= 0)
 			PGmin_old = -INF;
-		EXIT_IF_TIMEOUT(duration);
+		save_resume();
+		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -2305,11 +2474,12 @@ void Solver::two_random_shrink()
 {
 	int l = max_set;
 	int i, j, s;
-	active_size = l;
 	double C_i, C_j, G_i, G_j;
 	double PG_i , PG_j;
-	double PGmax_old = INF;
-	double PGmin_old = -INF;
+	if(isnan(PGmax_old))
+		PGmax_old = INF;
+	if(isnan(PGmin_old))
+		PGmin_old = -INF;
 	
 	clock_t start;
 	while (iter < max_iter)
@@ -2320,12 +2490,12 @@ void Solver::two_random_shrink()
 		PGmin_new = INF;
 		for(s=0; s<active_size; s++)
 		{
-			int si = rand()%active_size;
-			int sj = rand()%active_size;
+			int si = non_static_rand()%active_size;
+			int sj = non_static_rand()%active_size;
 			
 			while(si==sj)
 			{
-				sj = rand()%active_size;
+				sj = non_static_rand()%active_size;
 			}
 			
 			i = index[si];
@@ -2556,7 +2726,8 @@ void Solver::two_random_shrink()
 			PGmax_old = INF;
 		if(PGmin_old >= 0)
 			PGmin_old = -INF;
-		EXIT_IF_TIMEOUT(duration);
+		save_resume();
+		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -2568,26 +2739,27 @@ void Solver::two_cyclic_1000()
 	int full_l = prob->l;
 	int i, j, s, si;
 	double C_i, C_j, G_i, G_j;
-	active_size = l;
 	int *all_index = new int[l*(l-1)/2];
 	clock_t start;
-	s=0;
 
+	s=0;
 	for(i=0;i<l;i++)
 	{
 		for(j=i+1;j<l;j++)
 		{
-			all_index[s]=index[i]*full_l+index[j];
+			all_index[s]=i*full_l+j;
 			s++;
 		}
 		
 	}
+	std::uniform_int_distribution<int> _d(0,RAND_MAX);
+	std::default_random_engine _re;
 	for(i=0;i<l*(l-1)/2;i++)
 	{
-		int j = i+rand()%(l*(l-1)/2-i);
+		int j = i+_d(_re)%(l*(l-1)/2-i);
 		swap(all_index[i],all_index[j]);
 	}
-	s = 0;
+	s = (iter*active_size)%(l*(l-1)/2);
 	while (iter < max_iter)
 	{
 		start = clock();
@@ -2700,7 +2872,6 @@ void Solver::two_cyclic_1000()
 						newalpha_i = 0;
 						newalpha_j = delta/Q_ij;
 					}
-					
 				}
 			}
 			else
@@ -2750,7 +2921,8 @@ void Solver::two_cyclic_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
-		EXIT_IF_TIMEOUT(duration);
+		save_resume();
+		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -2758,22 +2930,20 @@ void Solver::two_cyclic_1000()
 
 void Solver::two_semirandom2_1000()
 {
-	int l = max_set;
 	int i, j, si;
-	active_size = l;
 	double C_i, C_j, G_i, G_j;
 	clock_t start;
-	active_size = active_size - 1;
+	active_size = 2*(max_set - 1);
 	while (iter < max_iter)
 	{
 		start = clock();
 		success_pair = 0;
-		for (i=0; i<active_size+1; i++)
+		for (i=0; i<max_set; i++)
 		{
-			int j = i+rand()%(active_size-i+1);
+			int j = i+non_static_rand()%(max_set-i);
 			swap(index[i], index[j]);
 		}
-		for(si=0; si<active_size; si++)
+		for(si=0; si<max_set-1; si++)
 		{
 			i = index[si];
 			j = index[si+1];
@@ -2783,7 +2953,6 @@ void Solver::two_semirandom2_1000()
 			
 			C_i = upper_bound[GETI(i)];
 			C_j = upper_bound[GETI(j)];
-			
 
 			feature_node const *xi = prob->x[i];
 			feature_node const *xj = prob->x[j];
@@ -2928,7 +3097,8 @@ void Solver::two_semirandom2_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
-		EXIT_IF_TIMEOUT(duration);
+		save_resume();
+		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -2936,23 +3106,19 @@ void Solver::two_semirandom2_1000()
 
 void Solver::two_semirandom1_1000()
 {
-	int l = max_set;
 	int i, j, si;
-	active_size = l;
 	double C_i, C_j, G_i, G_j;
 	clock_t start;
-	int hactive_size = active_size;
-	active_size = active_size/2;
 	while (iter < max_iter)
 	{
 		start = clock();
 		success_pair = 0;
-		for (i=0; i<hactive_size; i++)
+		for (i=0; i<active_size; i++)
 		{
-			int j = i+rand()%(hactive_size-i);
+			int j = i+non_static_rand()%(active_size-i);
 			swap(index[i], index[j]);
 		}
-		for(si=0; si<hactive_size-1; si+=2)
+		for(si=0; si<active_size-1; si+=2)
 		{
 			i = index[si];
 			j = index[si+1];
@@ -3107,7 +3273,8 @@ void Solver::two_semirandom1_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
-		EXIT_IF_TIMEOUT(duration);
+		save_resume();
+		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -3201,9 +3368,7 @@ static void calculate_unbias_two_newalpha(
 
 void Solver::two_random_1000()
 {
-	int l = max_set;
 	int i, j, si;
-	active_size = l;
 	double C_i, C_j, G_i, G_j;
 	double Q_ij;
 	bool is_updated;
@@ -3216,12 +3381,12 @@ void Solver::two_random_1000()
 		success_pair = 0;
 		for(si=0; si<active_size; si++)
 		{
-			i = index[rand()%active_size];
-			j = index[rand()%active_size];
+			i = index[non_static_rand()%active_size];
+			j = index[non_static_rand()%active_size];
 			
 			while(i==j)
 			{
-				j = index[rand()%active_size];
+				j = index[non_static_rand()%active_size];
 			}
 
 			const schar yi = y[i];
@@ -3257,7 +3422,8 @@ void Solver::two_random_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
-		EXIT_IF_TIMEOUT(duration);
+		save_resume();
+		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -3271,7 +3437,6 @@ void Solver::two_semigd_1000()
 	// TODO:test
 //	int l = max_set;
 //	int i, j, si;
-//	active_size = l;
 //	double C_i, C_j, G_i, G_j;
 //	enum {LOWER_BOUND, UPPER_BOUND, FREE};
 //	double *G = new double[l];
@@ -3285,8 +3450,8 @@ void Solver::two_semigd_1000()
 //	int *Max_order_index = new int[l];
 //	int *Min_order_index = new int[l];
 //	
-//	std::priority_queue<struct feature_node, std::vector<feature_node>, mincomp> Min_order_queue;
-//	std::priority_queue<struct feature_node, std::vector<feature_node>, maxcomp> Max_order_queue;
+//	std::priority_queue<struct feature_node, std::vector<feature_node>, mincomp> min_heap;
+//	std::priority_queue<struct feature_node, std::vector<feature_node>, maxcomp> max_heap;
 //
 //	while (iter < max_iter)
 //	{
@@ -3330,23 +3495,23 @@ void Solver::two_semigd_1000()
 //			//comp.value = fabs(PG);
 //
 ////			comp.value = PG;
-////			if((int) Min_order_queue.size() < update_size)
+////			if((int) min_heap.size() < update_size)
 ////			{
-////				Min_order_queue.push(comp);
+////				min_heap.push(comp);
 ////			}
-////			else if(Min_order_queue.top().value < comp.value)
+////			else if(min_heap.top().value < comp.value)
 ////			{
-////				Min_order_queue.pop();
-////				Min_order_queue.push(comp);
+////				min_heap.pop();
+////				min_heap.push(comp);
 ////			}
-////			if((int) Max_order_queue.size() < update_size)
+////			if((int) max_heap.size() < update_size)
 ////			{
-////				Max_order_queue.push(comp);
+////				max_heap.push(comp);
 ////			}
-////			else if(Max_order_queue.top().value > comp.value)
+////			else if(max_heap.top().value > comp.value)
 ////			{
-////				Max_order_queue.pop();
-////				Max_order_queue.push(comp);
+////				max_heap.pop();
+////				max_heap.push(comp);
 ////			}
 //
 ////			int yc = y[comp.index];
@@ -3354,46 +3519,46 @@ void Solver::two_semigd_1000()
 ////			if( (alpha_status[comp.index] != UPPER_BOUND && yc==+1) ||
 ////					(alpha_status[comp.index] != LOWER_BOUND && yc==-1) )
 ////			{ //Iup
-////				if((int) Min_order_queue.size() < update_size)
+////				if((int) min_heap.size() < update_size)
 ////				{
-////					Min_order_queue.push(comp);
+////					min_heap.push(comp);
 ////				}
-////				else if(Min_order_queue.top().value < comp.value)
+////				else if(min_heap.top().value < comp.value)
 ////				{
-////					Min_order_queue.pop();
-////					Min_order_queue.push(comp);
+////					min_heap.pop();
+////					min_heap.push(comp);
 ////				}
 ////			}
 ////			if( (alpha_status[comp.index] != UPPER_BOUND && yc==-1) ||
 ////					(alpha_status[comp.index] != LOWER_BOUND && yc==+1) )
 ////			{ //Ilow
-////				if((int) Max_order_queue.size() < update_size)
+////				if((int) max_heap.size() < update_size)
 ////				{
-////					Max_order_queue.push(comp);
+////					max_heap.push(comp);
 ////				}
-////				else if(Max_order_queue.top().value > comp.value)
+////				else if(max_heap.top().value > comp.value)
 ////				{
-////					Max_order_queue.pop();
-////					Max_order_queue.push(comp);
+////					max_heap.pop();
+////					max_heap.push(comp);
 ////				}
 ////			}
 //		}
-//		update_size = min((int)Min_order_queue.size(), (int)Max_order_queue.size());
-//		while((int)Max_order_queue.size() > update_size)
+//		update_size = min((int)min_heap.size(), (int)max_heap.size());
+//		while((int)max_heap.size() > update_size)
 //		{
-//			Max_order_queue.pop();
+//			max_heap.pop();
 //		}
-//		while((int)Min_order_queue.size() > update_size)
+//		while((int)min_heap.size() > update_size)
 //		{
-//			Min_order_queue.pop();
+//			min_heap.pop();
 //		}
 //		for(i=0; i<update_size; i++)
 //		{
-//			Max_order_index[update_size-1-i] = Min_order_queue.top().index;
-//			Min_order_queue.pop();
+//			Max_order_index[update_size-1-i] = min_heap.top().index;
+//			min_heap.pop();
 //
-//			Min_order_index[update_size-1-i] = Max_order_queue.top().index;
-//			Max_order_queue.pop();
+//			Min_order_index[update_size-1-i] = max_heap.top().index;
+//			max_heap.pop();
 //		}
 //
 //		for(si=0; si<update_size; si++)
@@ -3434,6 +3599,7 @@ void Solver::two_semigd_1000()
 //		iter++;
 //		duration += clock() - start;
 //		log_message();
+		save_resume();
 //	}
 //	summary();
 }
@@ -3450,17 +3616,16 @@ void Solver::bias_semigd()
 {
 	int l = prob->l;
 	int i, j;
-	active_size = l;
 	double G_i, G_j;
 	int counter = min(l,3);
 	enum {LOWER_BOUND, UPPER_BOUND, FREE};
-	time_t start;
+	clock_t start;
 
 	int *Max_order_index = new int[l];
 	int *Min_order_index = new int[l];
 	
-	std::priority_queue<struct feature_node, std::vector<feature_node>, mincomp> Min_order_queue;
-	std::priority_queue<struct feature_node, std::vector<feature_node>, maxcomp> Max_order_queue;
+	std::priority_queue<struct feature_node, std::vector<feature_node>, mincomp> min_heap;
+	std::priority_queue<struct feature_node, std::vector<feature_node>, maxcomp> max_heap;
 
 	double *G = new double[l];
 	while(iter < max_iter)
@@ -3566,58 +3731,58 @@ void Solver::bias_semigd()
 			if( (alpha_status[comp.index] != UPPER_BOUND && yc==+1) ||
 					(alpha_status[comp.index] != LOWER_BOUND && yc==-1) )
 			{
-				if((int) Min_order_queue.size() < update_size)
+				if((int) min_heap.size() < update_size)
 				{
-					Min_order_queue.push(comp);
+					min_heap.push(comp);
 				}
 				else
 				{
-					if(Min_order_queue.top().value < comp.value)
+					if(min_heap.top().value < comp.value)
 					{
-						Min_order_queue.pop();
-						Min_order_queue.push(comp);
+						min_heap.pop();
+						min_heap.push(comp);
 					}
 				}
 			}
 			if( (alpha_status[comp.index] != UPPER_BOUND && yc==-1) ||
 					(alpha_status[comp.index] != LOWER_BOUND && yc==+1) )
 			{
-				if((int) Max_order_queue.size() < update_size)
+				if((int) max_heap.size() < update_size)
 				{
-					Max_order_queue.push(comp);
+					max_heap.push(comp);
 				}
 				else
 				{
-					if(Max_order_queue.top().value > comp.value)
+					if(max_heap.top().value > comp.value)
 					{
-						Max_order_queue.pop();
-						Max_order_queue.push(comp);
+						max_heap.pop();
+						max_heap.push(comp);
 					}
 				}
 			}
 		}
-		update_size = min((int)Min_order_queue.size(), (int)Max_order_queue.size());
-		while((int)Max_order_queue.size() > update_size)
+		update_size = min((int)min_heap.size(), (int)max_heap.size());
+		while((int)max_heap.size() > update_size)
 		{
-			Max_order_queue.pop();
+			max_heap.pop();
 		}
-		while((int)Min_order_queue.size() > update_size)
+		while((int)min_heap.size() > update_size)
 		{
-			Min_order_queue.pop();
+			min_heap.pop();
 		}
 
 		for(i=0; i<update_size; i++)
 		{
-			Max_order_index[update_size-1-i] = Min_order_queue.top().index;
-			Min_order_queue.pop();
+			Max_order_index[update_size-1-i] = min_heap.top().index;
+			min_heap.pop();
 
-			Min_order_index[update_size-1-i] = Max_order_queue.top().index;
-			Max_order_queue.pop();
+			Min_order_index[update_size-1-i] = max_heap.top().index;
+			max_heap.pop();
 		}
 		if(wss_mode == SEMIGD_G_RAND)
 		{
-			std::random_shuffle(Max_order_index, Max_order_index+update_size);
-			std::random_shuffle(Min_order_index, Min_order_index+update_size);
+			RAND_SHUFFLE(Max_order_index, update_size);
+			RAND_SHUFFLE(Min_order_index, update_size);
 		}
 		for(int index_i = 0; index_i < update_size; index_i++)
 		{
@@ -3788,7 +3953,8 @@ void Solver::bias_semigd()
 		iter++;
 		duration += clock() - start;
 		log_message();
-		EXIT_IF_TIMEOUT(duration);
+		save_resume();
+		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();	
@@ -3799,12 +3965,14 @@ void Solver::bias_random_shrink()
 {
 	int l = prob->l;
 	int i, j;
-	active_size = l;
 	double G_i, G_j;
 	enum {LOWER_BOUND, UPPER_BOUND, FREE};
-	double PGmax_old = INF;
-	double PGmin_old = -INF;
-	time_t start;
+	clock_t start;
+	if(isnan(PGmax_old))
+		PGmax_old = INF;
+	if(isnan(PGmin_old))
+		PGmin_old = -INF;
+
 	while(iter < max_iter)
 	{
 		start = clock();
@@ -3813,12 +3981,12 @@ void Solver::bias_random_shrink()
 		PGmin_new = INF;
 		for(int s = 0; s < active_size; s++)
 		{
-			int si = rand()%active_size;
-			int sj = rand()%active_size;
+			int si = non_static_rand()%active_size;
+			int sj = non_static_rand()%active_size;
 			
 			while(si==sj)
 			{
-				sj = rand()%active_size;
+				sj = non_static_rand()%active_size;
 			}
 
 			i = index[si];
@@ -4064,7 +4232,8 @@ void Solver::bias_random_shrink()
 		iter++;
 		duration += clock() - start;
 		log_message();
-		EXIT_IF_TIMEOUT(duration);
+		save_resume();
+		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -4073,20 +4242,18 @@ void Solver::bias_random_shrink()
 
 void Solver::bias_random_1000()
 {
-	int l = prob->l;
 	int i, j;
-	active_size = l;
 	double G_i, G_j;
 	enum {LOWER_BOUND, UPPER_BOUND, FREE};
-	time_t start;
+	clock_t start;
 	while(iter < max_iter)
 	{
 		start = clock();
 		success_pair = 0;
 		for(int si = 0; si < active_size; si++)
 		{
-			i = rand()%active_size;
-			j = rand()%active_size;
+			i = non_static_rand()%active_size;
+			j = non_static_rand()%active_size;
 			
 			feature_node const * xi = prob->x[i];
 			feature_node const * xj = prob->x[j];
@@ -4243,7 +4410,8 @@ void Solver::bias_random_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
-		EXIT_IF_TIMEOUT(duration);
+		save_resume();
+		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -4255,10 +4423,12 @@ void Solver::oneclass_random_shrink()
 	clock_t start;
 	int l = prob->l;
 	int i, j;
-	active_size = l;
 	double G_i, G_j;
 	enum {LOWER_BOUND, UPPER_BOUND, FREE};
-	double Gmax_old = INF, Gmin_old = -INF;
+	if(isnan(Gmax_old))
+		Gmax_old = INF;
+	if(isnan(Gmin_old))
+		Gmin_old = -INF;
 	
 	while(iter < max_iter)
 	{
@@ -4269,8 +4439,8 @@ void Solver::oneclass_random_shrink()
 		Gmin = INF;
 		for(int index_i = 0; index_i<active_size; index_i++)
 		{
-			int si = rand()%active_size;
-			int sj = rand()%active_size;
+			int si = non_static_rand()%active_size;
+			int sj = non_static_rand()%active_size;
 			
 			i = index[si];
 			j = index[sj];
@@ -4462,7 +4632,8 @@ void Solver::oneclass_random_shrink()
 			Gmax_old = Gmax;
 			Gmin_old = Gmin;
 		}
-		EXIT_IF_TIMEOUT(duration);
+		save_resume();
+		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -4471,9 +4642,7 @@ void Solver::oneclass_random_shrink()
 void Solver::oneclass_random_1000()
 {
 	clock_t start;
-	int l = prob->l;
 	int i, j;
-	active_size = l;
 	double G_i, G_j;
 	enum {LOWER_BOUND, UPPER_BOUND, FREE};
 	
@@ -4484,8 +4653,8 @@ void Solver::oneclass_random_1000()
 		n_exchange = 0;
 		for(int index_i = 0; index_i<active_size; index_i++)
 		{
-			i = rand()%active_size;
-			j = rand()%active_size;
+			i = non_static_rand()%active_size;
+			j = non_static_rand()%active_size;
 			
 			feature_node const * xi = prob->x[i];
 			feature_node const * xj = prob->x[j];
@@ -4596,7 +4765,8 @@ void Solver::oneclass_random_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
-		EXIT_IF_TIMEOUT(duration);
+		save_resume();
+		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -4609,7 +4779,6 @@ void Solver::oneclass_first_1000()
 	int i, j;
 	double G_i, G_j;
 	double *G = new double[l];
-	active_size = l;
 	update_size = 1;
 	int Gmax_index= -1, Gmin_index = -1;
 	double Gmax=-INF, Gmin = INF;
@@ -4735,7 +4904,8 @@ void Solver::oneclass_first_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
-		EXIT_IF_TIMEOUT(duration);
+		save_resume();
+		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -4747,7 +4917,6 @@ void Solver::oneclass_second_1000()
 	clock_t start;
 	int l = prob->l;
 	int i, j;
-	active_size = l;
 	update_size = 1;
 	double G_i, G_j;
 	double *G = new double[l];
@@ -4885,7 +5054,8 @@ void Solver::oneclass_second_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
-		EXIT_IF_TIMEOUT(duration);
+		save_resume();
+		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -4897,15 +5067,14 @@ void Solver::oneclass_semigd_1000()
 	clock_t start;
 	int l = prob->l;
 	int i, j;
-	active_size = l;
 	double G_i, G_j;
 	enum {LOWER_BOUND, UPPER_BOUND, FREE};
 	
 	int *Max_order_index = new int[l];
 	int *Min_order_index = new int[l];
 				
-	std::priority_queue<struct feature_node, std::vector<feature_node>, maxcomp> Max_order_queue;
-	std::priority_queue<struct feature_node, std::vector<feature_node>, mincomp> Min_order_queue;
+	std::priority_queue<struct feature_node, std::vector<feature_node>, maxcomp> max_heap;
+	std::priority_queue<struct feature_node, std::vector<feature_node>, mincomp> min_heap;
 	
 	int success_all = 0;
 	while(iter < max_iter)
@@ -4924,49 +5093,49 @@ void Solver::oneclass_semigd_1000()
 			comp.value = -sparse_operator::dot(w, xi);
 			if(alpha_status[comp.index] != UPPER_BOUND)
 			{
-				if((int) Min_order_queue.size() <  update_size)
-					Min_order_queue.push(comp);
+				if((int) min_heap.size() <  update_size)
+					min_heap.push(comp);
 				else
 				{
-					if(Min_order_queue.top().value < comp.value)
+					if(min_heap.top().value < comp.value)
 					{
-						Min_order_queue.pop();
-						Min_order_queue.push(comp);
+						min_heap.pop();
+						min_heap.push(comp);
 					}
 				}
 			}
 			if(alpha_status[comp.index] != LOWER_BOUND)
 			{
-				if((int) Max_order_queue.size() < update_size)
-					Max_order_queue.push(comp);
+				if((int) max_heap.size() < update_size)
+					max_heap.push(comp);
 				else
 				{
-					if(Max_order_queue.top().value > comp.value)
+					if(max_heap.top().value > comp.value)
 					{
-						Max_order_queue.pop();
-						Max_order_queue.push(comp);
+						max_heap.pop();
+						max_heap.push(comp);
 					}
 				}
 			}
 		}
 		
-		update_size = min((int)Min_order_queue.size(), (int)Max_order_queue.size());
-		while((int)Max_order_queue.size() > update_size)
-			Max_order_queue.pop();
-		while((int)Min_order_queue.size() > update_size)
-			Min_order_queue.pop();
+		update_size = min((int)min_heap.size(), (int)max_heap.size());
+		while((int)max_heap.size() > update_size)
+			max_heap.pop();
+		while((int)min_heap.size() > update_size)
+			min_heap.pop();
 		
 		for(i=0; i<update_size; i++)
 		{
-			Max_order_index[update_size-1-i] = Min_order_queue.top().index;
-			Min_order_index[update_size-1-i] = Max_order_queue.top().index;
-			Min_order_queue.pop();
-			Max_order_queue.pop();
+			Max_order_index[update_size-1-i] = min_heap.top().index;
+			Min_order_index[update_size-1-i] = max_heap.top().index;
+			min_heap.pop();
+			max_heap.pop();
 		}
 		if(wss_mode == SEMIGD_G_RAND)
 		{
-			std::random_shuffle(Max_order_index, Max_order_index+update_size);
-			std::random_shuffle(Min_order_index, Min_order_index+update_size);
+			RAND_SHUFFLE(Max_order_index, update_size);
+			RAND_SHUFFLE(Min_order_index, update_size);
 		}
 		for(int index_i = 0; index_i<update_size; index_i++)
 		{
@@ -5083,8 +5252,9 @@ void Solver::oneclass_semigd_1000()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		save_resume();
 		success_all += success_pair;
-		EXIT_IF_TIMEOUT(duration);
+		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -5097,7 +5267,6 @@ void Solver::oneclass_semigd_shrink()
 	clock_t start;
 	int l = prob->l;
 	int i, j;
-	active_size = l;
 	double G_i, G_j;
 	enum {LOWER_BOUND, UPPER_BOUND, FREE};
 	Gmax = -INF;
@@ -5106,8 +5275,8 @@ void Solver::oneclass_semigd_shrink()
 	int *Max_order_index = new int[l];
 	int *Min_order_index = new int[l];
 				
-	std::priority_queue<struct feature_node, std::vector<feature_node>, maxcomp> Max_order_queue;
-	std::priority_queue<struct feature_node, std::vector<feature_node>, mincomp> Min_order_queue;
+	std::priority_queue<struct feature_node, std::vector<feature_node>, maxcomp> max_heap;
+	std::priority_queue<struct feature_node, std::vector<feature_node>, mincomp> min_heap;
 
 	
 	int success_all = 0;
@@ -5168,7 +5337,6 @@ void Solver::oneclass_semigd_shrink()
 					swap(index[i],index[--active_size]);
 					swap(G[i],G[active_size]);
 				}
-
 			}
 		}
 
@@ -5181,49 +5349,49 @@ void Solver::oneclass_semigd_shrink()
 			comp.value = G[i];
 			if(alpha_status[comp.index] != UPPER_BOUND)
 			{
-				if((int) Min_order_queue.size() <  update_size)
-					Min_order_queue.push(comp);
+				if((int) min_heap.size() <  update_size)
+					min_heap.push(comp);
 				else
 				{
-					if(Min_order_queue.top().value < comp.value)
+					if(min_heap.top().value < comp.value)
 					{
-						Min_order_queue.pop();
-						Min_order_queue.push(comp);
+						min_heap.pop();
+						min_heap.push(comp);
 					}
 				}
 			}
 			if(alpha_status[comp.index] != LOWER_BOUND)
 			{
-				if((int) Max_order_queue.size() < update_size)
-					Max_order_queue.push(comp);
+				if((int) max_heap.size() < update_size)
+					max_heap.push(comp);
 				else
 				{
-					if(Max_order_queue.top().value > comp.value)
+					if(max_heap.top().value > comp.value)
 					{
-						Max_order_queue.pop();
-						Max_order_queue.push(comp);
+						max_heap.pop();
+						max_heap.push(comp);
 					}
 				}
 			}
 		}
 		
-		update_size = min((int)Min_order_queue.size(), (int)Max_order_queue.size());
-		while((int)Max_order_queue.size() > update_size)
-			Max_order_queue.pop();
-		while((int)Min_order_queue.size() > update_size)
-			Min_order_queue.pop();
+		update_size = min((int)min_heap.size(), (int)max_heap.size());
+		while((int)max_heap.size() > update_size)
+			max_heap.pop();
+		while((int)min_heap.size() > update_size)
+			min_heap.pop();
 		
 		for(i=0; i<update_size; i++)
 		{
-			Max_order_index[update_size-1-i] = Min_order_queue.top().index;
-			Min_order_index[update_size-1-i] = Max_order_queue.top().index;
-			Min_order_queue.pop();
-			Max_order_queue.pop();
+			Max_order_index[update_size-1-i] = min_heap.top().index;
+			Min_order_index[update_size-1-i] = max_heap.top().index;
+			min_heap.pop();
+			max_heap.pop();
 		}
 		if(wss_mode == SEMIGD_G_RAND)
 		{
-			std::random_shuffle(Max_order_index, Max_order_index+update_size);
-			std::random_shuffle(Min_order_index, Min_order_index+update_size);
+			RAND_SHUFFLE(Max_order_index, update_size);
+			RAND_SHUFFLE(Min_order_index, update_size);
 		}
 		for(int index_i = 0; index_i<update_size; index_i++)
 		{
@@ -5324,9 +5492,6 @@ void Solver::oneclass_semigd_shrink()
 					n_exchange++;
 				sparse_operator::axpy(alpha[i]-old_alpha_i, prob->x[i], w);
 				sparse_operator::axpy(alpha[j]-old_alpha_j, prob->x[j], w);
-				double nG_i = sparse_operator::dot(w, prob->x[i]);
-				double nG_j = sparse_operator::dot(w, prob->x[j]);
-				info("%g %g %g %g | %g %g\n", alpha[i], alpha[j], nG_i, nG_j, G_i, G_j);
 				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[2]);
 				alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[2]);
 			}
@@ -5340,8 +5505,9 @@ void Solver::oneclass_semigd_shrink()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		save_resume();
 		success_all += success_pair;
-		EXIT_IF_TIMEOUT(duration);
+		EXIT_IF_TIMEOUT();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -5396,6 +5562,8 @@ static void oneclass_update(
 	{
 		alpha[i] = 0;
 	}
+	for(i=0; i<prob->n; i++)
+		w[i] = 0;
 	for(i=0; i<l; i++)
 	{
 		alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[2]);
@@ -5407,6 +5575,7 @@ static void oneclass_update(
 	Solver solver = Solver(solver_type);
 	solver.prob = prob;
 	solver.w = w;
+	solver.w_size = prob->n;
 	solver.alpha = alpha;
 	solver.eps = param->eps;
 	solver.QD = QD;
@@ -5418,6 +5587,10 @@ static void oneclass_update(
 	solver.max_iter = param->max_iter;
 	solver.timeout = param->timeout;
 	solver.opt_val = param->opt_val;
+	solver.log_fp = param->log_fp;
+	solver.active_size = l;
+	solver._resume = param->_resume;
+	solver.use_resume();
 	switch(solver_type)
 	{
 		
@@ -5526,18 +5699,25 @@ static void two_bias_update(
 	Solver solver = Solver(solver_type);
 	solver.prob = prob;
 	solver.w = w;
+	solver.w_size = w_size;
 	solver.alpha = alpha;
 	solver.eps = eps;
 	solver.QD = QD;
 	solver.y = y;
 	solver.diag = diag;
-	solver.index = index;
-	solver.upper_bound = upper_bound;
 	solver.alpha_status = alpha_status;
 	solver.ratio_update = param->r;
+	solver.index = index;
+	solver.upper_bound = upper_bound;
 	solver.max_iter = param->max_iter;
 	solver.timeout = param->timeout;
 	solver.opt_val = param->opt_val;
+	solver.log_fp = param->log_fp;
+	solver.PGmax_old = INF;
+	solver.PGmin_old = -INF;
+	solver.active_size = l;
+	solver._resume = param->_resume;
+	solver.use_resume();
 	switch(solver_type)
 	{
 		case BIAS_L1_RD_SH:
@@ -5621,6 +5801,8 @@ static void onetwo_nobias_update(
 	 ||solver_type == ONE_L1_SEMIGD_DUALOBJ_SH
 	 ||solver_type == ONE_L1_SEMIGD_DUALOBJ_RAND_1000
 	 ||solver_type == ONE_L1_SEMIGD_DUALOBJ_RAND_SH
+	 ||solver_type == ONE_L1_SEMIGD_DUALOBJ_YBAL_1000
+	 ||solver_type == ONE_L1_SEMIGD_DUALOBJ_YBAL_SH
 	 ||solver_type == TWO_L1_CY_1000 
 	 ||solver_type == TWO_L1_RD_1000 
 	 ||solver_type == TWO_L1_SEMIGD_1000 
@@ -5676,6 +5858,7 @@ static void onetwo_nobias_update(
 	Solver solver = Solver(solver_type);
 	solver.prob = prob;
 	solver.w = w;
+	solver.w_size = w_size;
 	solver.alpha = alpha;
 	solver.eps = eps;
 	solver.QD = QD;
@@ -5689,6 +5872,12 @@ static void onetwo_nobias_update(
 	solver.max_iter = param->max_iter;
 	solver.timeout = param->timeout;
 	solver.opt_val = param->opt_val;
+	solver.log_fp = param->log_fp;
+	solver.PGmax_old = INF;
+	solver.PGmin_old = -INF;
+	solver.active_size = max_set;
+	solver._resume = param->_resume;
+	solver.use_resume();
 	switch(solver_type)
 	{
 		case ONE_L1_RD_SH:
@@ -5770,6 +5959,20 @@ static void onetwo_nobias_update(
 		case ONE_L2_SEMIGD_DUALOBJ_RAND_SH:
 		{
 			solver.wss_mode = Solver::SEMIGD_DUALOBJ_RAND;
+			solver.one_semigd_dualobj_shrink();
+			break;
+		}
+		case ONE_L1_SEMIGD_DUALOBJ_YBAL_1000:
+		case ONE_L2_SEMIGD_DUALOBJ_YBAL_1000:
+		{
+			solver.wss_mode = Solver::SEMIGD_DUALOBJ_YBAL;
+			solver.one_semigd_dualobj_1000();
+			break;
+		}
+		case ONE_L1_SEMIGD_DUALOBJ_YBAL_SH:
+		case ONE_L2_SEMIGD_DUALOBJ_YBAL_SH:
+		{
+			solver.wss_mode = Solver::SEMIGD_DUALOBJ_YBAL;
 			solver.one_semigd_dualobj_shrink();
 			break;
 		}
@@ -7140,6 +7343,10 @@ static void train_one(const problem *prob, const parameter *param, double *w, do
 		case ONE_L1_SEMIGD_DUALOBJ_RAND_SH:
 		case ONE_L2_SEMIGD_DUALOBJ_RAND_1000:
 		case ONE_L2_SEMIGD_DUALOBJ_RAND_SH:
+		case ONE_L1_SEMIGD_DUALOBJ_YBAL_1000:
+		case ONE_L1_SEMIGD_DUALOBJ_YBAL_SH:
+		case ONE_L2_SEMIGD_DUALOBJ_YBAL_1000:
+		case ONE_L2_SEMIGD_DUALOBJ_YBAL_SH:
 		case TWO_L1_CY_1000:
 		case TWO_L2_CY_1000:
 		case TWO_L1_SEMICY_1000:
@@ -7759,6 +7966,10 @@ class Solver_type_table
 		SAVE_NAME(ONE_L1_SEMIGD_DUALOBJ_RAND_SH);
 		SAVE_NAME(ONE_L2_SEMIGD_DUALOBJ_RAND_1000);
 		SAVE_NAME(ONE_L2_SEMIGD_DUALOBJ_RAND_SH);
+		SAVE_NAME(ONE_L1_SEMIGD_DUALOBJ_YBAL_1000);
+		SAVE_NAME(ONE_L1_SEMIGD_DUALOBJ_YBAL_SH);
+		SAVE_NAME(ONE_L2_SEMIGD_DUALOBJ_YBAL_1000);
+		SAVE_NAME(ONE_L2_SEMIGD_DUALOBJ_YBAL_SH);
 		//for two-variable
 		SAVE_NAME(TWO_L1_CY_1000);
 		SAVE_NAME(TWO_L1_RD_1000);
@@ -8020,6 +8231,152 @@ struct model *load_model(const char *model_file_name)
 
 	return model_;
 }
+#undef FSCANF
+#define FSCANF(_stream, _format, _var)do\
+{\
+	if (fscanf(_stream, _format, _var) != 1)\
+	{\
+		fprintf(stderr, "ERROR: fscanf failed to read the resume\n");\
+		EXIT_LOAD_RESUME()\
+	}\
+}while(0)
+#define EXIT_LOAD_RESUME()\
+{\
+	setlocale(LC_ALL, old_locale);\
+	free(_resume);\
+	free(old_locale);\
+	return NULL;\
+}
+struct resume *load_resume(const char *resume_file_name)
+{
+	struct resume* _resume = Malloc(struct resume, 1);
+	strcpy(_resume->fname, resume_file_name);
+	FILE* fp = fopen(_resume->fname, "r");
+	if(fp==NULL)
+	{
+		_resume->read_resume=false;
+		fp = fopen(_resume->fname, "w");
+		if(fp==NULL) return NULL;
+		else
+		{
+			if (ferror(fp) != 0 || fclose(fp) != 0) return NULL;
+			return _resume;
+		}
+	}
+	// read resume
+	char *old_locale = setlocale(LC_ALL, NULL);
+	if (old_locale)
+	{
+		old_locale = strdup(old_locale);
+	}
+	setlocale(LC_ALL, "C");
+
+	int last_resume=0;
+	char cmd[81];
+	while((fscanf(fp, "%80s", cmd) != EOF))
+	{
+		if(strcmp(cmd, "=====")==0)
+		{
+			if(fscanf(fp, "%80s", cmd) == EOF)
+				break;
+			last_resume++;
+		}
+	}
+	fclose(fp);
+	if(last_resume == 0)
+		return _resume;
+	fp = fopen(_resume->fname, "r");
+	_resume->read_resume=true;
+
+	while(1)
+	{
+		FSCANF(fp, "%80s", cmd);
+		if(last_resume != 0)
+		{
+			if(strcmp(cmd, "=====")==0)
+				last_resume--;
+			continue;
+		}
+		if(strcmp(cmd, "iter")==0)
+		{
+			FSCANF(fp, "%d", &_resume->iter);
+		}
+		else if(strcmp(cmd, "duration")==0)
+		{
+			FSCANF(fp, "%ju", &_resume->duration);
+		}
+		else if(strcmp(cmd, "nr_rand_calls")==0)
+		{
+			FSCANF(fp, "%d", &_resume->nr_rand_calls);
+		}
+		else if(strcmp(cmd, "last_obj")==0)
+		{
+			FSCANF(fp, "%lf", &_resume->last_obj);
+		}
+		else if(strcmp(cmd, "active_size")==0)
+		{
+			FSCANF(fp, "%d", &_resume->active_size);
+		}
+		else if(strcmp(cmd, "Gmax_old")==0)
+		{
+			FSCANF(fp, "%lf", &_resume->Gmax_old);
+		}
+		else if(strcmp(cmd, "Gmin_old")==0)
+		{
+			FSCANF(fp, "%lf", &_resume->Gmin_old);
+		}
+		else if(strcmp(cmd, "PGmax_old")==0)
+		{
+			FSCANF(fp, "%lf", &_resume->PGmax_old);
+		}
+		else if(strcmp(cmd, "PGmin_old")==0)
+		{
+			FSCANF(fp, "%lf", &_resume->PGmin_old);
+		}
+		else if(strcmp(cmd, "alpha_size")==0)
+		{
+			FSCANF(fp, "%d", &_resume->alpha_size);
+		}
+		else if(strcmp(cmd, "index")==0)
+		{
+			_resume->index = Malloc(int, _resume->alpha_size);
+			for(int i=0; i<_resume->alpha_size; i++)
+				FSCANF(fp, "%d", &_resume->index[i]);
+		}
+		else if(strcmp(cmd, "alpha")==0)
+		{
+			_resume->alpha = Malloc(double, _resume->alpha_size);
+			for(int i=0; i<_resume->alpha_size; i++)
+				FSCANF(fp, "%lf", &_resume->alpha[i]);
+		}
+		else if(strcmp(cmd, "w_size")==0)
+		{
+			FSCANF(fp, "%d", &_resume->w_size);
+		}
+		else if(strcmp(cmd, "w")==0)
+		{
+			_resume->w = Malloc(double, _resume->w_size);
+			for(int i=0; i<_resume->w_size; i++)
+				FSCANF(fp, "%lf", &_resume->w[i]);
+		}
+		else if(strcmp(cmd, "=====")==0)
+		{
+			break;
+		}
+		else
+		{
+			fprintf(stderr,"unknown text in resume file: [%s]\n",cmd);
+			EXIT_LOAD_RESUME()
+		}
+	}
+
+	setlocale(LC_ALL, old_locale);
+	free(old_locale);
+
+	if (ferror(fp) != 0 || fclose(fp) != 0) return NULL;
+
+	return _resume;
+}
 
 int get_nr_feature(const model *model_)
 {
@@ -8159,6 +8516,10 @@ const char *check_parameter(const problem *prob, const parameter *param)
 		&& param->solver_type != ONE_L1_SEMIGD_DUALOBJ_RAND_SH
 		&& param->solver_type != ONE_L2_SEMIGD_DUALOBJ_RAND_1000
 		&& param->solver_type != ONE_L2_SEMIGD_DUALOBJ_RAND_SH
+		&& param->solver_type != ONE_L1_SEMIGD_DUALOBJ_YBAL_1000
+		&& param->solver_type != ONE_L1_SEMIGD_DUALOBJ_YBAL_SH
+		&& param->solver_type != ONE_L2_SEMIGD_DUALOBJ_YBAL_1000
+		&& param->solver_type != ONE_L2_SEMIGD_DUALOBJ_YBAL_SH
 		&& param->solver_type != TWO_L1_CY_1000
 		&& param->solver_type != TWO_L1_RD_1000
 		&& param->solver_type != TWO_L1_RD_SH

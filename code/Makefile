@@ -1,13 +1,13 @@
 CXX ?= g++
 CC ?= gcc
-CFLAGS = -Wall -Wconversion -O3 -fPIC -g
+CFLAGS = -std=c++11 -Wall -Wconversion -O3 -fPIC -g -fopenmp
 #CFLAGS = -Wall -Wconversion -fPIC -g
 LIBS = blas/blas.a
 SHVER = 3
 OS = $(shell uname)
 #LIBS = -lblas
 
-all: train predict
+all: train predict grid
 
 lib: linear.o tron.o blas/blas.a
 	if [ "$(OS)" = "Darwin" ]; then \
@@ -16,6 +16,9 @@ lib: linear.o tron.o blas/blas.a
 		SHARED_LIB_FLAG="-shared -Wl,-soname,liblinear.so.$(SHVER)"; \
 	fi; \
 	$(CXX) $${SHARED_LIB_FLAG} linear.o tron.o blas/blas.a -o liblinear.so.$(SHVER)
+
+grid: tron.o linear.o grid.cpp blas/blas.a
+	$(CXX) $(CFLAGS) -o grid grid.cpp tron.o linear.o $(LIBS)
 
 train: tron.o linear.o train.c blas/blas.a
 	$(CXX) $(CFLAGS) -o train train.c tron.o linear.o $(LIBS)
@@ -35,4 +38,4 @@ blas/blas.a: blas/*.c blas/*.h
 clean:
 	make -C blas clean
 	make -C matlab clean
-	rm -f *~ tron.o linear.o train predict liblinear.so.$(SHVER)
+	rm -f *~ tron.o linear.o train predict grid liblinear.so.$(SHVER)
