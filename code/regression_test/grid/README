@@ -1,0 +1,4 @@
+Used for testing if the output of `grid' and `train' are consistent.
+Usage: ./run.bash
+`grids' is the parameter for a data.
+data used can be changed in run.bash, default is heart_scale

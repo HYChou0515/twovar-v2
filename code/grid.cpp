@@ -396,7 +396,6 @@ void parse_stdin(char *input_file_name, GridItem* grid_item, char *param_str)
 	flag_find_C = 0;
 	bias = -1;
 
-	printf("%s", param_str);
 	char * key_token = strtok(param_str, " ");
 	char * val_token;
 	// parse options
