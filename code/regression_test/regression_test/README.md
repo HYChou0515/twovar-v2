@@ -11,27 +11,20 @@ Optional: gnuplot, matlab
 First
 
 ```shell
-$ ./get.sh
+$ ./get.sh [OLD_HASH]
 ```
+default OLD_HASH is HEAD^
 
-to get an archived `.zip` file containing the latest version of liblinear.
-
-Then
-
-```shell
-$ unzip liblr-latest.zip
-```
-
-and then there should be a directory named `liblr-latest`.
+Then 'old/' and 'new/' will be created:
+old is the dir contain the version of OLD_HASH
+new is the dir contain the version of HEAD
 
 ### Execution
-
-Suppose there is another directory named `liblr-modified` in the same directory `liblr-latest` is in.
 
 Then running
 
 ```shell
-$ ./regression.py liblr-latest liblr-modified [cmds] [results/]
+$ ./regression.py old new [cmds] [results/]
 ```
 
 will perform regression tests, and the terminal outputs will also be stored in `results/log.txt`. Detailed results will be put under `results/output/`.

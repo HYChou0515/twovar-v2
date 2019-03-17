@@ -14,6 +14,7 @@
 #include <limits>
 #include <time.h>
 #include <sys/time.h>
+#include<bits/stdc++.h>
 
 typedef signed char schar;
 template <class T> static inline void swap(T& x, T& y) { T t=x; x=y; y=t; }
@@ -815,6 +816,13 @@ void Solver_MCSVM_CS::Solve(double *w)
 		break;\
 	}\
 }
+#define EXIT_IF_OVER_CDSTEPS()\
+{\
+	if (max_cdstep > 0 && cdsteps > max_cdstep)\
+	{\
+		break;\
+	}\
+}
 #define EXIT_IF_OPTIMAL(obj)\
 {\
 	if (obj < opt_val)\
@@ -830,6 +838,9 @@ void Solver_MCSVM_CS::Solve(double *w)
 		swap(arr[i], arr[j]);\
 	}\
 }
+//For skipping log_info in log_message
+#define SAMPLE_TIME 1 
+#define MAX_LOG 10000
 class Solver
 {
 public:
@@ -852,6 +863,7 @@ public:
 	int *index;
 	int max_iter;
 	int timeout;
+	int max_cdstep;
 	double opt_val;
 
 	// logged variables
@@ -887,6 +899,9 @@ public:
 	std::default_random_engine generator;
 	std::uniform_int_distribution<int> distribution;
 	double last_obj; //the obj calculated in the last log_message
+	int cdsteps;
+	int log_skip;
+	int log_count;
 	enum SolverCate 
 	{
 		ONE_NOBIAS,
@@ -967,6 +982,7 @@ Solver::Solver(int _solver_type)
 	std::uniform_int_distribution<int> distribution(0,RAND_MAX);
 	_resume = NULL;
 	iter = 0;
+	cdsteps = 0;
 	duration = 0;
 	PGmax_new = nan("");
 	PGmin_new = nan("");
@@ -988,6 +1004,8 @@ Solver::Solver(int _solver_type)
 	Gmin_old = nan("");
 	nr_rand_calls = 0;
 	resume_count = 0;
+	log_skip = -1;
+	log_count = 0;
 	gettimeofday(&start_tv, NULL);
 
 	switch(solver_type)
@@ -1286,13 +1304,7 @@ void Solver:: countSVs()
 }
 void Solver::log_message()
 {
-	log_info("iter %d ", iter);
-	log_info("t %f ", (double)(duration)/CLOCKS_PER_SEC);
-	
 	double new_obj = calculate_obj();
-	log_info("obj %.16g ", new_obj);
-	log_info("decr_rate %.3e ", (last_obj-new_obj)/fabs(new_obj));
-	last_obj = new_obj;
 
 	int pseudo_updsize;
 	//default: see update_size and active_size are the same variable
@@ -1300,33 +1312,61 @@ void Solver::log_message()
 		pseudo_updsize = active_size;
 	else
 		pseudo_updsize = update_size;
-	log_info("actsize %d ", active_size);
-	log_info("updsize %d ", pseudo_updsize);
-	log_info("sucpair %d ", success_pair);
-	log_info("sucs_rate %.2f%% ", (double)success_pair/pseudo_updsize*100);
-	
+	cdsteps += pseudo_updsize;
+
 	countSVs();
-	log_info("nSV %d ", sv);
-	log_info("nBSV %d ", bsv);
-	log_info("nFree %d ", freesv);
-	log_info("nNonSV %d ", nonsv);
 
-	log_info("PGmax %.16g ", PGmax_new);
-	log_info("PGmin %.16g ", PGmin_new);
-	log_info("PGdiff %.3f ", PGmax_new-PGmin_new);
-	
-	log_info("Gmax %.16g ", Gmax);
-	log_info("Gmin %.16g ", Gmin);
-	log_info("Gdiff %.3f ", Gmax-Gmin);
+	if(timeout > 0 && SAMPLE_TIME > 0 && MAX_LOG > 0 && max_iter > MAX_LOG)
+	{
+		if(log_skip <= 0) 
+		{
+			gettimeofday(&now_tv, NULL);
+			if(now_tv.tv_sec-start_tv.tv_sec > SAMPLE_TIME)
+			{
+				long usec = 1000000 * (now_tv.tv_sec-start_tv.tv_sec) + (now_tv.tv_usec-start_tv.tv_usec);
+				log_skip = (int) ((long)timeout*(long)iter*1000000/ (usec * MAX_LOG));
+				printf("%d\n", log_skip);
+			}
+		}
+		if(log_count <= 0)
+			log_count = log_skip;
+	}
+	if(--log_count <= 0)
+	{
+		log_info("iter %d ", iter);
+		log_info("t %f ", (double)(duration)/CLOCKS_PER_SEC);
+		
+		log_info("obj %.16g ", new_obj);
+		log_info("decr_rate %.3e ", (last_obj-new_obj)/fabs(new_obj));
+		log_info("actsize %d ", active_size);
+		log_info("updsize %d ", pseudo_updsize);
+		log_info("sucpair %d ", success_pair);
+		log_info("sucs_rate %.2f%% ", (double)success_pair/pseudo_updsize*100);
+		
+		log_info("nSV %d ", sv);
+		log_info("nBSV %d ", bsv);
+		log_info("nFree %d ", freesv);
+		log_info("nNonSV %d ", nonsv);
 
-	log_info("n_exchange %d ", n_exchange);
+		log_info("PGmax %.16g ", PGmax_new);
+		log_info("PGmin %.16g ", PGmin_new);
+		log_info("PGdiff %.3f ", PGmax_new-PGmin_new);
+		
+		log_info("Gmax %.16g ", Gmax);
+		log_info("Gmin %.16g ", Gmin);
+		log_info("Gdiff %.3f ", Gmax-Gmin);
 
-	log_info("alpha_diff %.16g ", alpha_diff);
+		log_info("n_exchange %d ", n_exchange);
 
-	log_info("nr_pos_y %d ", nr_pos_y);
-	log_info("nr_neg_y %d ", nr_neg_y);
+		log_info("alpha_diff %.16g ", alpha_diff);
 
-	log_info("\n");
+		log_info("nr_pos_y %d ", nr_pos_y);
+		log_info("nr_neg_y %d ", nr_neg_y);
+		log_info("cdsteps %d ", cdsteps);
+
+		log_info("\n");
+	}
+	last_obj = new_obj;
 }
 void Solver::summary()
 {
@@ -1335,8 +1375,9 @@ void Solver::summary()
 	log_info("eps = %f ratio_update = %f\n", eps, ratio_update);
 	log_info("solver = %s\n", solver_name);
 	log_info("max_iter = %d\n", max_iter);
+	log_info("max_cdstep = %d\n", max_cdstep);
 	log_info("timeout = %d\n", timeout);
-	log_info("opt_val = %d\n", opt_val);
+	log_info("opt_val = %g\n", opt_val);
 	log_info("obj = %.16g rho = %.16g\n", calculate_obj(), calculate_rho());
 
 	countSVs();
@@ -1378,6 +1419,7 @@ void Solver::save_resume()
 	FILE* fp = fopen(_resume->fname, "a");
 	fprintf(fp, "iter\n%d\n", iter);
 	fprintf(fp, "duration\n%ju\n", (uintmax_t) duration);
+	fprintf(fp, "cdsteps\n%d\n", cdsteps);
 	fprintf(fp, "nr_rand_calls\n%d\n", nr_rand_calls);
 	fprintf(fp, "last_obj\n%.17g\n", last_obj);
 	fprintf(fp, "active_size\n%d\n", active_size);
@@ -1423,6 +1465,7 @@ void Solver::use_resume()
 	if(w_size != _resume->w_size)
 		fprintf(stderr, "ERROR: resume w_size not consistent\n");
 	iter = _resume->iter;
+	cdsteps = _resume->cdsteps;
 	duration = _resume->duration;
 	last_obj = _resume->last_obj;
 	active_size = _resume->active_size;
@@ -1548,6 +1591,7 @@ void Solver::one_random_shrink()
 			PGmin_old = -INF;
 		save_resume();
 		EXIT_IF_TIMEOUT();
+		EXIT_IF_OVER_CDSTEPS();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -1594,6 +1638,7 @@ void Solver::one_random_1000()
 		log_message();
 		save_resume();
 		EXIT_IF_TIMEOUT();
+		EXIT_IF_OVER_CDSTEPS();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -1698,6 +1743,7 @@ void Solver::one_cyclic_shrink()
 			PGmin_old = -INF;
 		save_resume();
 		EXIT_IF_TIMEOUT();
+		EXIT_IF_OVER_CDSTEPS();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -1743,6 +1789,7 @@ void Solver::one_cyclic_1000()
 		log_message();
 		save_resume();
 		EXIT_IF_TIMEOUT();
+		EXIT_IF_OVER_CDSTEPS();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -1870,6 +1917,7 @@ void Solver::one_semigd_1000()
 		log_message();
 		save_resume();
 		EXIT_IF_TIMEOUT();
+		EXIT_IF_OVER_CDSTEPS();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -2016,6 +2064,7 @@ void Solver::one_semigd_dualobj_1000()
 		log_message();
 		save_resume();
 		EXIT_IF_TIMEOUT();
+		EXIT_IF_OVER_CDSTEPS();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -2207,6 +2256,7 @@ void Solver::two_semicyclic_1000()
 		log_message();
 		save_resume();
 		EXIT_IF_TIMEOUT();
+		EXIT_IF_OVER_CDSTEPS();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -2465,6 +2515,7 @@ void Solver::two_random_shrink2()
 			PGmin_old = -INF;
 		save_resume();
 		EXIT_IF_TIMEOUT();
+		EXIT_IF_OVER_CDSTEPS();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -2728,6 +2779,7 @@ void Solver::two_random_shrink()
 			PGmin_old = -INF;
 		save_resume();
 		EXIT_IF_TIMEOUT();
+		EXIT_IF_OVER_CDSTEPS();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -2923,6 +2975,7 @@ void Solver::two_cyclic_1000()
 		log_message();
 		save_resume();
 		EXIT_IF_TIMEOUT();
+		EXIT_IF_OVER_CDSTEPS();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -3099,6 +3152,7 @@ void Solver::two_semirandom2_1000()
 		log_message();
 		save_resume();
 		EXIT_IF_TIMEOUT();
+		EXIT_IF_OVER_CDSTEPS();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -3275,6 +3329,7 @@ void Solver::two_semirandom1_1000()
 		log_message();
 		save_resume();
 		EXIT_IF_TIMEOUT();
+		EXIT_IF_OVER_CDSTEPS();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -3424,6 +3479,7 @@ void Solver::two_random_1000()
 		log_message();
 		save_resume();
 		EXIT_IF_TIMEOUT();
+		EXIT_IF_OVER_CDSTEPS();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -3955,6 +4011,7 @@ void Solver::bias_semigd()
 		log_message();
 		save_resume();
 		EXIT_IF_TIMEOUT();
+		EXIT_IF_OVER_CDSTEPS();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();	
@@ -4234,6 +4291,7 @@ void Solver::bias_random_shrink()
 		log_message();
 		save_resume();
 		EXIT_IF_TIMEOUT();
+		EXIT_IF_OVER_CDSTEPS();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -4412,6 +4470,7 @@ void Solver::bias_random_1000()
 		log_message();
 		save_resume();
 		EXIT_IF_TIMEOUT();
+		EXIT_IF_OVER_CDSTEPS();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -4634,6 +4693,7 @@ void Solver::oneclass_random_shrink()
 		}
 		save_resume();
 		EXIT_IF_TIMEOUT();
+		EXIT_IF_OVER_CDSTEPS();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -4767,6 +4827,7 @@ void Solver::oneclass_random_1000()
 		log_message();
 		save_resume();
 		EXIT_IF_TIMEOUT();
+		EXIT_IF_OVER_CDSTEPS();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -4906,6 +4967,7 @@ void Solver::oneclass_first_1000()
 		log_message();
 		save_resume();
 		EXIT_IF_TIMEOUT();
+		EXIT_IF_OVER_CDSTEPS();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -5056,6 +5118,7 @@ void Solver::oneclass_second_1000()
 		log_message();
 		save_resume();
 		EXIT_IF_TIMEOUT();
+		EXIT_IF_OVER_CDSTEPS();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -5255,6 +5318,7 @@ void Solver::oneclass_semigd_1000()
 		save_resume();
 		success_all += success_pair;
 		EXIT_IF_TIMEOUT();
+		EXIT_IF_OVER_CDSTEPS();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -5508,6 +5572,7 @@ void Solver::oneclass_semigd_shrink()
 		save_resume();
 		success_all += success_pair;
 		EXIT_IF_TIMEOUT();
+		EXIT_IF_OVER_CDSTEPS();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -5584,8 +5649,9 @@ static void oneclass_update(
 	solver.diag = diag;
 	solver.upper_bound = upper_bound;
 	solver.ratio_update = param->r;
-	solver.max_iter = param->max_iter;
+	solver.max_iter = param->max_iter>0 ? param->max_iter : INT_MAX;
 	solver.timeout = param->timeout;
+	solver.max_cdstep = param->max_cdstep*prob->l;
 	solver.opt_val = param->opt_val;
 	solver.log_fp = param->log_fp;
 	solver.active_size = l;
@@ -5709,8 +5775,9 @@ static void two_bias_update(
 	solver.ratio_update = param->r;
 	solver.index = index;
 	solver.upper_bound = upper_bound;
-	solver.max_iter = param->max_iter;
+	solver.max_iter = param->max_iter>0 ? param->max_iter : INT_MAX;
 	solver.timeout = param->timeout;
+	solver.max_cdstep = param->max_cdstep*prob->l;
 	solver.opt_val = param->opt_val;
 	solver.log_fp = param->log_fp;
 	solver.PGmax_old = INF;
@@ -5869,8 +5936,9 @@ static void onetwo_nobias_update(
 	solver.ratio_update = param->r;
 	solver.index = index;
 	solver.upper_bound = upper_bound;
-	solver.max_iter = param->max_iter;
+	solver.max_iter = param->max_iter>0 ? param->max_iter : INT_MAX;
 	solver.timeout = param->timeout;
+	solver.max_cdstep = param->max_cdstep*prob->l;
 	solver.opt_val = param->opt_val;
 	solver.log_fp = param->log_fp;
 	solver.PGmax_old = INF;
@@ -8304,6 +8372,10 @@ struct resume *load_resume(const char *resume_file_name)
 		else if(strcmp(cmd, "duration")==0)
 		{
 			FSCANF(fp, "%ju", &_resume->duration);
+		}
+		else if(strcmp(cmd, "cdsteps")==0)
+		{
+			FSCANF(fp, "%d", &_resume->cdsteps);
 		}
 		else if(strcmp(cmd, "nr_rand_calls")==0)
 		{

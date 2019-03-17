@@ -1,6 +1,9 @@
 #!/bin/bash
 
-NEW_HASH=$(git rev-parse HEAD)
+NEW_HASH=$(git branch | grep \* | cut -d ' ' -f2)
+if [ "detech from" == *"$NEW_HASH"* ]; then
+	NEW_HASH=$(git rev-parse HEAD)
+fi
 if [ -z $1 ]; then
 	OLD_HASH=$(git rev-parse HEAD^)
 else
