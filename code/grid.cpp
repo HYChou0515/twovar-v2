@@ -422,6 +422,11 @@ void parse_stdin(char *input_file_name, GridItem* grid_item, char *param_str)
 				grid_item->param.timeout = atoi(val_token);
 				break;
 
+			case 'u':
+				val_token = strtok(NULL, " ");
+				grid_item->param.max_cdstep = atoi(val_token);
+				break;
+
 			case 'r':
 				val_token = strtok(NULL, " ");
 				grid_item->param.r = atof(val_token);

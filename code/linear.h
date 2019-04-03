@@ -138,6 +138,7 @@ struct resume
 	char fname[1024];
 	bool read_resume;
 	int iter;
+	int cdsteps;
 	clock_t duration;
 	int nr_rand_calls;
 	double last_obj;
@@ -167,6 +168,7 @@ struct parameter
 	double r;       /* update ratio for semi-gd*/ 
 	int max_iter;     
 	int timeout; // in second     
+	int max_cdstep; // this *= prob->l
 	double opt_val;
 	double nu;	/* for one-class formulation */
 
