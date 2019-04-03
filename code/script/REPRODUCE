@@ -1,14 +1,14 @@
-# exp-2019-02-25
+# exp-2019-04-04
 # generate log
 ./runexp.py run 
 
-1404 log files
+324 log files
 
 # generate plot
-Plot l1/l2, and compare semigd with random.
-First comment L2 things, and un-comment L1_RD.
-After plotting, change to L2 and then plot again.
+When plotting ONECLASS_*, uncomment nlist=0.1 as 
+such exp has done before.
+Groups should be noticed.
 
 For a group, use
 
-./plot.py --logpath ../log/ cd
+./plot.py --logpath ../log/ time 

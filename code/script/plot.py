@@ -88,6 +88,7 @@ class Plotter(object):
 		for st in self.stype:
 			if is_semigd(st):
 				totnum = totnum + len(rlist) -1
+		totnum = max(totnum, 6)
 		self.colors = [cmap(j) for j in np.linspace(0, 1, totnum+1)]
 		self.makr = MARKER
 		self.makr = self.makr * int(math.ceil(float(len(self.colors))/len(self.makr)))

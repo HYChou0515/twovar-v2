@@ -76,13 +76,13 @@ for data in dataset:
 				filename = filename + "_r%g" %(r)
 			print(filename)
 			loginfo = LogInfo(filename)
-		#	try:
-		#		opt_val = loginfo.get_obj_minimal()
-		#		opt_val += math.fabs(tolerance * opt_val)
-		#	except Exception as e:
-		#		sys.stderr.write('error: ' + filename+os.linesep)
-		#		sys.stderr.write(str(e)+os.linesep)
-		#		continue
+			#	try:
+			#		opt_val = loginfo.get_obj_minimal()
+			#		opt_val += math.fabs(tolerance * opt_val)
+			#	except Exception as e:
+			#		sys.stderr.write('error: ' + filename+os.linesep)
+			#		sys.stderr.write(str(e)+os.linesep)
+			#		continue
 			#cmd = "%s%s -s %d -c %g -e %g -m %d -t %d -o %.16g" % (ROOT_PATH, train, runs[tp], tc, e, m, timeout, opt_val)
 			cmd = "%s%s -s %d -c %g -e %g -m %d -t %d" % (ROOT_PATH, train, runs[tp], tc, e, m, timeout)
 			if need_n:

@@ -40,27 +40,20 @@ PROCESS_MAX = 8
 
 # plot config
 
-MARKER = ["--","--","--","--","--","o-.","o-.","o-.","o-.","o-.",":"]
+MARKER = ["--","o-.","o-.","o-.","-.","-."]
 Y_BUFFER = 2
 MIN_SQUASH = 0.2
 YLIM = (1e-9, 1e20)
 
 uselabel = {
-		40111:"l1-random",
-		40121:"l2-random",
-		40211:"l1-semigd",
-		40221:"l2-semigd",
-		40311:"l1-semigdrd",
-		40321:"l2-semigdrd",
+		20111:"l1-random",
+		20121:"l2-random",
+		20411:"l1-semigd",
+		20421:"l2-semigd",
 		50111:"l1-random",
 		50211:"l1-semigd",
 		50311:"l1-first",
 		50411:"l1-second",
 		50511:"l1-semigdrd",
-		50121:"l2-random",
-		50221:"l2-semigd",
-		50321:"l2-first",
-		50421:"l2-second",
-		50521:"l2-semigdrd",
 }
 
