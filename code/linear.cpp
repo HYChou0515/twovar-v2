@@ -841,6 +841,31 @@ void Solver_MCSVM_CS::Solve(double *w)
 //For skipping log_info in log_message
 #define SAMPLE_TIME 1 
 #define MAX_LOG 10000
+
+struct mincomp
+{
+	bool operator()(const feature_node& left, const feature_node& right)
+	{
+		return left.value > right.value;
+	}
+};
+struct maxcomp
+{
+	bool operator()(const feature_node& left, const feature_node& right)
+	{
+		return left.value < right.value;
+	}
+};
+
+static int updateAlphaStatus(double alpha, double C)
+{
+	if(alpha <= 0)
+		return 0;
+	else if (alpha >= C)
+		return 1;
+	else 
+		return 2;
+}
 class Solver
 {
 public:
@@ -941,6 +966,8 @@ public:
 	int non_static_rand();
 	void save_resume();
 	void use_resume();
+	void one_deltaF_of_indices();
+	void bias_deltaF_of_indices();
 
 	//onetwo_nobias_update
 	void one_random_shrink();
@@ -1443,15 +1470,705 @@ void Solver::save_resume()
 	fprintf(fp, "\n=====\n");
 	fclose(fp);
 }
-
-static int updateAlphaStatus(double alpha, double C)
+void Solver::one_deltaF_of_indices()
 {
-	if(alpha <= 0)
-		return 0;
-	else if (alpha >= C)
-		return 1;
-	else 
-		return 2;
+	log_info("===\n");
+	int l = max_set;
+	int i, s;
+	double G_i, C_i;
+	enum {LOWER_BOUND, UPPER_BOUND, FREE};
+	double *G = new double[l];
+	std::priority_queue<struct feature_node, std::vector<feature_node>, maxcomp> max_heap;// if YBAL; then for y=+1
+	std::priority_queue<struct feature_node, std::vector<feature_node>, maxcomp> max_heap2; // if YBAL; then for y=-1
+	int *workset = new int[l];
+	double dualobj_drop;
+	double avg_dualobj_drop = 0;
+
+	for(i=0; i<active_size; i++)
+	{
+		int G_index = index[i];
+		feature_node * const xi = prob->x[G_index];
+		G[i] = y[G_index]*sparse_operator::dot(w, xi) -1 +alpha[G_index]*diag[GETI(G_index)];
+	}
+
+	adjust_update_size();
+
+	for(s=0; s<active_size; s++)
+	{
+		i = index[s];
+		const schar yi = y[i];
+		G_i = G[s];
+		C_i = upper_bound[GETI(i)];
+		double alpha_new = min(max(alpha[i] - G_i/QD[i], 0.0), C_i);
+		alpha_diff = alpha_new - alpha[i];
+
+		dualobj_drop = alpha_diff*G_i + 0.5*alpha_diff*alpha_diff*QD[i];
+
+		struct feature_node comp;
+		comp.index = i;
+		comp.value = dualobj_drop;
+		
+		if(yi==-1 && wss_mode == SEMIGD_DUALOBJ_YBAL && fabs(comp.value) > 1e-12)
+		{
+			if((int) max_heap2.size() < update_size)
+			{
+				max_heap2.push(comp);
+			}
+			else if ((int) max_heap2.size() <= 0)
+			{
+				// nothing
+			}
+			else if (max_heap2.top().value > comp.value)
+			{
+				max_heap2.pop();
+				max_heap2.push(comp);
+			}
+		}
+		else //if YBAL and comp.value<1e-12, it goes here, but max_heap will get rid of it as it's small
+		{
+			if((int) max_heap.size() < update_size)
+			{
+				max_heap.push(comp);
+			}
+			else if ((int) max_heap.size() <= 0)
+			{
+				// nothing
+			}
+			else if (max_heap.top().value > comp.value)
+			{
+				max_heap.pop();
+				max_heap.push(comp);
+			}
+		}
+	}
+	update_size = max((int) max_heap.size(), (int) max_heap2.size());
+
+	for(i=0; i<update_size; i++)
+	{
+		if((wss_mode==SEMIGD_DUALOBJ_YBAL && i%2==1 && !max_heap2.empty()) || max_heap.empty())
+		{
+			workset[update_size-1-i] = max_heap2.top().index;
+			max_heap2.pop();
+		}
+		else
+		{
+			workset[update_size-1-i] = max_heap.top().index;
+			max_heap.pop();
+		}
+	}
+	while(!max_heap.empty())
+		max_heap.pop();
+	while(!max_heap2.empty())
+		max_heap2.pop();
+
+	if (wss_mode == SEMIGD_DUALOBJ_RAND)
+	{
+		RAND_SHUFFLE(workset, update_size);
+	}
+	for(s=0; s<100; s++)
+	{
+		for(i=0; i<active_size; i++)
+		{
+			int G_index = index[i];
+			feature_node * const xi = prob->x[G_index];
+			G[i] = y[G_index]*sparse_operator::dot(w, xi) -1 +alpha[G_index]*diag[GETI(G_index)];
+		}
+		avg_dualobj_drop = 0;
+		for(int ss=0; ss<active_size; ss++)
+		{
+			i = index[ss];
+			G_i = G[ss];
+			C_i = upper_bound[GETI(i)];
+			double alpha_new = min(max(alpha[i] - G_i/QD[i], 0.0), C_i);
+			alpha_diff = alpha_new - alpha[i];
+
+			dualobj_drop = alpha_diff*G_i + 0.5*alpha_diff*alpha_diff*QD[i];
+			avg_dualobj_drop += dualobj_drop/active_size;
+		}
+//		log_info("====================\n");
+//		log_info("%.16g\n", avg_dualobj_drop);
+		for(int ss=0; ss<update_size; ss++)
+		{
+			i = workset[ss];
+			const schar yi = y[i];
+			feature_node const * xi = prob->x[i];
+			G_i = yi*sparse_operator::dot(w, xi)-1;
+			C_i = upper_bound[GETI(i)];
+			G_i += alpha[i]*diag[GETI(i)];
+			double alpha_new = min(max(alpha[i] - G_i/QD[i], 0.0), C_i);
+			alpha_diff = alpha_new - alpha[i];
+
+			dualobj_drop = alpha_diff*G_i + 0.5*alpha_diff*alpha_diff*QD[i];
+			log_info("%.3g ", dualobj_drop/avg_dualobj_drop);
+		}
+		i = workset[s];
+		const schar yi = y[i];
+		if(yi == +1)
+			++nr_pos_y;
+		if(yi == -1)
+			++nr_neg_y;
+		feature_node const * xi = prob->x[i];
+
+		G_i = yi*sparse_operator::dot(w, xi)-1;
+		C_i = upper_bound[GETI(i)];
+		G_i += alpha[i]*diag[GETI(i)];
+
+		double alpha_new = min(max(alpha[i] - G_i/QD[i], 0.0), C_i);
+		alpha_diff = alpha_new - alpha[i];
+		if (fabs(alpha_diff) > 1e-16)
+		{
+			success_pair++;
+			alpha[i] = alpha_new;
+			sparse_operator::axpy(alpha_diff*yi, xi, w);
+			alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[GETI(i)]);
+		}
+		double new_obj = calculate_obj();
+//		log_info("\n%.16g\n", new_obj-last_obj);
+		log_info("\n");
+		last_obj = new_obj;
+	}
+	log_info("===\n");
+}
+
+void Solver::bias_deltaF_of_indices()
+{
+	log_info("===\n");
+	int l = prob->l;
+	int i, j;
+	double G_i, G_j;
+	enum {LOWER_BOUND, UPPER_BOUND, FREE};
+
+	int *Max_order_index = new int[l];
+	int *Min_order_index = new int[l];
+	
+	std::priority_queue<struct feature_node, std::vector<feature_node>, mincomp> min_heap;
+	std::priority_queue<struct feature_node, std::vector<feature_node>, maxcomp> max_heap;
+
+	double *G = new double[l];
+	double dualobj_drop;
+	double avg_dualobj_drop = 0;
+
+	for(i=0; i<active_size; i++)
+	{
+		int G_index = index[i];
+		feature_node * const xi = prob->x[G_index];
+		G[i] = -y[G_index] * (y[G_index]*sparse_operator::dot(w, xi) -1 +alpha[G_index]*diag[GETI(G_index)]);
+	}
+
+	adjust_update_size();
+
+	for(i=0; i<active_size; i++)
+	{
+		struct feature_node comp;
+		comp.index = index[i];
+		comp.value = G[i];
+		int yc = y[comp.index];
+		if( (alpha_status[comp.index] != UPPER_BOUND && yc==+1) ||
+				(alpha_status[comp.index] != LOWER_BOUND && yc==-1) )
+		{
+			if((int) min_heap.size() < update_size)
+			{
+				min_heap.push(comp);
+			}
+			else
+			{
+				if(min_heap.top().value < comp.value)
+				{
+					min_heap.pop();
+					min_heap.push(comp);
+				}
+			}
+		}
+		if( (alpha_status[comp.index] != UPPER_BOUND && yc==-1) ||
+				(alpha_status[comp.index] != LOWER_BOUND && yc==+1) )
+		{
+			if((int) max_heap.size() < update_size)
+			{
+				max_heap.push(comp);
+			}
+			else
+			{
+				if(max_heap.top().value > comp.value)
+				{
+					max_heap.pop();
+					max_heap.push(comp);
+				}
+			}
+		}
+	}
+	update_size = min((int)min_heap.size(), (int)max_heap.size());
+	while((int)max_heap.size() > update_size)
+	{
+		max_heap.pop();
+	}
+	while((int)min_heap.size() > update_size)
+	{
+		min_heap.pop();
+	}
+
+	for(i=0; i<update_size; i++)
+	{
+		Max_order_index[update_size-1-i] = min_heap.top().index;
+		min_heap.pop();
+
+		Min_order_index[update_size-1-i] = max_heap.top().index;
+		max_heap.pop();
+	}
+	if(wss_mode == SEMIGD_G_RAND)
+	{
+		RAND_SHUFFLE(Max_order_index, update_size);
+		RAND_SHUFFLE(Min_order_index, update_size);
+	}
+	for(int index_i = 0; index_i < 100; index_i++)
+	{
+		avg_dualobj_drop = 0;
+		fprintf(stdout, "\r%d", index_i);
+		fflush(stdout);
+		#pragma omp parallel for reduction(+ : avg_dualobj_drop)
+		for(int si = 0; si < active_size*active_size; si++)
+		{
+			i = index[si/active_size];
+			j = index[si%active_size];
+			
+			feature_node const * xi = prob->x[i];
+			feature_node const * xj = prob->x[j];
+			
+			const schar yi = y[i];
+			const schar yj = y[j];
+			double C_i = upper_bound[GETI(i)];
+			double C_j = upper_bound[GETI(j)];
+			
+			double Q_ij = sparse_operator::feature_dot(xi, xj);
+			Q_ij = yi * yj * Q_ij;
+			G_i = G[i];
+			G_j = G[j];
+
+			double new_alpha_i = alpha[i];
+			double new_alpha_j = alpha[j];
+
+			if(y[i] == y[j])
+			{
+				double quad_coef = QD[i] + QD[j] - 2*Q_ij;
+				if(quad_coef <= 0)
+					quad_coef = 1e-12;
+				double delta = (G_i-G_j)/quad_coef;
+				double sum = new_alpha_i + new_alpha_j;
+				new_alpha_i -= delta;
+				new_alpha_j += delta;
+
+				if(sum > C_i)
+				{
+					if(new_alpha_i > C_i)
+					{
+						new_alpha_i = C_i;
+						new_alpha_j = sum -C_i;
+					}
+				}
+				else
+				{
+					if(new_alpha_j < 0)
+					{
+						new_alpha_j = 0;
+						new_alpha_i = sum;
+					}
+				}
+				if(sum > C_j)
+				{
+					if(new_alpha_j > C_j)
+					{
+						new_alpha_j = C_j;
+						new_alpha_i = sum -C_j;
+					}
+				}
+				else
+				{
+					if(new_alpha_i < 0)
+					{
+						new_alpha_i = 0;
+						new_alpha_j = sum;
+					}
+				}
+			}
+			else
+			{
+				double quad_coef = QD[i] + QD[j] + 2*Q_ij;
+				if(quad_coef <= 0)
+					quad_coef = 1e-12;
+				double delta = (-G_i-G_j)/quad_coef;
+				double diff = new_alpha_i - new_alpha_j;
+				new_alpha_i += delta;
+				new_alpha_j += delta;
+				if(diff > 0)
+				{
+					if(new_alpha_j < 0)
+					{
+						new_alpha_j = 0;
+						new_alpha_i = diff;
+					}
+				}
+				else
+				{
+					if(new_alpha_i < 0)
+					{
+						new_alpha_i = 0;
+						new_alpha_j = -diff;
+					}
+				}
+				if(diff > C_i - C_j)
+				{
+					if(new_alpha_i > C_i)
+					{
+						new_alpha_i = C_i;
+						new_alpha_j = C_i - diff;
+					}
+				}
+				else
+				{
+					if(new_alpha_j > C_j)
+					{
+						new_alpha_j = C_j;
+						new_alpha_i = C_j + diff;
+					}
+				}
+			}
+			double alpha_diff_i, alpha_diff_j;
+			double dualobj_drop = 0;
+			alpha_diff_i = new_alpha_i-alpha[i];
+			alpha_diff_j = new_alpha_j-alpha[j];
+			dualobj_drop += alpha_diff_i*G_i + 0.5*alpha_diff_i*alpha_diff_i*QD[i];
+			dualobj_drop += alpha_diff_j*G_j + 0.5*alpha_diff_j*alpha_diff_j*QD[j];
+			dualobj_drop += alpha_diff_i*alpha_diff_j*Q_ij;
+			avg_dualobj_drop += dualobj_drop/active_size/active_size;
+		}
+		log_info("%.3g\n", avg_dualobj_drop);
+		for(int sss = 0; sss < update_size; sss++)
+		{
+			i = Max_order_index[sss];
+			j = Min_order_index[sss];
+
+			feature_node const * xi = prob->x[i];
+			feature_node const * xj = prob->x[j];
+			
+			const schar yi = y[i];
+			if(yi == +1)
+				++nr_pos_y;
+			if(yi == -1)
+				++nr_neg_y;
+			const schar yj = y[j];
+			if(yj == +1)
+				++nr_pos_y;
+			if(yj == -1)
+				++nr_neg_y;
+			double C_i = upper_bound[GETI(i)];
+			double C_j = upper_bound[GETI(j)];
+
+			G_i = 0;
+			G_j = 0;
+			double Q_ij = 0;
+			while(xi->index != -1 && xj->index != -1)
+			{
+				if(xi->index == xj->index)
+				{
+					Q_ij += xi->value * xj->value;
+					G_i += xi->value * w[xi->index-1];
+					G_j += xj->value * w[xj->index-1];
+					++xi;
+					++xj;
+				}
+				else
+				{
+					if(xi->index > xj->index)
+					{
+						G_j += xj->value * w[xj->index-1];
+						++xj;
+					}
+					else
+					{
+						G_i += xi->value * w[xi->index-1];
+						++xi;
+					}
+				}
+			}
+			while(xi->index != -1)
+			{
+				G_i += xi->value * w[xi->index-1];
+				++xi;
+			}
+			while(xj->index != -1)
+			{
+				G_j += xj->value * w[xj->index-1];
+				++xj;
+			}
+			G_i = yi*G_i -1 +alpha[i]*diag[GETI(i)];
+			G_j = yj*G_j -1 +alpha[j]*diag[GETI(j)];
+			Q_ij = yi * yj * Q_ij;
+			
+			double new_alpha_i = alpha[i];
+			double new_alpha_j = alpha[j];
+
+			if(y[i] == y[j])
+			{
+				double quad_coef = QD[i] + QD[j] - 2*Q_ij;
+				if(quad_coef <= 0)
+					quad_coef = 1e-12;
+				double delta = (G_i-G_j)/quad_coef;
+				double sum = new_alpha_i + new_alpha_j;
+				new_alpha_i -= delta;
+				new_alpha_j += delta;
+
+				if(sum > C_i)
+				{
+					if(new_alpha_i > C_i)
+					{
+						new_alpha_i = C_i;
+						new_alpha_j = sum -C_i;
+					}
+				}
+				else
+				{
+					if(new_alpha_j < 0)
+					{
+						new_alpha_j = 0;
+						new_alpha_i = sum;
+					}
+				}
+				if(sum > C_j)
+				{
+					if(new_alpha_j > C_j)
+					{
+						new_alpha_j = C_j;
+						new_alpha_i = sum -C_j;
+					}
+				}
+				else
+				{
+					if(new_alpha_i < 0)
+					{
+						new_alpha_i = 0;
+						new_alpha_j = sum;
+					}
+				}
+			}
+			else
+			{
+				double quad_coef = QD[i] + QD[j] + 2*Q_ij;
+				if(quad_coef <= 0)
+					quad_coef = 1e-12;
+				double delta = (-G_i-G_j)/quad_coef;
+				double diff = new_alpha_i - new_alpha_j;
+				new_alpha_i += delta;
+				new_alpha_j += delta;
+				if(diff > 0)
+				{
+					if(new_alpha_j < 0)
+					{
+						new_alpha_j = 0;
+						new_alpha_i = diff;
+					}
+				}
+				else
+				{
+					if(new_alpha_i < 0)
+					{
+						new_alpha_i = 0;
+						new_alpha_j = -diff;
+					}
+				}
+				if(diff > C_i - C_j)
+				{
+					if(new_alpha_i > C_i)
+					{
+						new_alpha_i = C_i;
+						new_alpha_j = C_i - diff;
+					}
+				}
+				else
+				{
+					if(new_alpha_j > C_j)
+					{
+						new_alpha_j = C_j;
+						new_alpha_i = C_j + diff;
+					}
+				}
+			}
+			double alpha_diff_i, alpha_diff_j;
+			dualobj_drop = 0;
+			alpha_diff_i = new_alpha_i-alpha[i];
+			alpha_diff_j = new_alpha_j-alpha[j];
+			dualobj_drop += alpha_diff_i*G_i + 0.5*alpha_diff_i*alpha_diff_i*QD[i];
+			dualobj_drop += alpha_diff_j*G_j + 0.5*alpha_diff_j*alpha_diff_j*QD[j];
+			dualobj_drop += alpha_diff_i*alpha_diff_j*Q_ij;
+			log_info("%.3g ", dualobj_drop/avg_dualobj_drop);
+		}
+		i = Max_order_index[index_i];
+		j = Min_order_index[index_i];
+
+		feature_node const * xi = prob->x[i];
+		feature_node const * xj = prob->x[j];
+		
+		const schar yi = y[i];
+		if(yi == +1)
+			++nr_pos_y;
+		if(yi == -1)
+			++nr_neg_y;
+		const schar yj = y[j];
+		if(yj == +1)
+			++nr_pos_y;
+		if(yj == -1)
+			++nr_neg_y;
+		double C_i = upper_bound[GETI(i)];
+		double C_j = upper_bound[GETI(j)];
+
+		G_i = 0;
+		G_j = 0;
+		double Q_ij = 0;
+		while(xi->index != -1 && xj->index != -1)
+		{
+			if(xi->index == xj->index)
+			{
+				Q_ij += xi->value * xj->value;
+				G_i += xi->value * w[xi->index-1];
+				G_j += xj->value * w[xj->index-1];
+				++xi;
+				++xj;
+			}
+			else
+			{
+				if(xi->index > xj->index)
+				{
+					G_j += xj->value * w[xj->index-1];
+					++xj;
+				}
+				else
+				{
+					G_i += xi->value * w[xi->index-1];
+					++xi;
+				}
+			}
+		}
+		while(xi->index != -1)
+		{
+			G_i += xi->value * w[xi->index-1];
+			++xi;
+		}
+		while(xj->index != -1)
+		{
+			G_j += xj->value * w[xj->index-1];
+			++xj;
+		}
+		G_i = yi*G_i -1 +alpha[i]*diag[GETI(i)];
+		G_j = yj*G_j -1 +alpha[j]*diag[GETI(j)];
+		Q_ij = yi * yj * Q_ij;
+		
+		double old_alpha_i = alpha[i];
+		double old_alpha_j = alpha[j];
+
+		if(y[i] == y[j])
+		{
+			double quad_coef = QD[i] + QD[j] - 2*Q_ij;
+			if(quad_coef <= 0)
+				quad_coef = 1e-12;
+			double delta = (G_i-G_j)/quad_coef;
+			double sum = alpha[i] + alpha[j];
+			alpha[i] -= delta;
+			alpha[j] += delta;
+
+			if(sum > C_i)
+			{
+				if(alpha[i] > C_i)
+				{
+					alpha[i] = C_i;
+					alpha[j] = sum -C_i;
+				}
+			}
+			else
+			{
+				if(alpha[j] < 0)
+				{
+					alpha[j] = 0;
+					alpha[i] = sum;
+				}
+			}
+			if(sum > C_j)
+			{
+				if(alpha[j] > C_j)
+				{
+					alpha[j] = C_j;
+					alpha[i] = sum -C_j;
+				}
+			}
+			else
+			{
+				if(alpha[i] < 0)
+				{
+					alpha[i] = 0;
+					alpha[j] = sum;
+				}
+			}
+		}
+		else
+		{
+			double quad_coef = QD[i] + QD[j] + 2*Q_ij;
+			if(quad_coef <= 0)
+				quad_coef = 1e-12;
+			double delta = (-G_i-G_j)/quad_coef;
+			double diff = alpha[i] - alpha[j];
+			alpha[i] += delta;
+			alpha[j] += delta;
+			if(diff > 0)
+			{
+				if(alpha[j] < 0)
+				{
+					alpha[j] = 0;
+					alpha[i] = diff;
+				}
+			}
+			else
+			{
+				if(alpha[i] < 0)
+				{
+					alpha[i] = 0;
+					alpha[j] = -diff;
+				}
+			}
+			if(diff > C_i - C_j)
+			{
+				if(alpha[i] > C_i)
+				{
+					alpha[i] = C_i;
+					alpha[j] = C_i - diff;
+				}
+			}
+			else
+			{
+				if(alpha[j] > C_j)
+				{
+					alpha[j] = C_j;
+					alpha[i] = C_j + diff;
+				}
+			}
+		}
+
+		// update alpha status and w
+		if(fabs(alpha[i]-old_alpha_i) > 1e-16)
+		{
+			success_pair++;
+			sparse_operator::axpy(y[i]*(alpha[i]-old_alpha_i), prob->x[i], w);
+			sparse_operator::axpy(y[j]*(alpha[j]-old_alpha_j), prob->x[j], w);
+			alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[GETI(i)]);
+			alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[GETI(j)]);
+		}
+		else
+		{
+			alpha[i] = old_alpha_i;
+			alpha[j] = old_alpha_j;
+		}
+		double new_obj = calculate_obj();
+//		log_info("\n%.16g\n", new_obj-last_obj);
+		log_info("\n");
+		last_obj = new_obj;
+	}
+	log_info("===\n");
 }
 
 void Solver::use_resume()
@@ -1485,21 +2202,6 @@ void Solver::use_resume()
 		alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[2]);
 	}
 }
-
-struct mincomp
-{
-	bool operator()(const feature_node& left, const feature_node& right)
-	{
-		return left.value > right.value;
-	}
-};
-struct maxcomp
-{
-	bool operator()(const feature_node& left, const feature_node& right)
-	{
-		return left.value < right.value;
-	}
-};
 
 void Solver::one_random_shrink()
 {
@@ -2067,6 +2769,7 @@ void Solver::one_semigd_dualobj_1000()
 		EXIT_IF_OVER_CDSTEPS();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
+	one_deltaF_of_indices();
 	summary();
 }
 
@@ -4014,6 +4717,7 @@ void Solver::bias_semigd()
 		EXIT_IF_OVER_CDSTEPS();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
+	bias_deltaF_of_indices();
 	summary();	
 	delete [] alpha_status;
 }
