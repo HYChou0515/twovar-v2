@@ -100,9 +100,13 @@ How to Add New Solver Type (-s)
 			switch solver_type and run the (detailed) update function
 	c) train_one()
 		assign (big) update function
-	d) Solver_type_table
+	d) train()
+		the initial solution of oneclass type is not zeros
+	e) predict_values()
+		the initial solution of oneclass type is not zeros
+	f) Solver_type_table
 		SAVE_NAME to the solver type table
-	e) check_parameter()
+	g) check_parameter()
 		exit if solver_type is not equal to NEWTYPE or other
 5. script/liblrconf.py
 	a) append NEWTYPE code to runs = {}

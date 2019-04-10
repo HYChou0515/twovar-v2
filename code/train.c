@@ -133,6 +133,10 @@ void exit_with_help()
 	"BIAS_L1_SEMIGD_RAND_SH = 40312,\n"
 	"BIAS_L2_SEMIGD_RAND_1000 = 40321,\n"
 	"BIAS_L2_SEMIGD_RAND_SH = 40322,\n"
+	"BIAS_L1_SEMIGD_2_1000 = 40411,\n"
+	"BIAS_L1_SEMIGD_2_SH = 40412,\n"
+	"BIAS_L2_SEMIGD_2_1000 = 40421,\n"
+	"BIAS_L2_SEMIGD_2_SH = 40422,\n"
 	"//for one-class svm\n"
 	"ONECLASS_L1_RD_1000 = 50111,\n"
 	"ONECLASS_L1_RD_SH = 50112,\n"
@@ -150,6 +154,10 @@ void exit_with_help()
 	"ONECLASS_L1_SEMIGD_RAND_SH = 50512,\n"
 	"ONECLASS_L2_SEMIGD_RAND_1000 = 50521,\n"
 	"ONECLASS_L2_SEMIGD_RAND_SH = 50522,\n"
+	"ONECLASS_L1_SEMIGD_2_1000 = 50611,\n"
+	"ONECLASS_L1_SEMIGD_2_SH = 50612,\n"
+	"ONECLASS_L2_SEMIGD_2_1000 = 50621,\n"
+	"ONECLASS_L2_SEMIGD_2_SH = 50622,\n"
 	);
 	exit(1);
 }
@@ -536,6 +544,10 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 			case BIAS_L2_SEMIGD_RAND_1000:
 			case BIAS_L1_SEMIGD_RAND_SH:
 			case BIAS_L2_SEMIGD_RAND_SH:
+			case BIAS_L1_SEMIGD_2_1000:
+			case BIAS_L2_SEMIGD_2_1000:
+			case BIAS_L1_SEMIGD_2_SH:
+			case BIAS_L2_SEMIGD_2_SH:
 			case BIAS_L1_RD_SH:
 			case BIAS_L2_RD_SH:
 			case TWO_L1_RD_SH:
@@ -558,6 +570,10 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 			case ONECLASS_L1_SEMIGD_RAND_SH:
 			case ONECLASS_L2_SEMIGD_RAND_1000:
 			case ONECLASS_L2_SEMIGD_RAND_SH:
+			case ONECLASS_L1_SEMIGD_2_1000:
+			case ONECLASS_L1_SEMIGD_2_SH:
+			case ONECLASS_L2_SEMIGD_2_1000:
+			case ONECLASS_L2_SEMIGD_2_SH:
 				param.eps = 0.01;
 				break;
 		}
