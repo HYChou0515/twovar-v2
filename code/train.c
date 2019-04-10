@@ -133,10 +133,18 @@ void exit_with_help()
 	"BIAS_L1_SEMIGD_RAND_SH = 40312,\n"
 	"BIAS_L2_SEMIGD_RAND_1000 = 40321,\n"
 	"BIAS_L2_SEMIGD_RAND_SH = 40322,\n"
-	"BIAS_L1_SEMIGD_2_1000 = 40411,\n"
-	"BIAS_L1_SEMIGD_2_SH = 40412,\n"
-	"BIAS_L2_SEMIGD_2_1000 = 40421,\n"
-	"BIAS_L2_SEMIGD_2_SH = 40422,\n"
+	"BIAS_L1_SEMIGD_CY_2_1000 = 40411,\n"
+	"BIAS_L1_SEMIGD_CY_2_SH = 40412,\n"
+	"BIAS_L2_SEMIGD_CY_2_1000 = 40421,\n"
+	"BIAS_L2_SEMIGD_CY_2_SH = 40422,\n"
+	"BIAS_L1_SEMIGD_RD_2_1000 = 40511,\n"
+	"BIAS_L1_SEMIGD_RD_2_SH = 40512,\n"
+	"BIAS_L2_SEMIGD_RD_2_1000 = 40521,\n"
+	"BIAS_L2_SEMIGD_RD_2_SH = 40522,\n"
+	"BIAS_L1_CY_1000 = 40611,\n"
+	"BIAS_L1_CY_SH = 40612,\n"
+	"BIAS_L2_CY_1000 = 40621,\n"
+	"BIAS_L2_CY_SH = 40622,\n"
 	"//for one-class svm\n"
 	"ONECLASS_L1_RD_1000 = 50111,\n"
 	"ONECLASS_L1_RD_SH = 50112,\n"
@@ -536,6 +544,8 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 			case TWO_L2_SEMIRDTWO_1000:
 			case BIAS_L1_RD_1000:
 			case BIAS_L2_RD_1000:
+			case BIAS_L1_RD_SH:
+			case BIAS_L2_RD_SH:
 			case BIAS_L1_SEMIGD_1000:
 			case BIAS_L2_SEMIGD_1000:
 			case BIAS_L1_SEMIGD_SH:
@@ -544,12 +554,18 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 			case BIAS_L2_SEMIGD_RAND_1000:
 			case BIAS_L1_SEMIGD_RAND_SH:
 			case BIAS_L2_SEMIGD_RAND_SH:
-			case BIAS_L1_SEMIGD_2_1000:
-			case BIAS_L2_SEMIGD_2_1000:
-			case BIAS_L1_SEMIGD_2_SH:
-			case BIAS_L2_SEMIGD_2_SH:
-			case BIAS_L1_RD_SH:
-			case BIAS_L2_RD_SH:
+			case BIAS_L1_SEMIGD_CY_2_1000:
+			case BIAS_L2_SEMIGD_CY_2_1000:
+			case BIAS_L1_SEMIGD_CY_2_SH:
+			case BIAS_L2_SEMIGD_CY_2_SH:
+			case BIAS_L1_SEMIGD_RD_2_1000:
+			case BIAS_L2_SEMIGD_RD_2_1000:
+			case BIAS_L1_SEMIGD_RD_2_SH:
+			case BIAS_L2_SEMIGD_RD_2_SH:
+			case BIAS_L1_CY_1000:
+			case BIAS_L2_CY_1000:
+			case BIAS_L1_CY_SH:
+			case BIAS_L2_CY_SH:
 			case TWO_L1_RD_SH:
 			case TWO_L2_RD_SH:
 			case TWO_L1_RD_SH2:

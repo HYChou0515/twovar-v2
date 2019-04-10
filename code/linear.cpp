@@ -899,7 +899,7 @@ public:
 	double Gmin;
 	clock_t duration;
 	int active_size;
-	int success_pair;
+	int success_size;
 	int update_size;
 	int sv;
 	int bsv;
@@ -949,10 +949,16 @@ public:
 		SH_ON,
 		SH_OFF
 	};
+	enum RandMode
+	{
+		RANDOM,
+		CYCLIC
+	};
 	enum {LOWER_BOUND, UPPER_BOUND, FREE};
 	SolverCate category;
 	WssMode wss_mode;
 	ShrinkMode sh_mode;
+	RandMode rand_mode;
 	const char* solver_name;
 	//other function
 	double calculate_obj();
@@ -1021,7 +1027,7 @@ Solver::Solver(int _solver_type)
 	last_obj = nan("");
 	w_size = -1;
 	active_size = -1;
-	success_pair = -1;
+	success_size = -1;
 	n_exchange = -1;
 	update_size = -1;
 	solver_type = _solver_type;
@@ -1092,10 +1098,10 @@ Solver::Solver(int _solver_type)
 		case TWO_L2_SEMIGD_SH:
 			category = TWO_NOBIAS; 
 			break;
-		case BIAS_L1_RD_SH:
-		case BIAS_L2_RD_SH:
 		case BIAS_L1_RD_1000:
 		case BIAS_L2_RD_1000:
+		case BIAS_L1_RD_SH:
+		case BIAS_L2_RD_SH:
 		case BIAS_L1_SEMIGD_1000:
 		case BIAS_L2_SEMIGD_1000:
 		case BIAS_L1_SEMIGD_SH:
@@ -1104,10 +1110,18 @@ Solver::Solver(int _solver_type)
 		case BIAS_L2_SEMIGD_RAND_1000:
 		case BIAS_L1_SEMIGD_RAND_SH:
 		case BIAS_L2_SEMIGD_RAND_SH:
-		case BIAS_L1_SEMIGD_2_1000:
-		case BIAS_L1_SEMIGD_2_SH:
-		case BIAS_L2_SEMIGD_2_1000:
-		case BIAS_L2_SEMIGD_2_SH:
+		case BIAS_L1_SEMIGD_CY_2_1000:
+		case BIAS_L1_SEMIGD_CY_2_SH:
+		case BIAS_L2_SEMIGD_CY_2_1000:
+		case BIAS_L2_SEMIGD_CY_2_SH:
+		case BIAS_L1_SEMIGD_RD_2_1000:
+		case BIAS_L1_SEMIGD_RD_2_SH:
+		case BIAS_L2_SEMIGD_RD_2_1000:
+		case BIAS_L2_SEMIGD_RD_2_SH:
+		case BIAS_L1_CY_1000:
+		case BIAS_L2_CY_1000:
+		case BIAS_L1_CY_SH:
+		case BIAS_L2_CY_SH:
 			category = TWO_BIAS; 
 			break;
 		case ONECLASS_L1_RD_SH:
@@ -1184,10 +1198,10 @@ Solver::Solver(int _solver_type)
 		SAVE_NAME(TWO_L2_SEMIGD_1000);
 		SAVE_NAME(TWO_L1_SEMIGD_SH);
 		SAVE_NAME(TWO_L2_SEMIGD_SH);
-		SAVE_NAME(BIAS_L1_RD_SH);
-		SAVE_NAME(BIAS_L2_RD_SH);
 		SAVE_NAME(BIAS_L1_RD_1000);
 		SAVE_NAME(BIAS_L2_RD_1000);
+		SAVE_NAME(BIAS_L1_RD_SH);
+		SAVE_NAME(BIAS_L2_RD_SH);
 		SAVE_NAME(BIAS_L1_SEMIGD_1000);
 		SAVE_NAME(BIAS_L2_SEMIGD_1000);
 		SAVE_NAME(BIAS_L1_SEMIGD_SH);
@@ -1196,10 +1210,18 @@ Solver::Solver(int _solver_type)
 		SAVE_NAME(BIAS_L2_SEMIGD_RAND_1000);
 		SAVE_NAME(BIAS_L1_SEMIGD_RAND_SH);
 		SAVE_NAME(BIAS_L2_SEMIGD_RAND_SH);
-		SAVE_NAME(BIAS_L1_SEMIGD_2_1000);
-		SAVE_NAME(BIAS_L1_SEMIGD_2_SH);
-		SAVE_NAME(BIAS_L2_SEMIGD_2_1000);
-		SAVE_NAME(BIAS_L2_SEMIGD_2_SH);
+		SAVE_NAME(BIAS_L1_SEMIGD_CY_2_1000);
+		SAVE_NAME(BIAS_L1_SEMIGD_CY_2_SH);
+		SAVE_NAME(BIAS_L2_SEMIGD_CY_2_1000);
+		SAVE_NAME(BIAS_L2_SEMIGD_CY_2_SH);
+		SAVE_NAME(BIAS_L1_SEMIGD_RD_2_1000);
+		SAVE_NAME(BIAS_L1_SEMIGD_RD_2_SH);
+		SAVE_NAME(BIAS_L2_SEMIGD_RD_2_1000);
+		SAVE_NAME(BIAS_L2_SEMIGD_RD_2_SH);
+		SAVE_NAME(BIAS_L1_CY_1000);
+		SAVE_NAME(BIAS_L2_CY_1000);
+		SAVE_NAME(BIAS_L1_CY_SH);
+		SAVE_NAME(BIAS_L2_CY_SH);
 		SAVE_NAME(ONECLASS_L1_RD_SH);
 		SAVE_NAME(ONECLASS_L2_RD_SH);
 		SAVE_NAME(ONECLASS_L1_RD_1000);
@@ -1354,13 +1376,8 @@ void Solver::log_message()
 {
 	double new_obj = calculate_obj();
 
-	int pseudo_updsize;
-	//default: see update_size and active_size are the same variable
-	if(update_size == -1)
-		pseudo_updsize = active_size;
-	else
-		pseudo_updsize = update_size;
-	cdsteps += pseudo_updsize;
+	if(update_size >= 0)
+		cdsteps += update_size;
 
 	countSVs();
 
@@ -1387,9 +1404,9 @@ void Solver::log_message()
 		log_info("obj %.16g ", new_obj);
 		log_info("decr_rate %.3e ", (last_obj-new_obj)/fabs(new_obj));
 		log_info("actsize %d ", active_size);
-		log_info("updsize %d ", pseudo_updsize);
-		log_info("sucpair %d ", success_pair);
-		log_info("sucs_rate %.2f%% ", (double)success_pair/pseudo_updsize*100);
+		log_info("updsize %d ", update_size);
+		log_info("sucsize %d ", success_size);
+		log_info("sucs_rate %.2f%% ", (double)success_size/update_size*100);
 		
 		log_info("nSV %d ", sv);
 		log_info("nBSV %d ", bsv);
@@ -1504,6 +1521,7 @@ void Solver::one_deltaF_of_indices()
 	int *workset = new int[l];
 	double dualobj_drop;
 	double avg_dualobj_drop = 0;
+	int smgd_size;
 
 	for(i=0; i<active_size; i++)
 	{
@@ -1512,7 +1530,7 @@ void Solver::one_deltaF_of_indices()
 		G[i] = y[G_index]*sparse_operator::dot(w, xi) -1 +alpha[G_index]*diag[GETI(G_index)];
 	}
 
-	update_size = adjust_smgd_size();
+	smgd_size = adjust_smgd_size();
 
 	for(s=0; s<active_size; s++)
 	{
@@ -1531,7 +1549,7 @@ void Solver::one_deltaF_of_indices()
 		
 		if(yi==-1 && wss_mode == SEMIGD_DUALOBJ_YBAL && fabs(comp.value) > 1e-12)
 		{
-			if((int) max_heap2.size() < update_size)
+			if((int) max_heap2.size() < smgd_size)
 			{
 				max_heap2.push(comp);
 			}
@@ -1547,7 +1565,7 @@ void Solver::one_deltaF_of_indices()
 		}
 		else //if YBAL and comp.value<1e-12, it goes here, but max_heap will get rid of it as it's small
 		{
-			if((int) max_heap.size() < update_size)
+			if((int) max_heap.size() < smgd_size)
 			{
 				max_heap.push(comp);
 			}
@@ -1562,18 +1580,18 @@ void Solver::one_deltaF_of_indices()
 			}
 		}
 	}
-	update_size = max((int) max_heap.size(), (int) max_heap2.size());
+	smgd_size = max((int) max_heap.size(), (int) max_heap2.size());
 
-	for(i=0; i<update_size; i++)
+	for(i=0; i<smgd_size; i++)
 	{
 		if((wss_mode==SEMIGD_DUALOBJ_YBAL && i%2==1 && !max_heap2.empty()) || max_heap.empty())
 		{
-			workset[update_size-1-i] = max_heap2.top().index;
+			workset[smgd_size-1-i] = max_heap2.top().index;
 			max_heap2.pop();
 		}
 		else
 		{
-			workset[update_size-1-i] = max_heap.top().index;
+			workset[smgd_size-1-i] = max_heap.top().index;
 			max_heap.pop();
 		}
 	}
@@ -1584,9 +1602,9 @@ void Solver::one_deltaF_of_indices()
 
 	if (wss_mode == SEMIGD_DUALOBJ_RAND)
 	{
-		RAND_SHUFFLE(workset, update_size);
+		RAND_SHUFFLE(workset, smgd_size);
 	}
-	for(s=0; s<update_size; s++)
+	for(s=0; s<smgd_size; s++)
 	{
 		if(floor(log(s+1)/log(1.2)) != floor(log(s+2)/log(1.2)))
 		{
@@ -1614,7 +1632,7 @@ void Solver::one_deltaF_of_indices()
 			}
 	//		log_info("====================\n");
 			log_info("%.3g\n", avg_dualobj_drop);
-			for(int ss=0; ss<update_size; ss++)
+			for(int ss=0; ss<smgd_size; ss++)
 			{
 				i = workset[ss];
 				const schar yi = y[i];
@@ -1644,9 +1662,10 @@ void Solver::one_deltaF_of_indices()
 
 		double alpha_new = min(max(alpha[i] - G_i/QD[i], 0.0), C_i);
 		alpha_diff = alpha_new - alpha[i];
+		++update_size;
 		if (fabs(alpha_diff) > 1e-16)
 		{
-			success_pair++;
+			success_size++;
 			alpha[i] = alpha_new;
 			sparse_operator::axpy(alpha_diff*yi, xi, w);
 			alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[GETI(i)]);
@@ -1675,6 +1694,7 @@ void Solver::bias_deltaF_of_indices()
 	double *G = new double[l];
 	double dualobj_drop;
 	double avg_dualobj_drop = 0;
+	int smgd_size;
 
 	for(i=0; i<active_size; i++)
 	{
@@ -1683,7 +1703,7 @@ void Solver::bias_deltaF_of_indices()
 		G[i] = -y[G_index] * (y[G_index]*sparse_operator::dot(w, xi) -1 +alpha[G_index]*diag[GETI(G_index)]);
 	}
 
-	update_size = adjust_smgd_size();
+	smgd_size = adjust_smgd_size();
 
 	for(i=0; i<active_size; i++)
 	{
@@ -1694,7 +1714,7 @@ void Solver::bias_deltaF_of_indices()
 		if( (alpha_status[comp.index] != UPPER_BOUND && yc==+1) ||
 				(alpha_status[comp.index] != LOWER_BOUND && yc==-1) )
 		{
-			if((int) min_heap.size() < update_size)
+			if((int) min_heap.size() < smgd_size)
 			{
 				min_heap.push(comp);
 			}
@@ -1710,7 +1730,7 @@ void Solver::bias_deltaF_of_indices()
 		if( (alpha_status[comp.index] != UPPER_BOUND && yc==-1) ||
 				(alpha_status[comp.index] != LOWER_BOUND && yc==+1) )
 		{
-			if((int) max_heap.size() < update_size)
+			if((int) max_heap.size() < smgd_size)
 			{
 				max_heap.push(comp);
 			}
@@ -1724,30 +1744,30 @@ void Solver::bias_deltaF_of_indices()
 			}
 		}
 	}
-	update_size = min((int)min_heap.size(), (int)max_heap.size());
-	while((int)max_heap.size() > update_size)
+	smgd_size = min((int)min_heap.size(), (int)max_heap.size());
+	while((int)max_heap.size() > smgd_size)
 	{
 		max_heap.pop();
 	}
-	while((int)min_heap.size() > update_size)
+	while((int)min_heap.size() > smgd_size)
 	{
 		min_heap.pop();
 	}
 
-	for(i=0; i<update_size; i++)
+	for(i=0; i<smgd_size; i++)
 	{
-		Max_order_index[update_size-1-i] = min_heap.top().index;
+		Max_order_index[smgd_size-1-i] = min_heap.top().index;
 		min_heap.pop();
 
-		Min_order_index[update_size-1-i] = max_heap.top().index;
+		Min_order_index[smgd_size-1-i] = max_heap.top().index;
 		max_heap.pop();
 	}
 	if(wss_mode == SEMIGD_G_RAND)
 	{
-		RAND_SHUFFLE(Max_order_index, update_size);
-		RAND_SHUFFLE(Min_order_index, update_size);
+		RAND_SHUFFLE(Max_order_index, smgd_size);
+		RAND_SHUFFLE(Min_order_index, smgd_size);
 	}
-	for(int index_i = 0; index_i < update_size; index_i++)
+	for(int index_i = 0; index_i < smgd_size; index_i++)
 	{
 		if(floor(log(index_i+1)/log(1.2)) != floor(log(index_i+2)/log(1.2)))
 		{
@@ -1874,7 +1894,7 @@ void Solver::bias_deltaF_of_indices()
 			}
 
 			log_info("%.3g\n", avg_dualobj_drop);
-			for(int sss = 0; sss < update_size; sss++)
+			for(int sss = 0; sss < smgd_size; sss++)
 			{
 				i = Max_order_index[sss];
 				j = Min_order_index[sss];
@@ -2185,9 +2205,10 @@ void Solver::bias_deltaF_of_indices()
 		}
 
 		// update alpha status and w
+		update_size+=2;
 		if(fabs(alpha[i]-old_alpha_i) > 1e-16)
 		{
-			success_pair++;
+			success_size+=2;
 			sparse_operator::axpy(y[i]*(alpha[i]-old_alpha_i), prob->x[i], w);
 			sparse_operator::axpy(y[j]*(alpha[j]-old_alpha_j), prob->x[j], w);
 			alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[GETI(i)]);
@@ -2253,7 +2274,8 @@ void Solver::one_random_shrink()
 	while (iter < max_iter)
 	{
 		start = clock();
-		success_pair = 0;
+		success_size = 0;
+		update_size = 0;
 		PGmax_new = -INF;
 		PGmin_new = INF;
 		for (s=0; s<active_size; s++)
@@ -2298,9 +2320,10 @@ void Solver::one_random_shrink()
 			double alpha_old = alpha[i];
 			alpha[i] = min(max(alpha[i] - G/QD[i], 0.0), C);
 			d = (alpha[i] - alpha_old)*yi;
+			++update_size;
 			if(fabs(d) > 1.0e-16)
 			{
-				success_pair++;
+				success_size++;
 				sparse_operator::axpy(d, xi, w);
 			}
 		}
@@ -2342,12 +2365,12 @@ void Solver::one_random_1000()
 	while (iter < max_iter)
 	{
 		start = clock();
-		success_pair = 0;
+		success_size = 0;
+		update_size = 0;
 		nr_pos_y = 0;
 		nr_neg_y = 0;
 		for (s=0; s<active_size; s++)
 		{
-			
 			i = index[non_static_rand()%active_size];
 			const schar yi = y[i];
 			if(yi == +1)
@@ -2362,9 +2385,10 @@ void Solver::one_random_1000()
 			double alpha_old = alpha[i];
 			alpha[i] = min(max(alpha[i] - G/QD[i], 0.0), C);
 			d = (alpha[i] - alpha_old)*yi;
+			++update_size;
 			if(fabs(d) > 1.0e-16)
 			{
-				success_pair++;
+				success_size++;
 				sparse_operator::axpy(d, xi, w);
 			}
 		}
@@ -2399,7 +2423,8 @@ void Solver::one_cyclic_shrink()
 		PGmax_new = -INF;
 		PGmin_new = INF;
 		start = clock();
-		success_pair = 0;
+		success_size = 0;
+		update_size = 0;
 		for (i=0; i<active_size; i++)
 		{
 			int j = i+non_static_rand()%(active_size-i);
@@ -2447,13 +2472,14 @@ void Solver::one_cyclic_shrink()
 			PGmax_new = max(PGmax_new, PG);
 			PGmin_new = min(PGmin_new, PG);
 
+			++update_size;
 			if(fabs(PG) > 1.0e-12)
 			{
 				double alpha_old = alpha[i];
 				alpha[i] = min(max(alpha[i] - G/QD[i], 0.0), C);
 				d = (alpha[i] - alpha_old)*yi;
 				sparse_operator::axpy(d, xi, w);
-				success_pair++;
+				success_size++;
 			}
 		}
 		iter++;
@@ -2494,7 +2520,8 @@ void Solver::one_cyclic_1000()
 	while (iter < max_iter)
 	{
 		start = clock();
-		success_pair = 0;
+		success_size = 0;
+		update_size = 0;
 		for (i=0; i<active_size; i++)
 		{
 			int j = i+non_static_rand()%(active_size-i);
@@ -2514,9 +2541,10 @@ void Solver::one_cyclic_1000()
 			double alpha_old = alpha[i];
 			alpha[i] = min(max(alpha[i] - G/QD[i], 0.0), C);
 			d = (alpha[i] - alpha_old)*yi;
+			++update_size;
 			if(fabs(d) > 1.0e-16)
 			{
-				success_pair++;
+				success_size++;
 				sparse_operator::axpy(d, xi, w);
 			}
 		}
@@ -2553,7 +2581,7 @@ void Solver::one_semigd_1000()
 	while (iter < max_iter)
 	{
 		start = clock();
-		success_pair = 0;
+		success_size = 0;
 		nr_pos_y = 0;
 		nr_neg_y = 0;
 		// TODO: shuffle should not be in semigd
@@ -2571,8 +2599,7 @@ void Solver::one_semigd_1000()
 			feature_node * const xi = prob->x[G_index];
 			G[i] = y[G_index]*sparse_operator::dot(w, xi) -1 +alpha[G_index]*diag[GETI(G_index)];
 		}
-		update_size = adjust_smgd_size();
-		smgd_size = update_size;
+		smgd_size = adjust_smgd_size();
 
 		for(s=0; s<active_size; s++)
 		{
@@ -2613,7 +2640,6 @@ void Solver::one_semigd_1000()
 			}
 		}
 		smgd_size = (int) min_heap.size();
-		update_size = smgd_size;
 
 		for(i=0; i<smgd_size; i++)
 		{
@@ -2622,9 +2648,10 @@ void Solver::one_semigd_1000()
 		}
 		if (wss_mode == SEMIGD_PG_RAND)
 		{
-			RAND_SHUFFLE(workset, update_size);
+			RAND_SHUFFLE(workset, smgd_size);
 		}
-		for(s=0; s<update_size; s++)
+		update_size = 0;
+		for(s=0; s<smgd_size; s++)
 		{
 			i = workset[s];
 			const schar yi = y[i];
@@ -2640,9 +2667,10 @@ void Solver::one_semigd_1000()
 
 			double alpha_new = min(max(alpha[i] - G_i/QD[i], 0.0), C_i);
 			alpha_diff = alpha_new - alpha[i];
+			++update_size;
 			if (fabs(alpha_diff) > 1e-16)
 			{
-				success_pair++;
+				success_size++;
 				alpha[i] = alpha_new;
 				sparse_operator::axpy(alpha_diff*yi, xi, w);
 				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[GETI(i)]);
@@ -2677,11 +2705,12 @@ void Solver::one_semigd_dualobj_1000()
 	std::priority_queue<struct feature_node, std::vector<feature_node>, maxcomp> max_heap2; // if YBAL; then for y=-1
 	int *workset = new int[l];
 	double dualobj_drop;
+	int smgd_size;
 
 	while (iter < max_iter)
 	{
 		start = clock();
-		success_pair = 0;
+		success_size = 0;
 		nr_pos_y = 0;
 		nr_neg_y = 0;
 		for (i=0; i<active_size; i++)
@@ -2697,7 +2726,7 @@ void Solver::one_semigd_dualobj_1000()
 			G[i] = y[G_index]*sparse_operator::dot(w, xi) -1 +alpha[G_index]*diag[GETI(G_index)];
 		}
 
-		update_size = adjust_smgd_size();
+		smgd_size = adjust_smgd_size();
 
 		for(s=0; s<active_size; s++)
 		{
@@ -2716,7 +2745,7 @@ void Solver::one_semigd_dualobj_1000()
 			
 			if(yi==-1 && wss_mode == SEMIGD_DUALOBJ_YBAL && fabs(comp.value) > 1e-12)
 			{
-				if((int) max_heap2.size() < update_size)
+				if((int) max_heap2.size() < smgd_size)
 				{
 					max_heap2.push(comp);
 				}
@@ -2732,7 +2761,7 @@ void Solver::one_semigd_dualobj_1000()
 			}
 			else //if YBAL and comp.value<1e-12, it goes here, but max_heap will get rid of it as it's small
 			{
-				if((int) max_heap.size() < update_size)
+				if((int) max_heap.size() < smgd_size)
 				{
 					max_heap.push(comp);
 				}
@@ -2747,18 +2776,18 @@ void Solver::one_semigd_dualobj_1000()
 				}
 			}
 		}
-		update_size = max((int) max_heap.size(), (int) max_heap2.size());
+		smgd_size = max((int) max_heap.size(), (int) max_heap2.size());
 
-		for(i=0; i<update_size; i++)
+		for(i=0; i<smgd_size; i++)
 		{
 			if((wss_mode==SEMIGD_DUALOBJ_YBAL && i%2==1 && !max_heap2.empty()) || max_heap.empty())
 			{
-				workset[update_size-1-i] = max_heap2.top().index;
+				workset[smgd_size-1-i] = max_heap2.top().index;
 				max_heap2.pop();
 			}
 			else
 			{
-				workset[update_size-1-i] = max_heap.top().index;
+				workset[smgd_size-1-i] = max_heap.top().index;
 				max_heap.pop();
 			}
 		}
@@ -2769,9 +2798,10 @@ void Solver::one_semigd_dualobj_1000()
 
 		if (wss_mode == SEMIGD_DUALOBJ_RAND)
 		{
-			RAND_SHUFFLE(workset, update_size);
+			RAND_SHUFFLE(workset, smgd_size);
 		}
-		for(s=0; s<update_size; s++)
+		update_size = 0;
+		for(s=0; s<smgd_size; s++)
 		{
 			i = workset[s];
 			const schar yi = y[i];
@@ -2787,9 +2817,10 @@ void Solver::one_semigd_dualobj_1000()
 
 			double alpha_new = min(max(alpha[i] - G_i/QD[i], 0.0), C_i);
 			alpha_diff = alpha_new - alpha[i];
+			++update_size;
 			if (fabs(alpha_diff) > 1e-16)
 			{
-				success_pair++;
+				success_size++;
 				alpha[i] = alpha_new;
 				sparse_operator::axpy(alpha_diff*yi, xi, w);
 				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[GETI(i)]);
@@ -2830,7 +2861,7 @@ void Solver::two_semicyclic_1000()
 	while (iter < max_iter)
 	{
 		start = clock();
-		success_pair = 0;
+		success_size = 0;
 		for (i=0; i<active_size; i++)
 		{
 			int j = i+non_static_rand()%(active_size-i);
@@ -2838,6 +2869,7 @@ void Solver::two_semicyclic_1000()
 		}
 		k = k%active_size;
 		i = pickindex[k];
+		update_size = 0;
 		for(si=0; si<active_size; si++)
 		{
 			j = index[si];
@@ -2892,6 +2924,7 @@ void Solver::two_semicyclic_1000()
 			G_j = yj*G_j -1 +alpha[j]*diag[GETI(j)];
 			Q_ij = yi * yj * Q_ij;
 				
+			update_size+=2;
 			double base = QD[i]*QD[j] - Q_ij*Q_ij;
 			double newalpha_i, newalpha_j;
 			if(base == 0 && (fabs(-QD[j]*G_i + Q_ij * G_j) < 1.0e-12 || fabs(-QD[i]*G_j + Q_ij * G_i <1.0e-12)))
@@ -2986,7 +3019,7 @@ void Solver::two_semicyclic_1000()
 				update = true;
 			}
 			if(update)
-				success_pair += 1;
+				success_size += 2;
 		}
 		iter++;
 		duration += clock() - start;
@@ -3016,7 +3049,8 @@ void Solver::two_random_shrink2()
 		start = clock();
 		PGmax_new = -INF;
 		PGmin_new = INF;
-		success_pair = 0;
+		success_size = 0;
+		update_size = 0;
 		for(s=0; s<active_size; s++)
 		{
 			int si = non_static_rand()%active_size;
@@ -3136,6 +3170,7 @@ void Solver::two_random_shrink2()
 			double base = QD[i]*QD[j] - Q_ij*Q_ij;
 			bool use_j = false;
 			double newalpha_i, newalpha_j;
+			update_size+=2;
 			newalpha_i = min(C_i, max(0.0, alpha[i] + (-QD[j]*G_i + Q_ij * G_j)/base));
 			newalpha_j = min(C_j, max(0.0, alpha[j] + (-QD[i]*G_j + Q_ij * G_i)/base));
 			double d_i = newalpha_i - alpha[i];
@@ -3227,7 +3262,7 @@ void Solver::two_random_shrink2()
 				update = true;
 			}
 			if(update)
-				success_pair++;
+				success_size+=2;
 		}
 		iter++;
 		duration += clock() - start;
@@ -3273,7 +3308,8 @@ void Solver::two_random_shrink()
 	while (iter < max_iter)
 	{
 		start = clock();
-		success_pair = 0;
+		success_size = 0;
+		update_size = 0;
 		PGmax_new = -INF;
 		PGmin_new = INF;
 		for(s=0; s<active_size; s++)
@@ -3400,6 +3436,7 @@ void Solver::two_random_shrink()
 			double base = QD[i]*QD[j] - Q_ij*Q_ij;
 			bool use_j = false;
 			double newalpha_i, newalpha_j;
+			update_size+=2;
 			newalpha_i = min(C_i, max(0.0, alpha[i] + (-QD[j]*G_i + Q_ij * G_j)/base));
 			newalpha_j = min(C_j, max(0.0, alpha[j] + (-QD[i]*G_j + Q_ij * G_i)/base));
 			double d_i = newalpha_i - alpha[i];
@@ -3491,7 +3528,7 @@ void Solver::two_random_shrink()
 				update = true;
 			}
 			if(update)
-				success_pair++;
+				success_size+=2;
 		}
 		iter++;
 		duration += clock() - start;
@@ -3552,7 +3589,8 @@ void Solver::two_cyclic_1000()
 	while (iter < max_iter)
 	{
 		start = clock();
-		success_pair = 0;
+		success_size = 0;
+		update_size = 0;
 		for(si=0; si<active_size; si++)
 		{
 			int tempidx = all_index[s];
@@ -3613,6 +3651,7 @@ void Solver::two_cyclic_1000()
 			
 			double base = QD[i]*QD[j] - Q_ij*Q_ij;
 			double newalpha_i, newalpha_j;
+			update_size+=2;
 			if(base == 0 && (fabs(-QD[j]*G_i + Q_ij * G_j) < 1.0e-12 || fabs(-QD[i]*G_j + Q_ij * G_i <1.0e-12)))
 			{
 				double delta = QD[i]*alpha[i] + Q_ij*alpha[j] - G_i;
@@ -3704,8 +3743,7 @@ void Solver::two_cyclic_1000()
 				update = true;
 			}
 			if(update)
-				success_pair++;
-			
+				success_size+=2;
 		}
 		iter++;
 		duration += clock() - start;
@@ -3727,7 +3765,8 @@ void Solver::two_semirandom2_1000()
 	while (iter < max_iter)
 	{
 		start = clock();
-		success_pair = 0;
+		success_size = 0;
+		update_size = 0;
 		for (i=0; i<max_set; i++)
 		{
 			int j = i+non_static_rand()%(max_set-i);
@@ -3790,6 +3829,7 @@ void Solver::two_semirandom2_1000()
 				
 			double base = QD[i]*QD[j] - Q_ij*Q_ij;
 			double newalpha_i, newalpha_j;
+			update_size+=2;
 			if(base == 0 && (fabs(-QD[j]*G_i + Q_ij * G_j) < 1.0e-12 || fabs(-QD[i]*G_j + Q_ij * G_i <1.0e-12)))
 			{
 				double delta = QD[i]*alpha[i] + Q_ij*alpha[j] - G_i;
@@ -3882,7 +3922,7 @@ void Solver::two_semirandom2_1000()
 				update = true;
 			}
 			if(update)
-				success_pair++;
+				success_size+=2;
 		}
 		iter++;
 		duration += clock() - start;
@@ -3903,7 +3943,8 @@ void Solver::two_semirandom1_1000()
 	while (iter < max_iter)
 	{
 		start = clock();
-		success_pair = 0;
+		success_size = 0;
+		update_size = 0;
 		for (i=0; i<active_size; i++)
 		{
 			int j = i+non_static_rand()%(active_size-i);
@@ -3920,7 +3961,6 @@ void Solver::two_semirandom1_1000()
 			C_i = upper_bound[GETI(i)];
 			C_j = upper_bound[GETI(j)];
 			
-
 			feature_node const *xi = prob->x[i];
 			feature_node const *xj = prob->x[j];
 			
@@ -3967,6 +4007,7 @@ void Solver::two_semirandom1_1000()
 				
 			double base = QD[i]*QD[j] - Q_ij*Q_ij;
 			double newalpha_i, newalpha_j;
+			update_size+=2;
 			if(base == 0 && (fabs(-QD[j]*G_i + Q_ij * G_j) < 1.0e-12 || fabs(-QD[i]*G_j + Q_ij * G_i <1.0e-12)))
 			{
 				double delta = QD[i]*alpha[i] + Q_ij*alpha[j] - G_i;
@@ -4059,7 +4100,7 @@ void Solver::two_semirandom1_1000()
 				update = true;
 			}
 			if(update)
-				success_pair++;
+				success_size+=2;
 		}
 		iter++;
 		duration += clock() - start;
@@ -4170,7 +4211,8 @@ void Solver::two_random_1000()
 	while (iter < max_iter)
 	{
 		start = clock();
-		success_pair = 0;
+		success_size = 0;
+		update_size = 0;
 		for(si=0; si<active_size; si++)
 		{
 			i = index[non_static_rand()%active_size];
@@ -4195,6 +4237,7 @@ void Solver::two_random_1000()
 			
 			calculate_unbias_two_newalpha(newalpha_ij, QD[i],QD[j],Q_ij,C_i,C_j,alpha[i],alpha[j],G_i,G_j);
 
+			update_size+=2;
 			is_updated = false;
 			if(fabs(newalpha_ij->first - alpha[i]) > 1.0e-16)
 			{
@@ -4209,7 +4252,7 @@ void Solver::two_random_1000()
 				is_updated = true;
 			}
 			if(is_updated)
-				success_pair++;
+				success_size+=2;
 		}
 		iter++;
 		duration += clock() - start;
@@ -4228,173 +4271,6 @@ void Solver::two_semigd_1000()
 	info("Not implement yet\n");
 	// TODO:implement
 	// TODO:test
-//	int l = max_set;
-//	int i, j, si;
-//	double C_i, C_j, G_i, G_j;
-//	enum {LOWER_BOUND, UPPER_BOUND, FREE};
-//	double *G = new double[l];
-//	double PG;
-//	double Q_ij;
-//	bool is_updated;
-//	std::pair<double,double> *newalpha_ij = new std::pair<double,double>;
-//
-//	clock_t start;
-//
-//	int *Max_order_index = new int[l];
-//	int *Min_order_index = new int[l];
-//	
-//	std::priority_queue<struct feature_node, std::vector<feature_node>, mincomp> min_heap;
-//	std::priority_queue<struct feature_node, std::vector<feature_node>, maxcomp> max_heap;
-//
-//	while (iter < max_iter)
-//	{
-//		start = clock();
-//		success_pair = 0;
-//
-//		for(i=0; i<active_size; i++)
-//		{
-//			int G_index = index[i];
-//			feature_node * const xi = prob->x[G_index];
-//			G[i] = y[G_index]*sparse_operator::dot(w, xi) -1 +alpha[i]*diag[GETI(i)];
-//		}
-//
-//		update_size = int(active_size*ratio_update);
-//		if(update_size < 1)
-//			update_size = 1;
-//		update_size = 1;
-//
-//		for(i=0; i<active_size; i++)
-//		{
-//			struct feature_node comp;
-//			comp.index = index[i];
-//
-////			PG=0;
-////			if(alpha_status[comp.index] == LOWER_BOUND)
-////			{
-////				if(G[i] < 0)
-////					PG = G[i];
-////			}
-////			else if (alpha_status[comp.index] == UPPER_BOUND)
-////			{
-////				if(G[i] > 0)
-////					PG = G[i];
-////			}
-////			else
-////				PG = G[i];
-////
-////			PGmax_new = max(PGmax_new, PG);
-////			PGmin_new = min(PGmin_new, PG);
-//
-//			//comp.value = fabs(PG);
-//
-////			comp.value = PG;
-////			if((int) min_heap.size() < update_size)
-////			{
-////				min_heap.push(comp);
-////			}
-////			else if(min_heap.top().value < comp.value)
-////			{
-////				min_heap.pop();
-////				min_heap.push(comp);
-////			}
-////			if((int) max_heap.size() < update_size)
-////			{
-////				max_heap.push(comp);
-////			}
-////			else if(max_heap.top().value > comp.value)
-////			{
-////				max_heap.pop();
-////				max_heap.push(comp);
-////			}
-//
-////			int yc = y[comp.index];
-////			comp.value = -yc * G[i];
-////			if( (alpha_status[comp.index] != UPPER_BOUND && yc==+1) ||
-////					(alpha_status[comp.index] != LOWER_BOUND && yc==-1) )
-////			{ //Iup
-////				if((int) min_heap.size() < update_size)
-////				{
-////					min_heap.push(comp);
-////				}
-////				else if(min_heap.top().value < comp.value)
-////				{
-////					min_heap.pop();
-////					min_heap.push(comp);
-////				}
-////			}
-////			if( (alpha_status[comp.index] != UPPER_BOUND && yc==-1) ||
-////					(alpha_status[comp.index] != LOWER_BOUND && yc==+1) )
-////			{ //Ilow
-////				if((int) max_heap.size() < update_size)
-////				{
-////					max_heap.push(comp);
-////				}
-////				else if(max_heap.top().value > comp.value)
-////				{
-////					max_heap.pop();
-////					max_heap.push(comp);
-////				}
-////			}
-//		}
-//		update_size = min((int)min_heap.size(), (int)max_heap.size());
-//		while((int)max_heap.size() > update_size)
-//		{
-//			max_heap.pop();
-//		}
-//		while((int)min_heap.size() > update_size)
-//		{
-//			min_heap.pop();
-//		}
-//		for(i=0; i<update_size; i++)
-//		{
-//			Max_order_index[update_size-1-i] = min_heap.top().index;
-//			min_heap.pop();
-//
-//			Min_order_index[update_size-1-i] = max_heap.top().index;
-//			max_heap.pop();
-//		}
-//
-//		for(si=0; si<update_size; si++)
-//		{
-//			i = Max_order_index[si];
-//			j = Min_order_index[si];
-//
-//			const schar yi = y[i];
-//			const schar yj = y[j];
-//			const feature_node *xi = prob->x[i];
-//			const feature_node *xj = prob->x[j];
-//			
-//			Q_ij = yi * yj * sparse_operator::feature_dot(xi, xj);
-//			G_i = yi*sparse_operator::dot(w, xi) -1 +alpha[i]*diag[GETI(i)];
-//			G_j = yj*sparse_operator::dot(w, xj) -1 +alpha[j]*diag[GETI(j)];
-//
-//			C_i = upper_bound[GETI(i)];
-//			C_j = upper_bound[GETI(j)];
-//			
-//			calculate_unbias_two_newalpha(newalpha_ij, QD[i],QD[j],Q_ij,C_i,C_j,alpha[i],alpha[j],G_i,G_j);
-//
-//			is_updated = false;
-//			if(fabs(newalpha_ij->first - alpha[i]) > 1.0e-16)
-//			{
-//				sparse_operator::axpy(yi*(newalpha_ij->first - alpha[i]), prob->x[i], w);
-//				alpha[i] = newalpha_ij->first;
-//				is_updated = true;
-//			}
-//			if(fabs(newalpha_ij->second - alpha[j]) > 1.0e-16)
-//			{
-//				sparse_operator::axpy(yj*(newalpha_ij->second - alpha[j]), prob->x[j], w);
-//				alpha[j] = newalpha_ij->second;
-//				is_updated = true;
-//			}
-//			if(is_updated)
-//				success_pair++;
-//		}
-//		iter++;
-//		duration += clock() - start;
-//		log_message();
-		save_resume();
-//	}
-//	summary();
 }
 
 void Solver::two_semigd_shrink()
@@ -4428,7 +4304,7 @@ void Solver::bias_semigd2()
 	while(iter < max_iter)
 	{
 		start = clock();
-		success_pair = 0;
+		success_size = 0;
 		nr_pos_y = 0;
 		nr_neg_y = 0;
 		PGmax_new = -INF;
@@ -4436,10 +4312,13 @@ void Solver::bias_semigd2()
 
 		smgd_size = adjust_smgd_size();
 
-		for (i=0; i<active_size; i++)
+		if(rand_mode == CYCLIC)
 		{
-			int j = i+non_static_rand()%(active_size-i);
-			swap(index[i], index[j]);
+			for (i=0; i<active_size; i++)
+			{
+				j = i+non_static_rand()%(active_size-i);
+				swap(index[i], index[j]);
+			}
 		}
 
 		update_size = 0;
@@ -4450,25 +4329,47 @@ void Solver::bias_semigd2()
 				// check there are Iup and Ilow
 				Iup_size = 0;
 				Ilow_size = 0;
-				for(int s = 0; s < smgd_size; s++)
+				if(rand_mode == CYCLIC)
 				{
-					i = index[cycle_i+s];
-					const schar yi = y[i];
-					if( (alpha_status[i] != UPPER_BOUND && yi==+1) ||
-							(alpha_status[i] != LOWER_BOUND && yi==-1) )
+					for(int s = 0; s < smgd_size; s++)
 					{
-						Iup[Iup_size++] = cycle_i+s;
+						i = index[cycle_i+s];
+						const schar yi = y[i];
+						if( (alpha_status[i] != UPPER_BOUND && yi==+1) ||
+								(alpha_status[i] != LOWER_BOUND && yi==-1) )
+						{
+							Iup[Iup_size++] = cycle_i+s;
+						}
+						if( (alpha_status[i] != UPPER_BOUND && yi==-1) ||
+								(alpha_status[i] != LOWER_BOUND && yi==+1) )
+						{
+							Ilow[Ilow_size++] = cycle_i+s;
+						}
 					}
-					if( (alpha_status[i] != UPPER_BOUND && yi==-1) ||
-							(alpha_status[i] != LOWER_BOUND && yi==+1) )
+				}
+				if(rand_mode == RANDOM)
+				{
+					for(int s = 0; s < smgd_size; s++)
 					{
-						Ilow[Ilow_size++] = cycle_i+s;
+						int si = non_static_rand()%active_size;
+						int sj = non_static_rand()%active_size;
+						i = index[si];
+						const schar yi = y[i];
+						if( (alpha_status[i] != UPPER_BOUND && yi==+1) ||
+								(alpha_status[i] != LOWER_BOUND && yi==-1) )
+						{
+							Iup[Iup_size++] = si;
+						}
+						if( (alpha_status[i] != UPPER_BOUND && yi==-1) ||
+								(alpha_status[i] != LOWER_BOUND && yi==+1) )
+						{
+							Ilow[Ilow_size++] = sj;
+						}
 					}
 				}
 				if(Iup_size <= 0 || Ilow_size <= 0)
 					break;
 
-				update_size += smgd_size;
 				// use first info to select inner workset
 				// i.e. maximal violating pair
 				{
@@ -4684,9 +4585,10 @@ void Solver::bias_semigd2()
 				}
 
 				// update alpha status and w
+				update_size += 2;
 				if(fabs(alpha[i]-old_alpha_i) > 1e-16)
 				{
-					success_pair++;
+					success_size+=2;
 					sparse_operator::axpy(yi*(alpha[i]-old_alpha_i), prob->x[i], w);
 					sparse_operator::axpy(yj*(alpha[j]-old_alpha_j), prob->x[j], w);
 					alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[GETI(i)]);
@@ -4736,6 +4638,7 @@ void Solver::bias_semigd()
 	int counter = min(l,3);
 	enum {LOWER_BOUND, UPPER_BOUND, FREE};
 	clock_t start;
+	int smgd_size;
 
 	int *Max_order_index = new int[l];
 	int *Min_order_index = new int[l];
@@ -4747,7 +4650,7 @@ void Solver::bias_semigd()
 	while(iter < max_iter)
 	{
 		start = clock();
-		success_pair = 0;
+		success_size = 0;
 		nr_pos_y = 0;
 		nr_neg_y = 0;
 		if(sh_mode == SH_ON)
@@ -4836,8 +4739,7 @@ void Solver::bias_semigd()
 			}
 		}
 
-		update_size = adjust_smgd_size();
-
+		smgd_size = adjust_smgd_size();
 		for(i=0; i<active_size; i++)
 		{
 			struct feature_node comp;
@@ -4847,7 +4749,7 @@ void Solver::bias_semigd()
 			if( (alpha_status[comp.index] != UPPER_BOUND && yc==+1) ||
 					(alpha_status[comp.index] != LOWER_BOUND && yc==-1) )
 			{
-				if((int) min_heap.size() < update_size)
+				if((int) min_heap.size() < smgd_size)
 				{
 					min_heap.push(comp);
 				}
@@ -4863,7 +4765,7 @@ void Solver::bias_semigd()
 			if( (alpha_status[comp.index] != UPPER_BOUND && yc==-1) ||
 					(alpha_status[comp.index] != LOWER_BOUND && yc==+1) )
 			{
-				if((int) max_heap.size() < update_size)
+				if((int) max_heap.size() < smgd_size)
 				{
 					max_heap.push(comp);
 				}
@@ -4877,30 +4779,31 @@ void Solver::bias_semigd()
 				}
 			}
 		}
-		update_size = min((int)min_heap.size(), (int)max_heap.size());
-		while((int)max_heap.size() > update_size)
+		smgd_size = min((int)min_heap.size(), (int)max_heap.size());
+		while((int)max_heap.size() > smgd_size)
 		{
 			max_heap.pop();
 		}
-		while((int)min_heap.size() > update_size)
+		while((int)min_heap.size() > smgd_size)
 		{
 			min_heap.pop();
 		}
 
-		for(i=0; i<update_size; i++)
+		for(i=0; i<smgd_size; i++)
 		{
-			Max_order_index[update_size-1-i] = min_heap.top().index;
+			Max_order_index[smgd_size-1-i] = min_heap.top().index;
 			min_heap.pop();
 
-			Min_order_index[update_size-1-i] = max_heap.top().index;
+			Min_order_index[smgd_size-1-i] = max_heap.top().index;
 			max_heap.pop();
 		}
 		if(wss_mode == SEMIGD_G_RAND)
 		{
-			RAND_SHUFFLE(Max_order_index, update_size);
-			RAND_SHUFFLE(Min_order_index, update_size);
+			RAND_SHUFFLE(Max_order_index, smgd_size);
+			RAND_SHUFFLE(Min_order_index, smgd_size);
 		}
-		for(int index_i = 0; index_i < update_size; index_i++)
+		update_size = 0;
+		for(int index_i = 0; index_i < smgd_size; index_i++)
 		{
 			i = Max_order_index[index_i];
 			j = Min_order_index[index_i];
@@ -5051,10 +4954,11 @@ void Solver::bias_semigd()
 				}
 			}
 
+			update_size+=2;
 			// update alpha status and w
 			if(fabs(alpha[i]-old_alpha_i) > 1e-16)
 			{
-				success_pair++;
+				success_size+=2;
 				sparse_operator::axpy(y[i]*(alpha[i]-old_alpha_i), prob->x[i], w);
 				sparse_operator::axpy(y[j]*(alpha[j]-old_alpha_j), prob->x[j], w);
 				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[GETI(i)]);
@@ -5094,17 +4998,41 @@ void Solver::bias_random_shrink()
 	while(iter < max_iter)
 	{
 		start = clock();
-		success_pair = 0;
+		success_size = 0;
+		update_size = 0;
 		PGmax_new = -INF;
 		PGmin_new = INF;
-		for(int s = 0; s < active_size; s++)
+
+		if(rand_mode == CYCLIC)
 		{
-			int si = non_static_rand()%active_size;
-			int sj = non_static_rand()%active_size;
-			
-			while(si==sj)
+			for (i=0; i<active_size; i++)
 			{
+				j = i+non_static_rand()%(active_size-i);
+				swap(index[i], index[j]);
+			}
+		}
+		for(int s = 0; s+1 < active_size; s+=2)
+		{
+			int si = -1;
+			int sj = -1;
+			if(rand_mode == RANDOM)
+			{
+				si = non_static_rand()%active_size;
 				sj = non_static_rand()%active_size;
+				while(si==sj)
+				{
+					sj = non_static_rand()%active_size;
+				}
+			}
+			else if(rand_mode == CYCLIC)
+			{
+				si = s;
+				sj = s+1;
+			}
+			else
+			{
+				fprintf(stderr, "random mode not specified\n");
+				return;
 			}
 
 			i = index[si];
@@ -5314,10 +5242,11 @@ void Solver::bias_random_shrink()
 				}
 			}
 
+			update_size+=2;
 			// update alpha status and w
 			if(fabs(alpha[i]-old_alpha_i) > 1e-16)
 			{
-				success_pair++;
+				success_size+=2;
 				sparse_operator::axpy(y[i]*(alpha[i]-old_alpha_i), prob->x[i], w);
 				sparse_operator::axpy(y[j]*(alpha[j]-old_alpha_j), prob->x[j], w);
 				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[GETI(i)]);
@@ -5364,11 +5293,38 @@ void Solver::bias_random_1000()
 	while(iter < max_iter)
 	{
 		start = clock();
-		success_pair = 0;
-		for(int si = 0; si < active_size; si++)
+		success_size = 0;
+		update_size = 0;
+
+		if(rand_mode == CYCLIC)
 		{
-			i = non_static_rand()%active_size;
-			j = non_static_rand()%active_size;
+			for (i=0; i<active_size; i++)
+			{
+				j = i+non_static_rand()%(active_size-i);
+				swap(index[i], index[j]);
+			}
+		}
+		for(int si = 0; si+1 < active_size; si+=2)
+		{
+			if(rand_mode == RANDOM)
+			{
+				i = non_static_rand()%active_size;
+				j = non_static_rand()%active_size;
+				while(i==j)
+				{
+					j = non_static_rand()%active_size;
+				}
+			}
+			else if(rand_mode == CYCLIC)
+			{
+				i = si;
+				j = si+1;
+			}
+			else
+			{
+				fprintf(stderr, "random mode not specified\n");
+				return;
+			}
 			
 			feature_node const * xi = prob->x[i];
 			feature_node const * xj = prob->x[j];
@@ -5507,10 +5463,11 @@ void Solver::bias_random_1000()
 					}
 				}
 			}
+			update_size+=2;
 			// update alpha status and w
 			if(fabs(alpha[i]-old_alpha_i) > 1e-16)
 			{
-				success_pair++;
+				success_size+=2;
 				sparse_operator::axpy(y[i]*(alpha[i]-old_alpha_i), prob->x[i], w);
 				sparse_operator::axpy(y[j]*(alpha[j]-old_alpha_j), prob->x[j], w);
 				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[GETI(i)]);
@@ -5549,8 +5506,9 @@ void Solver::oneclass_random_shrink()
 	while(iter < max_iter)
 	{
 		start = clock();
-		success_pair = 0;
+		success_size = 0;
 		n_exchange = 0;
+		update_size = 0;
 		Gmax = -INF;
 		Gmin = INF;
 		for(int index_i = 0; index_i<active_size; index_i++)
@@ -5712,10 +5670,11 @@ void Solver::oneclass_random_shrink()
 					alpha[j] = sum;
 				}
 			}
+			update_size+=2;
 			// update alpha status and w
 			if(fabs(alpha[i]-old_alpha_i) > 1e-16)
 			{
-				success_pair++;
+				success_size+=2;
 				if(fabs(alpha[i]-old_alpha_i) == upper_bound[2])
 					n_exchange++;
 				sparse_operator::axpy(alpha[i]-old_alpha_i, prob->x[i], w);
@@ -5766,8 +5725,9 @@ void Solver::oneclass_random_1000()
 	while(iter < max_iter)
 	{
 		start = clock();
-		success_pair = 0;
+		success_size = 0;
 		n_exchange = 0;
+		update_size = 0;
 		for(int index_i = 0; index_i<active_size; index_i++)
 		{
 			i = non_static_rand()%active_size;
@@ -5862,10 +5822,11 @@ void Solver::oneclass_random_1000()
 					alpha[j] = sum;
 				}
 			}
+			update_size+=2;
 			// update alpha status and w
 			if(fabs(alpha[i]-old_alpha_i) > 1e-16)
 			{
-				success_pair++;
+				success_size+=2;
 				if(fabs(alpha[i]-old_alpha_i) == upper_bound[2])
 					n_exchange++;
 				sparse_operator::axpy(alpha[i]-old_alpha_i, prob->x[i], w);
@@ -5897,7 +5858,7 @@ void Solver::oneclass_first_1000()
 	int i, j;
 	double G_i, G_j;
 	double *G = new double[l];
-	update_size = 1;
+	update_size = 2;
 	int Gmax_index= -1, Gmin_index = -1;
 	double Gmax=-INF, Gmin = INF;
 	enum {LOWER_BOUND, UPPER_BOUND, FREE};
@@ -5905,7 +5866,7 @@ void Solver::oneclass_first_1000()
 	while(iter < max_iter)
 	{
 		start = clock();
-		success_pair = 0;
+		success_size = 0;
 		Gmax = -INF;
 		Gmin = INF;
 		Gmax_index =-1;
@@ -6008,7 +5969,7 @@ void Solver::oneclass_first_1000()
 		// update alpha status and w
 		if(fabs(alpha[i]-old_alpha_i) > 1e-16)
 		{
-			success_pair++;
+			success_size+=2;
 			sparse_operator::axpy(alpha[i]-old_alpha_i, prob->x[i], w);
 			sparse_operator::axpy(alpha[j]-old_alpha_j, prob->x[j], w);
 			alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[2]);
@@ -6036,7 +5997,7 @@ void Solver::oneclass_second_1000()
 	clock_t start;
 	int l = prob->l;
 	int i, j;
-	update_size = 1;
+	update_size = 2;
 	double G_i, G_j;
 	double *G = new double[l];
 	int Gmax_index= -1, Gmin_index = -1;
@@ -6046,7 +6007,7 @@ void Solver::oneclass_second_1000()
 	while(iter < max_iter)
 	{
 		start = clock();
-		success_pair = 0;
+		success_size = 0;
 		Gmax = -INF;
 		for(i=0; i<active_size; i++)
 		{
@@ -6158,7 +6119,7 @@ void Solver::oneclass_second_1000()
 		// update alpha status and w
 		if(fabs(alpha[i]-old_alpha_i) > 1e-16)
 		{
-			success_pair++;
+			success_size+=2;
 			sparse_operator::axpy(alpha[i]-old_alpha_i, prob->x[i], w);
 			sparse_operator::axpy(alpha[j]-old_alpha_j, prob->x[j], w);
 			alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[2]);
@@ -6211,15 +6172,15 @@ void Solver::oneclass_semigd_1000()
 				
 	std::priority_queue<struct feature_node, std::vector<feature_node>, maxcomp> max_heap;
 	std::priority_queue<struct feature_node, std::vector<feature_node>, mincomp> min_heap;
+	int smgd_size;
 	
-	int success_all = 0;
 	while(iter < max_iter)
 	{
 		start = clock();
-		success_pair = 0;
+		success_size = 0;
 		n_exchange = 0;
 
-		update_size = adjust_smgd_size();
+		smgd_size = adjust_smgd_size();
 
 		for(i=0; i<active_size; i++)
 		{
@@ -6229,7 +6190,7 @@ void Solver::oneclass_semigd_1000()
 			comp.value = -sparse_operator::dot(w, xi);
 			if(alpha_status[comp.index] != UPPER_BOUND)
 			{
-				if((int) min_heap.size() <  update_size)
+				if((int) min_heap.size() <  smgd_size)
 					min_heap.push(comp);
 				else
 				{
@@ -6242,7 +6203,7 @@ void Solver::oneclass_semigd_1000()
 			}
 			if(alpha_status[comp.index] != LOWER_BOUND)
 			{
-				if((int) max_heap.size() < update_size)
+				if((int) max_heap.size() < smgd_size)
 					max_heap.push(comp);
 				else
 				{
@@ -6255,25 +6216,26 @@ void Solver::oneclass_semigd_1000()
 			}
 		}
 		
-		update_size = min((int)min_heap.size(), (int)max_heap.size());
-		while((int)max_heap.size() > update_size)
+		smgd_size = min((int)min_heap.size(), (int)max_heap.size());
+		while((int)max_heap.size() > smgd_size)
 			max_heap.pop();
-		while((int)min_heap.size() > update_size)
+		while((int)min_heap.size() > smgd_size)
 			min_heap.pop();
 		
-		for(i=0; i<update_size; i++)
+		for(i=0; i<smgd_size; i++)
 		{
-			Max_order_index[update_size-1-i] = min_heap.top().index;
-			Min_order_index[update_size-1-i] = max_heap.top().index;
+			Max_order_index[smgd_size-1-i] = min_heap.top().index;
+			Min_order_index[smgd_size-1-i] = max_heap.top().index;
 			min_heap.pop();
 			max_heap.pop();
 		}
 		if(wss_mode == SEMIGD_G_RAND)
 		{
-			RAND_SHUFFLE(Max_order_index, update_size);
-			RAND_SHUFFLE(Min_order_index, update_size);
+			RAND_SHUFFLE(Max_order_index, smgd_size);
+			RAND_SHUFFLE(Min_order_index, smgd_size);
 		}
-		for(int index_i = 0; index_i<update_size; index_i++)
+		update_size = 0;
+		for(int index_i = 0; index_i<smgd_size; index_i++)
 		{
 			i = Max_order_index[index_i];
 			j = Min_order_index[index_i];
@@ -6367,10 +6329,11 @@ void Solver::oneclass_semigd_1000()
 					alpha[j] = sum;
 				}
 			}
+			update_size+=2;
 			// update alpha status and w
 			if(fabs(alpha[i]-old_alpha_i) > 1e-16)
 			{
-				success_pair++;
+				success_size+=2;
 				if(fabs(alpha[i]-old_alpha_i) == upper_bound[2])
 					n_exchange++;
 				sparse_operator::axpy(alpha[i]-old_alpha_i, prob->x[i], w);
@@ -6389,7 +6352,6 @@ void Solver::oneclass_semigd_1000()
 		duration += clock() - start;
 		log_message();
 		save_resume();
-		success_all += success_pair;
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OVER_CDSTEPS();
 		EXIT_IF_OPTIMAL(last_obj);
@@ -6414,14 +6376,13 @@ void Solver::oneclass_semigd_shrink()
 				
 	std::priority_queue<struct feature_node, std::vector<feature_node>, maxcomp> max_heap;
 	std::priority_queue<struct feature_node, std::vector<feature_node>, mincomp> min_heap;
-
+	int smgd_size;
 	
-	int success_all = 0;
 	double *G = new double[l];
 	while(iter < max_iter)
 	{
 		start = clock();
-		success_pair = 0;
+		success_size = 0;
 		n_exchange = 0;
 		Gmax = -INF;
 		Gmin = INF;
@@ -6477,7 +6438,7 @@ void Solver::oneclass_semigd_shrink()
 			}
 		}
 
-		update_size = adjust_smgd_size();
+		smgd_size = adjust_smgd_size();
 
 		for(i=0; i<active_size; i++)
 		{
@@ -6486,7 +6447,7 @@ void Solver::oneclass_semigd_shrink()
 			comp.value = G[i];
 			if(alpha_status[comp.index] != UPPER_BOUND)
 			{
-				if((int) min_heap.size() <  update_size)
+				if((int) min_heap.size() <  smgd_size)
 					min_heap.push(comp);
 				else
 				{
@@ -6499,7 +6460,7 @@ void Solver::oneclass_semigd_shrink()
 			}
 			if(alpha_status[comp.index] != LOWER_BOUND)
 			{
-				if((int) max_heap.size() < update_size)
+				if((int) max_heap.size() < smgd_size)
 					max_heap.push(comp);
 				else
 				{
@@ -6512,25 +6473,26 @@ void Solver::oneclass_semigd_shrink()
 			}
 		}
 		
-		update_size = min((int)min_heap.size(), (int)max_heap.size());
-		while((int)max_heap.size() > update_size)
+		smgd_size = min((int)min_heap.size(), (int)max_heap.size());
+		while((int)max_heap.size() > smgd_size)
 			max_heap.pop();
-		while((int)min_heap.size() > update_size)
+		while((int)min_heap.size() > smgd_size)
 			min_heap.pop();
 		
-		for(i=0; i<update_size; i++)
+		for(i=0; i<smgd_size; i++)
 		{
-			Max_order_index[update_size-1-i] = min_heap.top().index;
-			Min_order_index[update_size-1-i] = max_heap.top().index;
+			Max_order_index[smgd_size-1-i] = min_heap.top().index;
+			Min_order_index[smgd_size-1-i] = max_heap.top().index;
 			min_heap.pop();
 			max_heap.pop();
 		}
 		if(wss_mode == SEMIGD_G_RAND)
 		{
-			RAND_SHUFFLE(Max_order_index, update_size);
-			RAND_SHUFFLE(Min_order_index, update_size);
+			RAND_SHUFFLE(Max_order_index, smgd_size);
+			RAND_SHUFFLE(Min_order_index, smgd_size);
 		}
-		for(int index_i = 0; index_i<update_size; index_i++)
+		update_size = 0;
+		for(int index_i = 0; index_i<smgd_size; index_i++)
 		{
 			i = Max_order_index[index_i];
 			j = Min_order_index[index_i];
@@ -6621,10 +6583,11 @@ void Solver::oneclass_semigd_shrink()
 					alpha[j] = sum;
 				}
 			}
+			update_size+=2;
 			// update alpha status and w
 			if(fabs(alpha[i]-old_alpha_i) > 1e-16)
 			{
-				success_pair++;
+				success_size+=2;
 				if(fabs(alpha[i]-old_alpha_i) == upper_bound[2])
 					n_exchange++;
 				sparse_operator::axpy(alpha[i]-old_alpha_i, prob->x[i], w);
@@ -6643,7 +6606,6 @@ void Solver::oneclass_semigd_shrink()
 		duration += clock() - start;
 		log_message();
 		save_resume();
-		success_all += success_pair;
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OVER_CDSTEPS();
 		EXIT_IF_OPTIMAL(last_obj);
@@ -6810,8 +6772,12 @@ static void two_bias_update(
 	||	solver_type == BIAS_L1_SEMIGD_SH 
 	||	solver_type == BIAS_L1_SEMIGD_RAND_1000 
 	||	solver_type == BIAS_L1_SEMIGD_RAND_SH 
-	||	solver_type == BIAS_L1_SEMIGD_2_1000 
-	||	solver_type == BIAS_L1_SEMIGD_2_SH )
+	||	solver_type == BIAS_L1_SEMIGD_CY_2_1000 
+	||	solver_type == BIAS_L1_SEMIGD_CY_2_SH 
+	||	solver_type == BIAS_L1_SEMIGD_RD_2_1000 
+	||	solver_type == BIAS_L1_SEMIGD_RD_2_SH 
+	||  solver_type == BIAS_L1_CY_1000 
+	||	solver_type == BIAS_L1_CY_SH )
 	{
 		diag[0] = 0;
 		diag[2] = 0;
@@ -6872,16 +6838,32 @@ static void two_bias_update(
 	solver.use_resume();
 	switch(solver_type)
 	{
-		case BIAS_L1_RD_SH:
-		case BIAS_L2_RD_SH:
-		{
-			solver.bias_random_shrink();
-			break;
-		}
 		case BIAS_L1_RD_1000:
 		case BIAS_L2_RD_1000:
 		{
+			solver.rand_mode = Solver::RANDOM;
 			solver.bias_random_1000();
+			break;
+		}
+		case BIAS_L1_RD_SH:
+		case BIAS_L2_RD_SH:
+		{
+			solver.rand_mode = Solver::RANDOM;
+			solver.bias_random_shrink();
+			break;
+		}
+		case BIAS_L1_CY_1000:
+		case BIAS_L2_CY_1000:
+		{
+			solver.rand_mode = Solver::CYCLIC;
+			solver.bias_random_1000();
+			break;
+		}
+		case BIAS_L1_CY_SH:
+		case BIAS_L2_CY_SH:
+		{
+			solver.rand_mode = Solver::CYCLIC;
+			solver.bias_random_shrink();
 			break;
 		}
 		case BIAS_L1_SEMIGD_1000:
@@ -6916,16 +6898,34 @@ static void two_bias_update(
 			solver.bias_semigd();
 			break;
 		}
-		case BIAS_L1_SEMIGD_2_1000:
-		case BIAS_L2_SEMIGD_2_1000:
+		case BIAS_L1_SEMIGD_CY_2_1000:
+		case BIAS_L2_SEMIGD_CY_2_1000:
 		{
+			solver.rand_mode = Solver::CYCLIC;
 			solver.sh_mode = Solver::SH_OFF;
 			solver.bias_semigd2();
 			break;
 		}
-		case BIAS_L1_SEMIGD_2_SH:
-		case BIAS_L2_SEMIGD_2_SH:
+		case BIAS_L1_SEMIGD_CY_2_SH:
+		case BIAS_L2_SEMIGD_CY_2_SH:
 		{
+			solver.rand_mode = Solver::CYCLIC;
+			solver.sh_mode = Solver::SH_ON;
+			solver.bias_semigd2();
+			break;
+		}
+		case BIAS_L1_SEMIGD_RD_2_1000:
+		case BIAS_L2_SEMIGD_RD_2_1000:
+		{
+			solver.rand_mode = Solver::RANDOM;
+			solver.sh_mode = Solver::SH_OFF;
+			solver.bias_semigd2();
+			break;
+		}
+		case BIAS_L1_SEMIGD_RD_2_SH:
+		case BIAS_L2_SEMIGD_RD_2_SH:
+		{
+			solver.rand_mode = Solver::RANDOM;
 			solver.sh_mode = Solver::SH_ON;
 			solver.bias_semigd2();
 			break;
@@ -8550,10 +8550,18 @@ static void train_one(const problem *prob, const parameter *param, double *w, do
 		case BIAS_L2_SEMIGD_RAND_1000:
 		case BIAS_L1_SEMIGD_RAND_SH:
 		case BIAS_L2_SEMIGD_RAND_SH:
-		case BIAS_L1_SEMIGD_2_1000:
-		case BIAS_L2_SEMIGD_2_1000:
-		case BIAS_L1_SEMIGD_2_SH:
-		case BIAS_L2_SEMIGD_2_SH:
+		case BIAS_L1_SEMIGD_CY_2_1000:
+		case BIAS_L2_SEMIGD_CY_2_1000:
+		case BIAS_L1_SEMIGD_CY_2_SH:
+		case BIAS_L2_SEMIGD_CY_2_SH:
+		case BIAS_L1_SEMIGD_RD_2_1000:
+		case BIAS_L2_SEMIGD_RD_2_1000:
+		case BIAS_L1_SEMIGD_RD_2_SH:
+		case BIAS_L2_SEMIGD_RD_2_SH:
+		case BIAS_L1_CY_1000:
+		case BIAS_L2_CY_1000:
+		case BIAS_L1_CY_SH:
+		case BIAS_L2_CY_SH:
 			two_bias_update(prob, w, eps, Cp, Cn, param);
 			break;
 		default:
@@ -9189,10 +9197,18 @@ class Solver_type_table
 		SAVE_NAME(BIAS_L2_SEMIGD_RAND_1000);
 		SAVE_NAME(BIAS_L1_SEMIGD_RAND_SH);
 		SAVE_NAME(BIAS_L2_SEMIGD_RAND_SH);
-		SAVE_NAME(BIAS_L1_SEMIGD_2_1000);
-		SAVE_NAME(BIAS_L2_SEMIGD_2_1000);
-		SAVE_NAME(BIAS_L1_SEMIGD_2_SH);
-		SAVE_NAME(BIAS_L2_SEMIGD_2_SH);
+		SAVE_NAME(BIAS_L1_SEMIGD_CY_2_1000);
+		SAVE_NAME(BIAS_L2_SEMIGD_CY_2_1000);
+		SAVE_NAME(BIAS_L1_SEMIGD_CY_2_SH);
+		SAVE_NAME(BIAS_L2_SEMIGD_CY_2_SH);
+		SAVE_NAME(BIAS_L1_SEMIGD_RD_2_1000);
+		SAVE_NAME(BIAS_L2_SEMIGD_RD_2_1000);
+		SAVE_NAME(BIAS_L1_SEMIGD_RD_2_SH);
+		SAVE_NAME(BIAS_L2_SEMIGD_RD_2_SH);
+		SAVE_NAME(BIAS_L1_CY_1000);
+		SAVE_NAME(BIAS_L2_CY_1000);
+		SAVE_NAME(BIAS_L1_CY_SH);
+		SAVE_NAME(BIAS_L2_CY_SH);
 		//for one-class svm
 		SAVE_NAME(ONECLASS_L1_RD_1000);
 		SAVE_NAME(ONECLASS_L1_RD_SH);
@@ -9749,10 +9765,18 @@ const char *check_parameter(const problem *prob, const parameter *param)
 		&& param->solver_type != BIAS_L2_SEMIGD_RAND_1000
 		&& param->solver_type != BIAS_L1_SEMIGD_RAND_SH
 		&& param->solver_type != BIAS_L2_SEMIGD_RAND_SH
-		&& param->solver_type != BIAS_L1_SEMIGD_2_1000
-		&& param->solver_type != BIAS_L2_SEMIGD_2_1000
-		&& param->solver_type != BIAS_L1_SEMIGD_2_SH
-		&& param->solver_type != BIAS_L2_SEMIGD_2_SH
+		&& param->solver_type != BIAS_L1_SEMIGD_CY_2_1000
+		&& param->solver_type != BIAS_L2_SEMIGD_CY_2_1000
+		&& param->solver_type != BIAS_L1_SEMIGD_CY_2_SH
+		&& param->solver_type != BIAS_L2_SEMIGD_CY_2_SH
+		&& param->solver_type != BIAS_L1_SEMIGD_RD_2_1000
+		&& param->solver_type != BIAS_L2_SEMIGD_RD_2_1000
+		&& param->solver_type != BIAS_L1_SEMIGD_RD_2_SH
+		&& param->solver_type != BIAS_L2_SEMIGD_RD_2_SH
+		&& param->solver_type != BIAS_L1_CY_1000
+		&& param->solver_type != BIAS_L2_CY_1000
+		&& param->solver_type != BIAS_L1_CY_SH
+		&& param->solver_type != BIAS_L2_CY_SH
 	 	&& param->solver_type != ONECLASS_L1_RD_1000
 	 	&& param->solver_type != ONECLASS_L1_RD_SH
 	 	&& param->solver_type != ONECLASS_L2_RD_1000
