@@ -11,6 +11,7 @@ import sys
 ROOT_PATH="../"
 DATA_PATH="../../data/"
 LOG_PATH=ROOT_PATH+logfolder+"/"
+RESUME_PATH=ROOT_PATH+resumefolder+"/"
 train="train"
 grid="grid"
 
@@ -69,11 +70,13 @@ for data in dataset:
 		kk = itertools.product(clist_real, elist_real, nlist_real, rlist_real)
 		datapath = "%s%s" % (DATA_PATH, data)
 		for tc, e, n, r in kk:
-			filename = "%s%s_s%d_c%g_e%g" %(LOG_PATH, data, runs[tp], tc, e)
+			basename = "%s_s%d_c%g_e%g" %(data, runs[tp], tc, e)
 			if need_n:
-				filename = filename + "_n%g" %(n)
+				basename = basename + "_n%g" %(n)
 			if need_r:
-				filename = filename + "_r%g" %(r)
+				basename = basename + "_r%g" %(r)
+			filename = "%s%s" % (LOG_PATH, basename)
+			resumename = "%s%s" % (RESUME_PATH, basename)
 			print(filename)
 			loginfo = LogInfo(filename)
 			#	try:
@@ -92,16 +95,14 @@ for data in dataset:
 			cmd = cmd+ " %s" % datapath
 			print(cmd)
 			if mode == 0:
-				with open(filename, "w") as logfile:
-					p = subprocess.Popen(cmd.split(' '), stdout=subprocess.PIPE)
-					out, err = p.communicate()
-					logfile.write(out)
+				cmd = cmd + " %s %s" % (filename, resumename)
+				subprocess.Popen(cmd.split(' '))
 			elif mode == 1:
 				cmd = cmd+ " > %s\n" % (filename)
 				ind += 1
 				bashfile.write(cmd)
 			elif mode == 2:
-				grid_opt = ' '.join(cmd.split(' ')[1:-1]) + " %s\n" % (filename)
+				grid_opt = ' '.join(cmd.split(' ')[1:-1]) + " %s %s\n" % (filename, resumename)
 				ind += 1
 				if not gridjob_file or gridjob_file.closed:
 					gridjob_file = open(gridjob_name, 'w')

@@ -942,7 +942,8 @@ public:
 		SEMIGD_PG_RAND,
 		SEMIGD_DUALOBJ,
 		SEMIGD_DUALOBJ_RAND,
-		SEMIGD_DUALOBJ_YBAL
+		SEMIGD_DUALOBJ_YBAL,
+		SEMIGD_FIRST
 	};
 	enum ShrinkMode
 	{
@@ -1100,6 +1101,10 @@ Solver::Solver(int _solver_type)
 		case BIAS_L2_RD_1000:
 		case BIAS_L1_RD_SH:
 		case BIAS_L2_RD_SH:
+		case BIAS_L1_CY_1000:
+		case BIAS_L2_CY_1000:
+		case BIAS_L1_CY_SH:
+		case BIAS_L2_CY_SH:
 		case BIAS_L1_SEMIGD_1000:
 		case BIAS_L2_SEMIGD_1000:
 		case BIAS_L1_SEMIGD_SH:
@@ -1108,18 +1113,22 @@ Solver::Solver(int _solver_type)
 		case BIAS_L2_SEMIGD_RAND_1000:
 		case BIAS_L1_SEMIGD_RAND_SH:
 		case BIAS_L2_SEMIGD_RAND_SH:
-		case BIAS_L1_SEMIGD_CY_2_1000:
-		case BIAS_L1_SEMIGD_CY_2_SH:
-		case BIAS_L2_SEMIGD_CY_2_1000:
-		case BIAS_L2_SEMIGD_CY_2_SH:
-		case BIAS_L1_SEMIGD_RD_2_1000:
-		case BIAS_L1_SEMIGD_RD_2_SH:
-		case BIAS_L2_SEMIGD_RD_2_1000:
-		case BIAS_L2_SEMIGD_RD_2_SH:
-		case BIAS_L1_CY_1000:
-		case BIAS_L2_CY_1000:
-		case BIAS_L1_CY_SH:
-		case BIAS_L2_CY_SH:
+		case BIAS_L1_SEMIGD_CY_FIRST_1000:
+		case BIAS_L1_SEMIGD_CY_FIRST_SH:
+		case BIAS_L2_SEMIGD_CY_FIRST_1000:
+		case BIAS_L2_SEMIGD_CY_FIRST_SH:
+		case BIAS_L1_SEMIGD_RD_FIRST_1000:
+		case BIAS_L1_SEMIGD_RD_FIRST_SH:
+		case BIAS_L2_SEMIGD_RD_FIRST_1000:
+		case BIAS_L2_SEMIGD_RD_FIRST_SH:
+		case BIAS_L1_SEMIGD_CY_DUALOBJ_1000:
+		case BIAS_L1_SEMIGD_CY_DUALOBJ_SH:
+		case BIAS_L2_SEMIGD_CY_DUALOBJ_1000:
+		case BIAS_L2_SEMIGD_CY_DUALOBJ_SH:
+		case BIAS_L1_SEMIGD_RD_DUALOBJ_1000:
+		case BIAS_L1_SEMIGD_RD_DUALOBJ_SH:
+		case BIAS_L2_SEMIGD_RD_DUALOBJ_1000:
+		case BIAS_L2_SEMIGD_RD_DUALOBJ_SH:
 			category = TWO_BIAS; 
 			break;
 		case ONECLASS_L1_RD_1000:
@@ -1138,14 +1147,14 @@ Solver::Solver(int _solver_type)
 		case ONECLASS_L2_SEMIGD_RAND_1000:
 		case ONECLASS_L1_SEMIGD_RAND_SH:
 		case ONECLASS_L2_SEMIGD_RAND_SH:
-		case ONECLASS_L1_SEMIGD_CY_2_1000:
-		case ONECLASS_L1_SEMIGD_CY_2_SH:
-		case ONECLASS_L2_SEMIGD_CY_2_1000:
-		case ONECLASS_L2_SEMIGD_CY_2_SH:
-		case ONECLASS_L1_SEMIGD_RD_2_1000:
-		case ONECLASS_L1_SEMIGD_RD_2_SH:
-		case ONECLASS_L2_SEMIGD_RD_2_1000:
-		case ONECLASS_L2_SEMIGD_RD_2_SH:
+		case ONECLASS_L1_SEMIGD_CY_FIRST_1000:
+		case ONECLASS_L1_SEMIGD_CY_FIRST_SH:
+		case ONECLASS_L2_SEMIGD_CY_FIRST_1000:
+		case ONECLASS_L2_SEMIGD_CY_FIRST_SH:
+		case ONECLASS_L1_SEMIGD_RD_FIRST_1000:
+		case ONECLASS_L1_SEMIGD_RD_FIRST_SH:
+		case ONECLASS_L2_SEMIGD_RD_FIRST_1000:
+		case ONECLASS_L2_SEMIGD_RD_FIRST_SH:
 		case ONECLASS_L1_CY_1000:
 		case ONECLASS_L2_CY_1000:
 		case ONECLASS_L1_CY_SH:
@@ -1208,6 +1217,10 @@ Solver::Solver(int _solver_type)
 		SAVE_NAME(BIAS_L2_RD_1000);
 		SAVE_NAME(BIAS_L1_RD_SH);
 		SAVE_NAME(BIAS_L2_RD_SH);
+		SAVE_NAME(BIAS_L1_CY_1000);
+		SAVE_NAME(BIAS_L2_CY_1000);
+		SAVE_NAME(BIAS_L1_CY_SH);
+		SAVE_NAME(BIAS_L2_CY_SH);
 		SAVE_NAME(BIAS_L1_SEMIGD_1000);
 		SAVE_NAME(BIAS_L2_SEMIGD_1000);
 		SAVE_NAME(BIAS_L1_SEMIGD_SH);
@@ -1216,18 +1229,22 @@ Solver::Solver(int _solver_type)
 		SAVE_NAME(BIAS_L2_SEMIGD_RAND_1000);
 		SAVE_NAME(BIAS_L1_SEMIGD_RAND_SH);
 		SAVE_NAME(BIAS_L2_SEMIGD_RAND_SH);
-		SAVE_NAME(BIAS_L1_SEMIGD_CY_2_1000);
-		SAVE_NAME(BIAS_L1_SEMIGD_CY_2_SH);
-		SAVE_NAME(BIAS_L2_SEMIGD_CY_2_1000);
-		SAVE_NAME(BIAS_L2_SEMIGD_CY_2_SH);
-		SAVE_NAME(BIAS_L1_SEMIGD_RD_2_1000);
-		SAVE_NAME(BIAS_L1_SEMIGD_RD_2_SH);
-		SAVE_NAME(BIAS_L2_SEMIGD_RD_2_1000);
-		SAVE_NAME(BIAS_L2_SEMIGD_RD_2_SH);
-		SAVE_NAME(BIAS_L1_CY_1000);
-		SAVE_NAME(BIAS_L2_CY_1000);
-		SAVE_NAME(BIAS_L1_CY_SH);
-		SAVE_NAME(BIAS_L2_CY_SH);
+		SAVE_NAME(BIAS_L1_SEMIGD_CY_FIRST_1000);
+		SAVE_NAME(BIAS_L1_SEMIGD_CY_FIRST_SH);
+		SAVE_NAME(BIAS_L2_SEMIGD_CY_FIRST_1000);
+		SAVE_NAME(BIAS_L2_SEMIGD_CY_FIRST_SH);
+		SAVE_NAME(BIAS_L1_SEMIGD_RD_FIRST_1000);
+		SAVE_NAME(BIAS_L1_SEMIGD_RD_FIRST_SH);
+		SAVE_NAME(BIAS_L2_SEMIGD_RD_FIRST_1000);
+		SAVE_NAME(BIAS_L2_SEMIGD_RD_FIRST_SH);
+		SAVE_NAME(BIAS_L1_SEMIGD_CY_DUALOBJ_1000);
+		SAVE_NAME(BIAS_L1_SEMIGD_CY_DUALOBJ_SH);
+		SAVE_NAME(BIAS_L2_SEMIGD_CY_DUALOBJ_1000);
+		SAVE_NAME(BIAS_L2_SEMIGD_CY_DUALOBJ_SH);
+		SAVE_NAME(BIAS_L1_SEMIGD_RD_DUALOBJ_1000);
+		SAVE_NAME(BIAS_L1_SEMIGD_RD_DUALOBJ_SH);
+		SAVE_NAME(BIAS_L2_SEMIGD_RD_DUALOBJ_1000);
+		SAVE_NAME(BIAS_L2_SEMIGD_RD_DUALOBJ_SH);
 		SAVE_NAME(ONECLASS_L1_RD_1000);
 		SAVE_NAME(ONECLASS_L2_RD_1000);
 		SAVE_NAME(ONECLASS_L1_RD_SH);
@@ -1244,14 +1261,14 @@ Solver::Solver(int _solver_type)
 		SAVE_NAME(ONECLASS_L2_SEMIGD_RAND_1000);
 		SAVE_NAME(ONECLASS_L1_SEMIGD_RAND_SH);
 		SAVE_NAME(ONECLASS_L2_SEMIGD_RAND_SH);
-		SAVE_NAME(ONECLASS_L1_SEMIGD_CY_2_1000);
-		SAVE_NAME(ONECLASS_L1_SEMIGD_CY_2_SH);
-		SAVE_NAME(ONECLASS_L2_SEMIGD_CY_2_1000);
-		SAVE_NAME(ONECLASS_L2_SEMIGD_CY_2_SH);
-		SAVE_NAME(ONECLASS_L1_SEMIGD_RD_2_1000);
-		SAVE_NAME(ONECLASS_L1_SEMIGD_RD_2_SH);
-		SAVE_NAME(ONECLASS_L2_SEMIGD_RD_2_1000);
-		SAVE_NAME(ONECLASS_L2_SEMIGD_RD_2_SH);
+		SAVE_NAME(ONECLASS_L1_SEMIGD_CY_FIRST_1000);
+		SAVE_NAME(ONECLASS_L1_SEMIGD_CY_FIRST_SH);
+		SAVE_NAME(ONECLASS_L2_SEMIGD_CY_FIRST_1000);
+		SAVE_NAME(ONECLASS_L2_SEMIGD_CY_FIRST_SH);
+		SAVE_NAME(ONECLASS_L1_SEMIGD_RD_FIRST_1000);
+		SAVE_NAME(ONECLASS_L1_SEMIGD_RD_FIRST_SH);
+		SAVE_NAME(ONECLASS_L2_SEMIGD_RD_FIRST_1000);
+		SAVE_NAME(ONECLASS_L2_SEMIGD_RD_FIRST_SH);
 		SAVE_NAME(ONECLASS_L1_CY_1000);
 		SAVE_NAME(ONECLASS_L2_CY_1000);
 		SAVE_NAME(ONECLASS_L1_CY_SH);
@@ -1307,7 +1324,6 @@ double Solver::calculate_rho()
 		{
 			n_free++;
 			sum += yg;
-
 		}
 		else if(alpha_status[i] == UPPER_BOUND)
 		{
@@ -2070,6 +2086,124 @@ void Solver::bias_deltaF_of_indices()
 				log_info("%.3g ", dualobj_drop);
 			}
 			log_info("\n");
+		}
+		avg_dualobj_drop = 0;
+		int enough_size = 3;
+		#pragma omp parallel for reduction(+ : avg_dualobj_drop)
+		for(int si = 0; si < enough_size*enough_size; si++)
+		{
+			int i = index[non_static_rand()%active_size];
+			int j = index[non_static_rand()%active_size];
+			
+			feature_node const * xi = prob->x[i];
+			feature_node const * xj = prob->x[j];
+			
+			const schar yi = y[i];
+			const schar yj = y[j];
+			double C_i = upper_bound[GETI(i)];
+			double C_j = upper_bound[GETI(j)];
+			
+			double Q_ij = sparse_operator::feature_dot(xi, xj);
+			Q_ij = yi * yj * Q_ij;
+			double G_i = G[i];
+			double G_j = G[j];
+
+			double new_alpha_i = alpha[i];
+			double new_alpha_j = alpha[j];
+
+			if(y[i] == y[j])
+			{
+				double quad_coef = QD[i] + QD[j] - 2*Q_ij;
+				if(quad_coef <= 0)
+					quad_coef = 1e-12;
+				double delta = (G_i-G_j)/quad_coef;
+				double sum = new_alpha_i + new_alpha_j;
+				new_alpha_i -= delta;
+				new_alpha_j += delta;
+
+				if(sum > C_i)
+				{
+					if(new_alpha_i > C_i)
+					{
+						new_alpha_i = C_i;
+						new_alpha_j = sum -C_i;
+					}
+				}
+				else
+				{
+					if(new_alpha_j < 0)
+					{
+						new_alpha_j = 0;
+						new_alpha_i = sum;
+					}
+				}
+				if(sum > C_j)
+				{
+					if(new_alpha_j > C_j)
+					{
+						new_alpha_j = C_j;
+						new_alpha_i = sum -C_j;
+					}
+				}
+				else
+				{
+					if(new_alpha_i < 0)
+					{
+						new_alpha_i = 0;
+						new_alpha_j = sum;
+					}
+				}
+			}
+			else
+			{
+				double quad_coef = QD[i] + QD[j] + 2*Q_ij;
+				if(quad_coef <= 0)
+					quad_coef = 1e-12;
+				double delta = (-G_i-G_j)/quad_coef;
+				double diff = new_alpha_i - new_alpha_j;
+				new_alpha_i += delta;
+				new_alpha_j += delta;
+				if(diff > 0)
+				{
+					if(new_alpha_j < 0)
+					{
+						new_alpha_j = 0;
+						new_alpha_i = diff;
+					}
+				}
+				else
+				{
+					if(new_alpha_i < 0)
+					{
+						new_alpha_i = 0;
+						new_alpha_j = -diff;
+					}
+				}
+				if(diff > C_i - C_j)
+				{
+					if(new_alpha_i > C_i)
+					{
+						new_alpha_i = C_i;
+						new_alpha_j = C_i - diff;
+					}
+				}
+				else
+				{
+					if(new_alpha_j > C_j)
+					{
+						new_alpha_j = C_j;
+						new_alpha_i = C_j + diff;
+					}
+				}
+			}
+			double alpha_diff_i, alpha_diff_j;
+			double dualobj_drop = 0;
+			alpha_diff_i = new_alpha_i-alpha[i];
+			alpha_diff_j = new_alpha_j-alpha[j];
+			dualobj_drop += alpha_diff_i*G_i + 0.5*alpha_diff_i*alpha_diff_i*QD[i];
+			dualobj_drop += alpha_diff_j*G_j + 0.5*alpha_diff_j*alpha_diff_j*QD[j];
+			dualobj_drop += alpha_diff_i*alpha_diff_j*Q_ij;
+			avg_dualobj_drop += dualobj_drop/(enough_size*enough_size);
 		}
 		i = Max_order_index[index_i];
 		j = Min_order_index[index_i];
@@ -4183,7 +4317,6 @@ static void calculate_unbias_two_newalpha(
 				newalpha_ij->first = 0;
 				newalpha_ij->second = delta/Q_ij;
 			}
-			
 		}
 	}
 	else
@@ -4297,19 +4430,132 @@ void Solver::two_semigd_shrink()
 	// TODO:test
 }
 
+static void calculate_bias_newalpha(
+		std::pair<double,double> *newalpha_ij,
+		double QDi, double QDj, double Q_ij, double C_i, double C_j,
+		double alpha_i, double alpha_j, double G_i, double G_j,
+		const schar yi, const schar yj)
+{
+	if(yi == yj)
+	{
+		double quad_coef = QDi + QDj - 2*Q_ij;
+		if(quad_coef <= 0)
+			quad_coef = 1e-12;
+		double delta = (G_i-G_j)/quad_coef;
+		double sum = alpha_i + alpha_j;
+		newalpha_ij->first = alpha_i - delta;
+		newalpha_ij->second = alpha_j + delta;
+
+		if(sum > C_i)
+		{
+			if(newalpha_ij->first > C_i)
+			{
+				newalpha_ij->first = C_i;
+				newalpha_ij->second = sum -C_i;
+			}
+		}
+		else
+		{
+			if(newalpha_ij->second < 0)
+			{
+				newalpha_ij->second = 0;
+				newalpha_ij->first = sum;
+			}
+		}
+		if(sum > C_j)
+		{
+			if(newalpha_ij->second > C_j)
+			{
+				newalpha_ij->second = C_j;
+				newalpha_ij->first = sum -C_j;
+			}
+		}
+		else
+		{
+			if(newalpha_ij->first < 0)
+			{
+				newalpha_ij->first = 0;
+				newalpha_ij->second = sum;
+			}
+		}
+	}
+	else
+	{
+		double quad_coef = QDi + QDj + 2*Q_ij;
+		if(quad_coef <= 0)
+			quad_coef = 1e-12;
+		double delta = (-G_i-G_j)/quad_coef;
+		double diff = alpha_i - alpha_j;
+		newalpha_ij->first = alpha_i + delta;
+		newalpha_ij->second = alpha_j + delta;
+		if(diff > 0)
+		{
+			if(newalpha_ij->second < 0)
+			{
+				newalpha_ij->second = 0;
+				newalpha_ij->first = diff;
+			}
+		}
+		else
+		{
+			if(newalpha_ij->first < 0)
+			{
+				newalpha_ij->first = 0;
+				newalpha_ij->second = -diff;
+			}
+		}
+		if(diff > C_i - C_j)
+		{
+			if(newalpha_ij->first > C_i)
+			{
+				newalpha_ij->first = C_i;
+				newalpha_ij->second = C_i - diff;
+			}
+		}
+		else
+		{
+			if(newalpha_ij->second > C_j)
+			{
+				newalpha_ij->second = C_j;
+				newalpha_ij->first = C_j + diff;
+			}
+		}
+	}
+}
+
+static double bias_diff_obj(
+		double alpha_diff_i, double alpha_diff_j,
+		double QDi, double QDj, double Q_ij, double G_i, double G_j)
+{
+	double obj_new_minus_old = 0;
+	obj_new_minus_old += alpha_diff_i*G_i + 
+		0.5*alpha_diff_i*alpha_diff_i*QDi;
+	obj_new_minus_old += alpha_diff_j*G_j +
+		0.5*alpha_diff_j*alpha_diff_j*QDj;
+	obj_new_minus_old += alpha_diff_i*alpha_diff_j*Q_ij;
+	return obj_new_minus_old; 
+}
+
 void Solver::bias_semigd2()
 {
 	int l = prob->l;
 	int i, j;
 	double G_i, G_j;
+	double Q_ij, C_i, C_j;
 	enum {LOWER_BOUND, UPPER_BOUND, FREE};
 	clock_t start;
 
 	int smgd_size = adjust_smgd_size();
+
 	int Iup_size = 0;
 	int Ilow_size = 0;
 	int *Iup = new int[smgd_size];
 	int *Ilow = new int[smgd_size];
+
+	double *innerG = new double[smgd_size];
+	std::pair<double,double> *newalpha_ij = new std::pair<double,double>;
+	int *workset = new int[smgd_size];
+
 	std::vector<int> shrunk_inds(smgd_size*2);
 	int shrunk_size = 0; // this allow duplicate and will be delt with just before shrink
 
@@ -4343,53 +4589,53 @@ void Solver::bias_semigd2()
 		{
 			for(int inner_iter = 0; inner_iter < 1; inner_iter++)
 			{
-				// check there are Iup and Ilow
-				Iup_size = 0;
-				Ilow_size = 0;
-				if(rand_mode == CYCLIC)
+				if(wss_mode == SEMIGD_FIRST)
 				{
-					for(int s = 0; s < smgd_size; s++)
+					// check there are Iup and Ilow
+					Iup_size = 0;
+					Ilow_size = 0;
+					if(rand_mode == CYCLIC)
 					{
-						i = index[cycle_i+s];
-						const schar yi = y[i];
-						if( (alpha_status[i] != UPPER_BOUND && yi==+1) ||
-								(alpha_status[i] != LOWER_BOUND && yi==-1) )
+						for(int s = 0; s < smgd_size; s++)
 						{
-							Iup[Iup_size++] = cycle_i+s;
-						}
-						if( (alpha_status[i] != UPPER_BOUND && yi==-1) ||
-								(alpha_status[i] != LOWER_BOUND && yi==+1) )
-						{
-							Ilow[Ilow_size++] = cycle_i+s;
+							i = index[cycle_i+s];
+							const schar yi = y[i];
+							if( (alpha_status[i] != UPPER_BOUND && yi==+1) ||
+									(alpha_status[i] != LOWER_BOUND && yi==-1) )
+							{
+								Iup[Iup_size++] = cycle_i+s;
+							}
+							if( (alpha_status[i] != UPPER_BOUND && yi==-1) ||
+									(alpha_status[i] != LOWER_BOUND && yi==+1) )
+							{
+								Ilow[Ilow_size++] = cycle_i+s;
+							}
 						}
 					}
-				}
-				if(rand_mode == RANDOM)
-				{
-					for(int s = 0; s < smgd_size; s++)
+					if(rand_mode == RANDOM)
 					{
-						int si = non_static_rand()%active_size;
-						int sj = non_static_rand()%active_size;
-						i = index[si];
-						const schar yi = y[i];
-						if( (alpha_status[i] != UPPER_BOUND && yi==+1) ||
-								(alpha_status[i] != LOWER_BOUND && yi==-1) )
+						for(int s = 0; s < smgd_size; s++)
 						{
-							Iup[Iup_size++] = si;
-						}
-						if( (alpha_status[i] != UPPER_BOUND && yi==-1) ||
-								(alpha_status[i] != LOWER_BOUND && yi==+1) )
-						{
-							Ilow[Ilow_size++] = sj;
+							int si = non_static_rand()%active_size;
+							i = index[si];
+							const schar yi = y[i];
+							if( (alpha_status[i] != UPPER_BOUND && yi==+1) ||
+									(alpha_status[i] != LOWER_BOUND && yi==-1) )
+							{
+								Iup[Iup_size++] = si;
+							}
+							if( (alpha_status[i] != UPPER_BOUND && yi==-1) ||
+									(alpha_status[i] != LOWER_BOUND && yi==+1) )
+							{
+								Ilow[Ilow_size++] = si;
+							}
 						}
 					}
-				}
-				if(Iup_size <= 0 || Ilow_size <= 0)
-					break;
+					if(Iup_size <= 0 || Ilow_size <= 0)
+						break;
 
-				// use first info to select inner workset
-				// i.e. maximal violating pair
-				{
+					// use first info to select inner workset
+					// i.e. maximal violating pair
 					shrunk_size = 0;
 					i=-1;
 					double yGmax = -INF;
@@ -4485,137 +4731,111 @@ void Solver::bias_semigd2()
 							continue;
 						}
 					}
+					if(i==j)
+						continue;
+					const schar yi = y[i];
+					if(yi == +1)
+						++nr_pos_y;
+					if(yi == -1)
+						++nr_neg_y;
+					const schar yj = y[j];
+					if(yj == +1)
+						++nr_pos_y;
+					if(yj == -1)
+						++nr_neg_y;
+
+					// i and j are indices to be updated
+					feature_node const * xi = prob->x[i];
+					feature_node const * xj = prob->x[j];
+					
+					G_i = Gmax;
+					G_j = Gmin;
+					C_i = upper_bound[GETI(i)];
+					C_j = upper_bound[GETI(j)];
+					Q_ij = yi * yj * sparse_operator::feature_dot(xi, xj);
+					
+					calculate_bias_newalpha(newalpha_ij, QD[i],QD[j],Q_ij,C_i,C_j,alpha[i],alpha[j],G_i,G_j,yi,yj);
 				}
-				if(i==j)
-					continue;
-				const schar yi = y[i];
-				if(yi == +1)
-					++nr_pos_y;
-				if(yi == -1)
-					++nr_neg_y;
-				const schar yj = y[j];
-				if(yj == +1)
-					++nr_pos_y;
-				if(yj == -1)
-					++nr_neg_y;
-				G_i = Gmax;
-				G_j = Gmin;
-
-				// i and j are indices to be updated
-				feature_node const * xi = prob->x[i];
-				feature_node const * xj = prob->x[j];
-				
-				double C_i = upper_bound[GETI(i)];
-				double C_j = upper_bound[GETI(j)];
-				double Q_ij = yi * yj * sparse_operator::feature_dot(xi, xj);
-				
-				double old_alpha_i = alpha[i];
-				double old_alpha_j = alpha[j];
-
-				if(yi == yj)
+				else if(wss_mode == SEMIGD_DUALOBJ)
 				{
-					double quad_coef = QD[i] + QD[j] - 2*Q_ij;
-					if(quad_coef <= 0)
-						quad_coef = 1e-12;
-					double delta = (G_i-G_j)/quad_coef;
-					double sum = alpha[i] + alpha[j];
-					alpha[i] -= delta;
-					alpha[j] += delta;
+					if(rand_mode == CYCLIC)
+					{
+						for(int s = 0; s < smgd_size; s++)
+							workset[s] = index[cycle_i+s];
+					}
+					if(rand_mode == RANDOM)
+					{
+						for(int s = 0; s < smgd_size; s++)
+							workset[s] = index[non_static_rand()%active_size];
+					}
+					for(int s=0; s<smgd_size; s++)
+					{
+						i = workset[s];
+						feature_node * const xi = prob->x[i];
+						innerG[s] = y[i]*sparse_operator::dot(w, xi) -1 +alpha[i]*diag[GETI(i)];
+					}
+					int best_i=-1;
+					int best_j=-1;
+					double best_alpha_i=INF;
+					double best_alpha_j=INF;
+					// get the smallest dualobj
+					double min_diff_obj = INF;
+					double diff_obj;
+					for(int si=0; si<smgd_size; si++)
+					{
+						i = workset[si];
+						feature_node const * xi = prob->x[i];
+						G_i = innerG[si];
+						C_i = upper_bound[GETI(i)];
+						for(int sj=si+1; sj<smgd_size; sj++)
+						{
+							j = workset[sj];
+							G_j = innerG[sj];
+							C_j = upper_bound[GETI(j)];
 
-					if(sum > C_i)
-					{
-						if(alpha[i] > C_i)
-						{
-							alpha[i] = C_i;
-							alpha[j] = sum -C_i;
+							feature_node const * xj = prob->x[j];
+							Q_ij = y[i] * y[j] * sparse_operator::feature_dot(xi, xj);
+							calculate_bias_newalpha(newalpha_ij, QD[i],QD[j],Q_ij,
+									C_i,C_j,alpha[i],alpha[j],G_i,G_j,y[i],y[j]);
+							diff_obj = bias_diff_obj(newalpha_ij->first - alpha[i], newalpha_ij->second - alpha[j],
+									QD[i], QD[j], Q_ij, G_i, G_j);
+							if(min_diff_obj > diff_obj)
+							{
+								min_diff_obj = diff_obj;
+								best_i = i;
+								best_j = j;
+								best_alpha_i = newalpha_ij->first;
+								best_alpha_j = newalpha_ij->second;
+							}
 						}
 					}
-					else
-					{
-						if(alpha[j] < 0)
-						{
-							alpha[j] = 0;
-							alpha[i] = sum;
-						}
-					}
-					if(sum > C_j)
-					{
-						if(alpha[j] > C_j)
-						{
-							alpha[j] = C_j;
-							alpha[i] = sum -C_j;
-						}
-					}
-					else
-					{
-						if(alpha[i] < 0)
-						{
-							alpha[i] = 0;
-							alpha[j] = sum;
-						}
-					}
+					if(min_diff_obj >= 0)
+						continue;
+					i = best_i;
+					j = best_j;
+					newalpha_ij->first = best_alpha_i;
+					newalpha_ij->second = best_alpha_j;
 				}
 				else
 				{
-					double quad_coef = QD[i] + QD[j] + 2*Q_ij;
-					if(quad_coef <= 0)
-						quad_coef = 1e-12;
-					double delta = (-G_i-G_j)/quad_coef;
-					double diff = alpha[i] - alpha[j];
-					alpha[i] += delta;
-					alpha[j] += delta;
-					if(diff > 0)
-					{
-						if(alpha[j] < 0)
-						{
-							alpha[j] = 0;
-							alpha[i] = diff;
-						}
-					}
-					else
-					{
-						if(alpha[i] < 0)
-						{
-							alpha[i] = 0;
-							alpha[j] = -diff;
-						}
-					}
-					if(diff > C_i - C_j)
-					{
-						if(alpha[i] > C_i)
-						{
-							alpha[i] = C_i;
-							alpha[j] = C_i - diff;
-						}
-					}
-					else
-					{
-						if(alpha[j] > C_j)
-						{
-							alpha[j] = C_j;
-							alpha[i] = C_j + diff;
-						}
-					}
+					fprintf(stderr, "wss mode not specified\n");
+					return;
 				}
-
 				// update alpha status and w
 				update_size += 2;
-				if(fabs(alpha[i]-old_alpha_i) > 1e-16)
+				if(fabs(newalpha_ij->first-alpha[i]) > 1e-16)
 				{
 					success_size+=2;
-					sparse_operator::axpy(yi*(alpha[i]-old_alpha_i), prob->x[i], w);
-					sparse_operator::axpy(yj*(alpha[j]-old_alpha_j), prob->x[j], w);
+					sparse_operator::axpy(y[i]*(newalpha_ij->first-alpha[i]), prob->x[i], w);
+					sparse_operator::axpy(y[j]*(newalpha_ij->second-alpha[j]), prob->x[j], w);
+					alpha[i] = newalpha_ij->first;
+					alpha[j] = newalpha_ij->second;
 					alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[GETI(i)]);
 					alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[GETI(j)]);
 				}
-				else
-				{
-					alpha[i] = old_alpha_i;
-					alpha[j] = old_alpha_j;
-				}
 			}
 		}
-		if(sh_mode == SH_ON)
+		if(sh_mode == SH_ON && wss_mode == SEMIGD_FIRST)
 		{
 			if(PGmax_new - PGmin_new <= eps && iter > 1)
 			{
@@ -5331,8 +5551,8 @@ void Solver::bias_random_1000()
 			}
 			else if(rand_mode == CYCLIC)
 			{
-				i = si;
-				j = si+1;
+				i = index[si];
+				j = index[si+1];
 			}
 			else
 			{
@@ -6280,7 +6500,6 @@ void Solver::oneclass_semigd2()
 					for(int s = 0; s < smgd_size; s++)
 					{
 						int si = non_static_rand()%active_size;
-						int sj = non_static_rand()%active_size;
 						i = index[si];
 						if( alpha_status[i] != UPPER_BOUND )
 						{
@@ -6288,7 +6507,7 @@ void Solver::oneclass_semigd2()
 						}
 						if( alpha_status[i] != LOWER_BOUND )
 						{
-							Ilow[Ilow_size++] = sj;
+							Ilow[Ilow_size++] = si;
 						}
 					}
 				}
@@ -6755,10 +6974,10 @@ static void oneclass_update(
 	|| param->solver_type == ONECLASS_L1_SEMIGD_RAND_SH
 	|| param->solver_type == ONECLASS_L1_FIRST_1000
 	|| param->solver_type == ONECLASS_L1_SECOND_1000
-	|| param->solver_type == ONECLASS_L1_SEMIGD_CY_2_1000
-	|| param->solver_type == ONECLASS_L1_SEMIGD_CY_2_SH
-	|| param->solver_type == ONECLASS_L1_SEMIGD_RD_2_1000
-	|| param->solver_type == ONECLASS_L1_SEMIGD_RD_2_SH
+	|| param->solver_type == ONECLASS_L1_SEMIGD_CY_FIRST_1000
+	|| param->solver_type == ONECLASS_L1_SEMIGD_CY_FIRST_SH
+	|| param->solver_type == ONECLASS_L1_SEMIGD_RD_FIRST_1000
+	|| param->solver_type == ONECLASS_L1_SEMIGD_RD_FIRST_SH
 	|| param->solver_type == ONECLASS_L1_CY_1000
 	|| param->solver_type == ONECLASS_L1_CY_SH)
 	{
@@ -6867,26 +7086,26 @@ static void oneclass_update(
 			solver.sh_mode = Solver::SH_ON;
 			solver.oneclass_semigd();
 			break;
-		case ONECLASS_L1_SEMIGD_CY_2_1000:
-		case ONECLASS_L2_SEMIGD_CY_2_1000:
+		case ONECLASS_L1_SEMIGD_CY_FIRST_1000:
+		case ONECLASS_L2_SEMIGD_CY_FIRST_1000:
 			solver.rand_mode = Solver::CYCLIC;
 			solver.sh_mode = Solver::SH_OFF;
 			solver.oneclass_semigd2();
 			break;
-		case ONECLASS_L1_SEMIGD_CY_2_SH:
-		case ONECLASS_L2_SEMIGD_CY_2_SH:
+		case ONECLASS_L1_SEMIGD_CY_FIRST_SH:
+		case ONECLASS_L2_SEMIGD_CY_FIRST_SH:
 			solver.rand_mode = Solver::CYCLIC;
 			solver.sh_mode = Solver::SH_ON;
 			solver.oneclass_semigd2();
 			break;
-		case ONECLASS_L1_SEMIGD_RD_2_1000:
-		case ONECLASS_L2_SEMIGD_RD_2_1000:
+		case ONECLASS_L1_SEMIGD_RD_FIRST_1000:
+		case ONECLASS_L2_SEMIGD_RD_FIRST_1000:
 			solver.rand_mode = Solver::RANDOM;
 			solver.sh_mode = Solver::SH_OFF;
 			solver.oneclass_semigd2();
 			break;
-		case ONECLASS_L1_SEMIGD_RD_2_SH:
-		case ONECLASS_L2_SEMIGD_RD_2_SH:
+		case ONECLASS_L1_SEMIGD_RD_FIRST_SH:
+		case ONECLASS_L2_SEMIGD_RD_FIRST_SH:
 			solver.rand_mode = Solver::RANDOM;
 			solver.sh_mode = Solver::SH_ON;
 			solver.oneclass_semigd2();
@@ -6918,16 +7137,20 @@ static void two_bias_update(
 
 	if( solver_type == BIAS_L1_RD_1000 
 	||	solver_type == BIAS_L1_RD_SH 
+	||  solver_type == BIAS_L1_CY_1000 
+	||	solver_type == BIAS_L1_CY_SH
 	||	solver_type == BIAS_L1_SEMIGD_1000 
 	||	solver_type == BIAS_L1_SEMIGD_SH 
 	||	solver_type == BIAS_L1_SEMIGD_RAND_1000 
 	||	solver_type == BIAS_L1_SEMIGD_RAND_SH 
-	||	solver_type == BIAS_L1_SEMIGD_CY_2_1000 
-	||	solver_type == BIAS_L1_SEMIGD_CY_2_SH 
-	||	solver_type == BIAS_L1_SEMIGD_RD_2_1000 
-	||	solver_type == BIAS_L1_SEMIGD_RD_2_SH 
-	||  solver_type == BIAS_L1_CY_1000 
-	||	solver_type == BIAS_L1_CY_SH )
+	||	solver_type == BIAS_L1_SEMIGD_CY_FIRST_1000 
+	||	solver_type == BIAS_L1_SEMIGD_CY_FIRST_SH 
+	||	solver_type == BIAS_L1_SEMIGD_RD_FIRST_1000 
+	||	solver_type == BIAS_L1_SEMIGD_RD_FIRST_SH 
+	||	solver_type == BIAS_L1_SEMIGD_CY_DUALOBJ_1000 
+	||	solver_type == BIAS_L1_SEMIGD_CY_DUALOBJ_SH 
+	||	solver_type == BIAS_L1_SEMIGD_RD_DUALOBJ_1000 
+	||	solver_type == BIAS_L1_SEMIGD_RD_DUALOBJ_SH )
 	{
 		diag[0] = 0;
 		diag[2] = 0;
@@ -7048,33 +7271,73 @@ static void two_bias_update(
 			solver.bias_semigd();
 			break;
 		}
-		case BIAS_L1_SEMIGD_CY_2_1000:
-		case BIAS_L2_SEMIGD_CY_2_1000:
+		case BIAS_L1_SEMIGD_CY_FIRST_1000:
+		case BIAS_L2_SEMIGD_CY_FIRST_1000:
 		{
+			solver.wss_mode = Solver::SEMIGD_FIRST;
 			solver.rand_mode = Solver::CYCLIC;
 			solver.sh_mode = Solver::SH_OFF;
 			solver.bias_semigd2();
 			break;
 		}
-		case BIAS_L1_SEMIGD_CY_2_SH:
-		case BIAS_L2_SEMIGD_CY_2_SH:
+		case BIAS_L1_SEMIGD_CY_FIRST_SH:
+		case BIAS_L2_SEMIGD_CY_FIRST_SH:
 		{
+			solver.wss_mode = Solver::SEMIGD_FIRST;
 			solver.rand_mode = Solver::CYCLIC;
 			solver.sh_mode = Solver::SH_ON;
 			solver.bias_semigd2();
 			break;
 		}
-		case BIAS_L1_SEMIGD_RD_2_1000:
-		case BIAS_L2_SEMIGD_RD_2_1000:
+		case BIAS_L1_SEMIGD_RD_FIRST_1000:
+		case BIAS_L2_SEMIGD_RD_FIRST_1000:
 		{
+			solver.wss_mode = Solver::SEMIGD_FIRST;
 			solver.rand_mode = Solver::RANDOM;
 			solver.sh_mode = Solver::SH_OFF;
 			solver.bias_semigd2();
 			break;
 		}
-		case BIAS_L1_SEMIGD_RD_2_SH:
-		case BIAS_L2_SEMIGD_RD_2_SH:
+		case BIAS_L1_SEMIGD_RD_FIRST_SH:
+		case BIAS_L2_SEMIGD_RD_FIRST_SH:
 		{
+			solver.wss_mode = Solver::SEMIGD_FIRST;
+			solver.rand_mode = Solver::RANDOM;
+			solver.sh_mode = Solver::SH_ON;
+			solver.bias_semigd2();
+			break;
+		}
+		case BIAS_L1_SEMIGD_CY_DUALOBJ_1000:
+		case BIAS_L2_SEMIGD_CY_DUALOBJ_1000:
+		{
+			solver.wss_mode = Solver::SEMIGD_DUALOBJ;
+			solver.rand_mode = Solver::CYCLIC;
+			solver.sh_mode = Solver::SH_OFF;
+			solver.bias_semigd2();
+			break;
+		}
+		case BIAS_L1_SEMIGD_CY_DUALOBJ_SH:
+		case BIAS_L2_SEMIGD_CY_DUALOBJ_SH:
+		{
+			solver.wss_mode = Solver::SEMIGD_DUALOBJ;
+			solver.rand_mode = Solver::CYCLIC;
+			solver.sh_mode = Solver::SH_ON;
+			solver.bias_semigd2();
+			break;
+		}
+		case BIAS_L1_SEMIGD_RD_DUALOBJ_1000:
+		case BIAS_L2_SEMIGD_RD_DUALOBJ_1000:
+		{
+			solver.wss_mode = Solver::SEMIGD_DUALOBJ;
+			solver.rand_mode = Solver::RANDOM;
+			solver.sh_mode = Solver::SH_OFF;
+			solver.bias_semigd2();
+			break;
+		}
+		case BIAS_L1_SEMIGD_RD_DUALOBJ_SH:
+		case BIAS_L2_SEMIGD_RD_DUALOBJ_SH:
+		{
+			solver.wss_mode = Solver::SEMIGD_DUALOBJ;
 			solver.rand_mode = Solver::RANDOM;
 			solver.sh_mode = Solver::SH_ON;
 			solver.bias_semigd2();
@@ -8632,14 +8895,14 @@ static void train_one(const problem *prob, const parameter *param, double *w, do
 		case ONECLASS_L2_SEMIGD_RAND_1000:
 		case ONECLASS_L1_SEMIGD_RAND_SH:
 		case ONECLASS_L2_SEMIGD_RAND_SH:
-		case ONECLASS_L1_SEMIGD_CY_2_1000:
-		case ONECLASS_L2_SEMIGD_CY_2_1000:
-		case ONECLASS_L1_SEMIGD_CY_2_SH:
-		case ONECLASS_L2_SEMIGD_CY_2_SH:
-		case ONECLASS_L1_SEMIGD_RD_2_1000:
-		case ONECLASS_L2_SEMIGD_RD_2_1000:
-		case ONECLASS_L1_SEMIGD_RD_2_SH:
-		case ONECLASS_L2_SEMIGD_RD_2_SH:
+		case ONECLASS_L1_SEMIGD_CY_FIRST_1000:
+		case ONECLASS_L2_SEMIGD_CY_FIRST_1000:
+		case ONECLASS_L1_SEMIGD_CY_FIRST_SH:
+		case ONECLASS_L2_SEMIGD_CY_FIRST_SH:
+		case ONECLASS_L1_SEMIGD_RD_FIRST_1000:
+		case ONECLASS_L2_SEMIGD_RD_FIRST_1000:
+		case ONECLASS_L1_SEMIGD_RD_FIRST_SH:
+		case ONECLASS_L2_SEMIGD_RD_FIRST_SH:
 		case ONECLASS_L1_CY_1000:
 		case ONECLASS_L2_CY_1000:
 		case ONECLASS_L1_CY_SH:
@@ -8700,6 +8963,10 @@ static void train_one(const problem *prob, const parameter *param, double *w, do
 		case BIAS_L2_RD_1000:
 		case BIAS_L1_RD_SH:
 		case BIAS_L2_RD_SH:
+		case BIAS_L1_CY_1000:
+		case BIAS_L2_CY_1000:
+		case BIAS_L1_CY_SH:
+		case BIAS_L2_CY_SH:
 		case BIAS_L1_SEMIGD_1000:
 		case BIAS_L2_SEMIGD_1000:
 		case BIAS_L1_SEMIGD_SH:
@@ -8708,18 +8975,22 @@ static void train_one(const problem *prob, const parameter *param, double *w, do
 		case BIAS_L2_SEMIGD_RAND_1000:
 		case BIAS_L1_SEMIGD_RAND_SH:
 		case BIAS_L2_SEMIGD_RAND_SH:
-		case BIAS_L1_SEMIGD_CY_2_1000:
-		case BIAS_L2_SEMIGD_CY_2_1000:
-		case BIAS_L1_SEMIGD_CY_2_SH:
-		case BIAS_L2_SEMIGD_CY_2_SH:
-		case BIAS_L1_SEMIGD_RD_2_1000:
-		case BIAS_L2_SEMIGD_RD_2_1000:
-		case BIAS_L1_SEMIGD_RD_2_SH:
-		case BIAS_L2_SEMIGD_RD_2_SH:
-		case BIAS_L1_CY_1000:
-		case BIAS_L2_CY_1000:
-		case BIAS_L1_CY_SH:
-		case BIAS_L2_CY_SH:
+		case BIAS_L1_SEMIGD_CY_FIRST_1000:
+		case BIAS_L2_SEMIGD_CY_FIRST_1000:
+		case BIAS_L1_SEMIGD_CY_FIRST_SH:
+		case BIAS_L2_SEMIGD_CY_FIRST_SH:
+		case BIAS_L1_SEMIGD_RD_FIRST_1000:
+		case BIAS_L2_SEMIGD_RD_FIRST_1000:
+		case BIAS_L1_SEMIGD_RD_FIRST_SH:
+		case BIAS_L2_SEMIGD_RD_FIRST_SH:
+		case BIAS_L1_SEMIGD_CY_DUALOBJ_1000:
+		case BIAS_L2_SEMIGD_CY_DUALOBJ_1000:
+		case BIAS_L1_SEMIGD_CY_DUALOBJ_SH:
+		case BIAS_L2_SEMIGD_CY_DUALOBJ_SH:
+		case BIAS_L1_SEMIGD_RD_DUALOBJ_1000:
+		case BIAS_L2_SEMIGD_RD_DUALOBJ_1000:
+		case BIAS_L1_SEMIGD_RD_DUALOBJ_SH:
+		case BIAS_L2_SEMIGD_RD_DUALOBJ_SH:
 			two_bias_update(prob, w, eps, Cp, Cn, param);
 			break;
 		default:
@@ -8793,14 +9064,14 @@ model* train(const problem *prob, const parameter *param)
 	|| param->solver_type == ONECLASS_L2_SEMIGD_RAND_1000
 	|| param->solver_type == ONECLASS_L1_SEMIGD_RAND_SH
 	|| param->solver_type == ONECLASS_L2_SEMIGD_RAND_SH
-	|| param->solver_type == ONECLASS_L1_SEMIGD_CY_2_1000
-	|| param->solver_type == ONECLASS_L2_SEMIGD_CY_2_1000
-	|| param->solver_type == ONECLASS_L1_SEMIGD_CY_2_SH
-	|| param->solver_type == ONECLASS_L2_SEMIGD_CY_2_SH
-	|| param->solver_type == ONECLASS_L1_SEMIGD_RD_2_1000
-	|| param->solver_type == ONECLASS_L2_SEMIGD_RD_2_1000
-	|| param->solver_type == ONECLASS_L1_SEMIGD_RD_2_SH
-	|| param->solver_type == ONECLASS_L2_SEMIGD_RD_2_SH
+	|| param->solver_type == ONECLASS_L1_SEMIGD_CY_FIRST_1000
+	|| param->solver_type == ONECLASS_L2_SEMIGD_CY_FIRST_1000
+	|| param->solver_type == ONECLASS_L1_SEMIGD_CY_FIRST_SH
+	|| param->solver_type == ONECLASS_L2_SEMIGD_CY_FIRST_SH
+	|| param->solver_type == ONECLASS_L1_SEMIGD_RD_FIRST_1000
+	|| param->solver_type == ONECLASS_L2_SEMIGD_RD_FIRST_1000
+	|| param->solver_type == ONECLASS_L1_SEMIGD_RD_FIRST_SH
+	|| param->solver_type == ONECLASS_L2_SEMIGD_RD_FIRST_SH
 	|| param->solver_type == ONECLASS_L1_CY_1000
 	|| param->solver_type == ONECLASS_L2_CY_1000
 	|| param->solver_type == ONECLASS_L1_CY_SH
@@ -8822,14 +9093,14 @@ model* train(const problem *prob, const parameter *param)
 		|| param->solver_type == ONECLASS_L2_SEMIGD_RAND_1000
 		|| param->solver_type == ONECLASS_L1_SEMIGD_RAND_SH
 		|| param->solver_type == ONECLASS_L2_SEMIGD_RAND_SH
-		|| param->solver_type == ONECLASS_L1_SEMIGD_CY_2_1000
-		|| param->solver_type == ONECLASS_L2_SEMIGD_CY_2_1000
-		|| param->solver_type == ONECLASS_L1_SEMIGD_CY_2_SH
-		|| param->solver_type == ONECLASS_L2_SEMIGD_CY_2_SH
-		|| param->solver_type == ONECLASS_L1_SEMIGD_RD_2_1000
-		|| param->solver_type == ONECLASS_L2_SEMIGD_RD_2_1000
-		|| param->solver_type == ONECLASS_L1_SEMIGD_RD_2_SH
-		|| param->solver_type == ONECLASS_L2_SEMIGD_RD_2_SH
+		|| param->solver_type == ONECLASS_L1_SEMIGD_CY_FIRST_1000
+		|| param->solver_type == ONECLASS_L2_SEMIGD_CY_FIRST_1000
+		|| param->solver_type == ONECLASS_L1_SEMIGD_CY_FIRST_SH
+		|| param->solver_type == ONECLASS_L2_SEMIGD_CY_FIRST_SH
+		|| param->solver_type == ONECLASS_L1_SEMIGD_RD_FIRST_1000
+		|| param->solver_type == ONECLASS_L2_SEMIGD_RD_FIRST_1000
+		|| param->solver_type == ONECLASS_L1_SEMIGD_RD_FIRST_SH
+		|| param->solver_type == ONECLASS_L2_SEMIGD_RD_FIRST_SH
 		|| param->solver_type == ONECLASS_L1_CY_1000
 		|| param->solver_type == ONECLASS_L2_CY_1000
 		|| param->solver_type == ONECLASS_L1_CY_SH
@@ -9227,14 +9498,14 @@ double predict_values(const struct model *model_, const struct feature_node *x, 
 		 	||model_->param.solver_type != ONECLASS_L2_SEMIGD_RAND_1000
 		 	||model_->param.solver_type != ONECLASS_L1_SEMIGD_RAND_SH
 	 		||model_->param.solver_type != ONECLASS_L2_SEMIGD_RAND_SH
-			||model_->param.solver_type != ONECLASS_L1_SEMIGD_CY_2_1000
-			||model_->param.solver_type != ONECLASS_L2_SEMIGD_CY_2_1000
-			||model_->param.solver_type != ONECLASS_L1_SEMIGD_CY_2_SH
-			||model_->param.solver_type != ONECLASS_L2_SEMIGD_CY_2_SH
-		 	||model_->param.solver_type != ONECLASS_L1_SEMIGD_RD_2_1000
-		 	||model_->param.solver_type != ONECLASS_L2_SEMIGD_RD_2_1000
-		 	||model_->param.solver_type != ONECLASS_L1_SEMIGD_RD_2_SH
-	 		||model_->param.solver_type != ONECLASS_L2_SEMIGD_RD_2_SH
+			||model_->param.solver_type != ONECLASS_L1_SEMIGD_CY_FIRST_1000
+			||model_->param.solver_type != ONECLASS_L2_SEMIGD_CY_FIRST_1000
+			||model_->param.solver_type != ONECLASS_L1_SEMIGD_CY_FIRST_SH
+			||model_->param.solver_type != ONECLASS_L2_SEMIGD_CY_FIRST_SH
+		 	||model_->param.solver_type != ONECLASS_L1_SEMIGD_RD_FIRST_1000
+		 	||model_->param.solver_type != ONECLASS_L2_SEMIGD_RD_FIRST_1000
+		 	||model_->param.solver_type != ONECLASS_L1_SEMIGD_RD_FIRST_SH
+	 		||model_->param.solver_type != ONECLASS_L2_SEMIGD_RD_FIRST_SH
 			||model_->param.solver_type != ONECLASS_L1_CY_1000
 		 	||model_->param.solver_type != ONECLASS_L1_CY_SH
 	 		||model_->param.solver_type != ONECLASS_L2_CY_1000
@@ -9371,6 +9642,10 @@ class Solver_type_table
 		SAVE_NAME(BIAS_L2_RD_1000);
 		SAVE_NAME(BIAS_L1_RD_SH);
 		SAVE_NAME(BIAS_L2_RD_SH);
+		SAVE_NAME(BIAS_L1_CY_1000);
+		SAVE_NAME(BIAS_L2_CY_1000);
+		SAVE_NAME(BIAS_L1_CY_SH);
+		SAVE_NAME(BIAS_L2_CY_SH);
 		SAVE_NAME(BIAS_L1_SEMIGD_1000);
 		SAVE_NAME(BIAS_L2_SEMIGD_1000);
 		SAVE_NAME(BIAS_L1_SEMIGD_SH);
@@ -9379,18 +9654,22 @@ class Solver_type_table
 		SAVE_NAME(BIAS_L2_SEMIGD_RAND_1000);
 		SAVE_NAME(BIAS_L1_SEMIGD_RAND_SH);
 		SAVE_NAME(BIAS_L2_SEMIGD_RAND_SH);
-		SAVE_NAME(BIAS_L1_SEMIGD_CY_2_1000);
-		SAVE_NAME(BIAS_L2_SEMIGD_CY_2_1000);
-		SAVE_NAME(BIAS_L1_SEMIGD_CY_2_SH);
-		SAVE_NAME(BIAS_L2_SEMIGD_CY_2_SH);
-		SAVE_NAME(BIAS_L1_SEMIGD_RD_2_1000);
-		SAVE_NAME(BIAS_L2_SEMIGD_RD_2_1000);
-		SAVE_NAME(BIAS_L1_SEMIGD_RD_2_SH);
-		SAVE_NAME(BIAS_L2_SEMIGD_RD_2_SH);
-		SAVE_NAME(BIAS_L1_CY_1000);
-		SAVE_NAME(BIAS_L2_CY_1000);
-		SAVE_NAME(BIAS_L1_CY_SH);
-		SAVE_NAME(BIAS_L2_CY_SH);
+		SAVE_NAME(BIAS_L1_SEMIGD_CY_FIRST_1000);
+		SAVE_NAME(BIAS_L2_SEMIGD_CY_FIRST_1000);
+		SAVE_NAME(BIAS_L1_SEMIGD_CY_FIRST_SH);
+		SAVE_NAME(BIAS_L2_SEMIGD_CY_FIRST_SH);
+		SAVE_NAME(BIAS_L1_SEMIGD_RD_FIRST_1000);
+		SAVE_NAME(BIAS_L2_SEMIGD_RD_FIRST_1000);
+		SAVE_NAME(BIAS_L1_SEMIGD_RD_FIRST_SH);
+		SAVE_NAME(BIAS_L2_SEMIGD_RD_FIRST_SH);
+		SAVE_NAME(BIAS_L1_SEMIGD_CY_DUALOBJ_1000);
+		SAVE_NAME(BIAS_L2_SEMIGD_CY_DUALOBJ_1000);
+		SAVE_NAME(BIAS_L1_SEMIGD_CY_DUALOBJ_SH);
+		SAVE_NAME(BIAS_L2_SEMIGD_CY_DUALOBJ_SH);
+		SAVE_NAME(BIAS_L1_SEMIGD_RD_DUALOBJ_1000);
+		SAVE_NAME(BIAS_L2_SEMIGD_RD_DUALOBJ_1000);
+		SAVE_NAME(BIAS_L1_SEMIGD_RD_DUALOBJ_SH);
+		SAVE_NAME(BIAS_L2_SEMIGD_RD_DUALOBJ_SH);
 		//for one-class svm
 		SAVE_NAME(ONECLASS_L1_RD_1000);
 		SAVE_NAME(ONECLASS_L1_RD_SH);
@@ -9408,14 +9687,14 @@ class Solver_type_table
 		SAVE_NAME(ONECLASS_L1_SEMIGD_RAND_SH);
 		SAVE_NAME(ONECLASS_L2_SEMIGD_RAND_1000);
 		SAVE_NAME(ONECLASS_L2_SEMIGD_RAND_SH);
-		SAVE_NAME(ONECLASS_L1_SEMIGD_CY_2_1000);
-		SAVE_NAME(ONECLASS_L1_SEMIGD_CY_2_SH);
-		SAVE_NAME(ONECLASS_L2_SEMIGD_CY_2_1000);
-		SAVE_NAME(ONECLASS_L2_SEMIGD_CY_2_SH);
-		SAVE_NAME(ONECLASS_L1_SEMIGD_RD_2_1000);
-		SAVE_NAME(ONECLASS_L1_SEMIGD_RD_2_SH);
-		SAVE_NAME(ONECLASS_L2_SEMIGD_RD_2_1000);
-		SAVE_NAME(ONECLASS_L2_SEMIGD_RD_2_SH);
+		SAVE_NAME(ONECLASS_L1_SEMIGD_CY_FIRST_1000);
+		SAVE_NAME(ONECLASS_L1_SEMIGD_CY_FIRST_SH);
+		SAVE_NAME(ONECLASS_L2_SEMIGD_CY_FIRST_1000);
+		SAVE_NAME(ONECLASS_L2_SEMIGD_CY_FIRST_SH);
+		SAVE_NAME(ONECLASS_L1_SEMIGD_RD_FIRST_1000);
+		SAVE_NAME(ONECLASS_L1_SEMIGD_RD_FIRST_SH);
+		SAVE_NAME(ONECLASS_L2_SEMIGD_RD_FIRST_1000);
+		SAVE_NAME(ONECLASS_L2_SEMIGD_RD_FIRST_SH);
 		SAVE_NAME(ONECLASS_L1_CY_1000);
 		SAVE_NAME(ONECLASS_L1_CY_SH);
 		SAVE_NAME(ONECLASS_L2_CY_1000);
@@ -9947,6 +10226,10 @@ const char *check_parameter(const problem *prob, const parameter *param)
 		&& param->solver_type != BIAS_L2_RD_1000
 		&& param->solver_type != BIAS_L1_RD_SH
 		&& param->solver_type != BIAS_L2_RD_SH
+		&& param->solver_type != BIAS_L1_CY_1000
+		&& param->solver_type != BIAS_L2_CY_1000
+		&& param->solver_type != BIAS_L1_CY_SH
+		&& param->solver_type != BIAS_L2_CY_SH
 		&& param->solver_type != BIAS_L1_SEMIGD_1000
 		&& param->solver_type != BIAS_L2_SEMIGD_1000
 		&& param->solver_type != BIAS_L1_SEMIGD_SH
@@ -9955,18 +10238,22 @@ const char *check_parameter(const problem *prob, const parameter *param)
 		&& param->solver_type != BIAS_L2_SEMIGD_RAND_1000
 		&& param->solver_type != BIAS_L1_SEMIGD_RAND_SH
 		&& param->solver_type != BIAS_L2_SEMIGD_RAND_SH
-		&& param->solver_type != BIAS_L1_SEMIGD_CY_2_1000
-		&& param->solver_type != BIAS_L2_SEMIGD_CY_2_1000
-		&& param->solver_type != BIAS_L1_SEMIGD_CY_2_SH
-		&& param->solver_type != BIAS_L2_SEMIGD_CY_2_SH
-		&& param->solver_type != BIAS_L1_SEMIGD_RD_2_1000
-		&& param->solver_type != BIAS_L2_SEMIGD_RD_2_1000
-		&& param->solver_type != BIAS_L1_SEMIGD_RD_2_SH
-		&& param->solver_type != BIAS_L2_SEMIGD_RD_2_SH
-		&& param->solver_type != BIAS_L1_CY_1000
-		&& param->solver_type != BIAS_L2_CY_1000
-		&& param->solver_type != BIAS_L1_CY_SH
-		&& param->solver_type != BIAS_L2_CY_SH
+		&& param->solver_type != BIAS_L1_SEMIGD_CY_FIRST_1000
+		&& param->solver_type != BIAS_L2_SEMIGD_CY_FIRST_1000
+		&& param->solver_type != BIAS_L1_SEMIGD_CY_FIRST_SH
+		&& param->solver_type != BIAS_L2_SEMIGD_CY_FIRST_SH
+		&& param->solver_type != BIAS_L1_SEMIGD_RD_FIRST_1000
+		&& param->solver_type != BIAS_L2_SEMIGD_RD_FIRST_1000
+		&& param->solver_type != BIAS_L1_SEMIGD_RD_FIRST_SH
+		&& param->solver_type != BIAS_L2_SEMIGD_RD_FIRST_SH
+		&& param->solver_type != BIAS_L1_SEMIGD_CY_DUALOBJ_1000
+		&& param->solver_type != BIAS_L2_SEMIGD_CY_DUALOBJ_1000
+		&& param->solver_type != BIAS_L1_SEMIGD_CY_DUALOBJ_SH
+		&& param->solver_type != BIAS_L2_SEMIGD_CY_DUALOBJ_SH
+		&& param->solver_type != BIAS_L1_SEMIGD_RD_DUALOBJ_1000
+		&& param->solver_type != BIAS_L2_SEMIGD_RD_DUALOBJ_1000
+		&& param->solver_type != BIAS_L1_SEMIGD_RD_DUALOBJ_SH
+		&& param->solver_type != BIAS_L2_SEMIGD_RD_DUALOBJ_SH
 	 	&& param->solver_type != ONECLASS_L1_RD_1000
 	 	&& param->solver_type != ONECLASS_L1_RD_SH
 	 	&& param->solver_type != ONECLASS_L2_RD_1000
@@ -9983,14 +10270,14 @@ const char *check_parameter(const problem *prob, const parameter *param)
 	 	&& param->solver_type != ONECLASS_L1_SEMIGD_RAND_SH
 	 	&& param->solver_type != ONECLASS_L2_SEMIGD_RAND_1000
 	 	&& param->solver_type != ONECLASS_L2_SEMIGD_RAND_SH
-		&& param->solver_type != ONECLASS_L1_SEMIGD_CY_2_1000
-		&& param->solver_type != ONECLASS_L1_SEMIGD_CY_2_SH
-		&& param->solver_type != ONECLASS_L2_SEMIGD_CY_2_1000
-		&& param->solver_type != ONECLASS_L2_SEMIGD_CY_2_SH
-	 	&& param->solver_type != ONECLASS_L1_SEMIGD_RD_2_1000
-	 	&& param->solver_type != ONECLASS_L1_SEMIGD_RD_2_SH
-	 	&& param->solver_type != ONECLASS_L2_SEMIGD_RD_2_1000
-	 	&& param->solver_type != ONECLASS_L2_SEMIGD_RD_2_SH
+		&& param->solver_type != ONECLASS_L1_SEMIGD_CY_FIRST_1000
+		&& param->solver_type != ONECLASS_L1_SEMIGD_CY_FIRST_SH
+		&& param->solver_type != ONECLASS_L2_SEMIGD_CY_FIRST_1000
+		&& param->solver_type != ONECLASS_L2_SEMIGD_CY_FIRST_SH
+	 	&& param->solver_type != ONECLASS_L1_SEMIGD_RD_FIRST_1000
+	 	&& param->solver_type != ONECLASS_L1_SEMIGD_RD_FIRST_SH
+	 	&& param->solver_type != ONECLASS_L2_SEMIGD_RD_FIRST_1000
+	 	&& param->solver_type != ONECLASS_L2_SEMIGD_RD_FIRST_SH
 	 	&& param->solver_type != ONECLASS_L1_CY_1000
 	 	&& param->solver_type != ONECLASS_L1_CY_SH
 	 	&& param->solver_type != ONECLASS_L2_CY_1000

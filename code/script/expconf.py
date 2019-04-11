@@ -1,10 +1,25 @@
 logfolder='log_notime'
+resumefolder='resume'
 
 runtype = [
-	"ONE_L1_SEMIGD_DUALOBJ_YBAL_1000",
-	"ONE_L2_SEMIGD_DUALOBJ_YBAL_1000",
+		"ONECLASS_L1_CY_1000",
+		"ONECLASS_L1_CY_SH",
+		"ONECLASS_L2_CY_1000",
+		"ONECLASS_L2_CY_SH",
+		"ONECLASS_L1_SEMIGD_CY_2_1000",
+		"ONECLASS_L1_SEMIGD_CY_2_SH",
+		"ONECLASS_L2_SEMIGD_CY_2_1000",
+		"ONECLASS_L2_SEMIGD_CY_2_SH",
+		"BIAS_L1_CY_1000",
+		"BIAS_L1_CY_SH",
+		"BIAS_L2_CY_1000",
+		"BIAS_L2_CY_SH",
+		"BIAS_L1_SEMIGD_CY_2_1000",
+		"BIAS_L1_SEMIGD_CY_2_SH",
+		"BIAS_L2_SEMIGD_CY_2_1000",
+		"BIAS_L2_SEMIGD_CY_2_SH",
 ]
-nlist = [0.1]
+nlist = [0.1, 0.01, 0.2]
 clist = [1.0/32, 1, 32]
 elist = [1e-12]
 rlist = [
@@ -14,7 +29,7 @@ rlist = [
 	#0.064,0.128,0.256,
 	#0.512,0.9,0.95,
 	#float('inf'),
-	0.1, 0.2, 0.3, 0.4, 0.5,
+	4,
 	#0.6,0.7,0.8,0.9,0.99
 	#1,0.95,0.9,0.5,0.1,0.001
 	#,0.5
