@@ -4552,9 +4552,9 @@ void Solver::bias_semigd2()
 	int *Iup = new int[smgd_size];
 	int *Ilow = new int[smgd_size];
 
-	double *innerG = new double[smgd_size];
+	double *IupG = new double[smgd_size];
+	double *IlowG = new double[smgd_size];
 	std::pair<double,double> *newalpha_ij = new std::pair<double,double>;
-	int *workset = new int[smgd_size];
 
 	std::vector<int> shrunk_inds(smgd_size*2);
 	int shrunk_size = 0; // this allow duplicate and will be delt with just before shrink
@@ -4589,51 +4589,51 @@ void Solver::bias_semigd2()
 		{
 			for(int inner_iter = 0; inner_iter < 1; inner_iter++)
 			{
+				// check there are Iup and Ilow
+				Iup_size = 0;
+				Ilow_size = 0;
+				if(rand_mode == CYCLIC)
+				{
+					for(int s = 0; s < smgd_size; s++)
+					{
+						i = index[cycle_i+s];
+						const schar yi = y[i];
+						if( (alpha_status[i] != UPPER_BOUND && yi==+1) ||
+								(alpha_status[i] != LOWER_BOUND && yi==-1) )
+						{
+							Iup[Iup_size++] = cycle_i+s;
+						}
+						if( (alpha_status[i] != UPPER_BOUND && yi==-1) ||
+								(alpha_status[i] != LOWER_BOUND && yi==+1) )
+						{
+							Ilow[Ilow_size++] = cycle_i+s;
+						}
+					}
+				}
+				if(rand_mode == RANDOM)
+				{
+					for(int s = 0; s < smgd_size; s++)
+					{
+						int si = non_static_rand()%active_size;
+						i = index[si];
+						const schar yi = y[i];
+						if( (alpha_status[i] != UPPER_BOUND && yi==+1) ||
+								(alpha_status[i] != LOWER_BOUND && yi==-1) )
+						{
+							Iup[Iup_size++] = si;
+						}
+						if( (alpha_status[i] != UPPER_BOUND && yi==-1) ||
+								(alpha_status[i] != LOWER_BOUND && yi==+1) )
+						{
+							Ilow[Ilow_size++] = si;
+						}
+					}
+				}
+				if(Iup_size <= 0 || Ilow_size <= 0)
+					break;
+
 				if(wss_mode == SEMIGD_FIRST)
 				{
-					// check there are Iup and Ilow
-					Iup_size = 0;
-					Ilow_size = 0;
-					if(rand_mode == CYCLIC)
-					{
-						for(int s = 0; s < smgd_size; s++)
-						{
-							i = index[cycle_i+s];
-							const schar yi = y[i];
-							if( (alpha_status[i] != UPPER_BOUND && yi==+1) ||
-									(alpha_status[i] != LOWER_BOUND && yi==-1) )
-							{
-								Iup[Iup_size++] = cycle_i+s;
-							}
-							if( (alpha_status[i] != UPPER_BOUND && yi==-1) ||
-									(alpha_status[i] != LOWER_BOUND && yi==+1) )
-							{
-								Ilow[Ilow_size++] = cycle_i+s;
-							}
-						}
-					}
-					if(rand_mode == RANDOM)
-					{
-						for(int s = 0; s < smgd_size; s++)
-						{
-							int si = non_static_rand()%active_size;
-							i = index[si];
-							const schar yi = y[i];
-							if( (alpha_status[i] != UPPER_BOUND && yi==+1) ||
-									(alpha_status[i] != LOWER_BOUND && yi==-1) )
-							{
-								Iup[Iup_size++] = si;
-							}
-							if( (alpha_status[i] != UPPER_BOUND && yi==-1) ||
-									(alpha_status[i] != LOWER_BOUND && yi==+1) )
-							{
-								Ilow[Ilow_size++] = si;
-							}
-						}
-					}
-					if(Iup_size <= 0 || Ilow_size <= 0)
-						break;
-
 					// use first info to select inner workset
 					// i.e. maximal violating pair
 					shrunk_size = 0;
@@ -4758,21 +4758,17 @@ void Solver::bias_semigd2()
 				}
 				else if(wss_mode == SEMIGD_DUALOBJ)
 				{
-					if(rand_mode == CYCLIC)
+					for(int s=0; s<Iup_size; s++)
 					{
-						for(int s = 0; s < smgd_size; s++)
-							workset[s] = index[cycle_i+s];
-					}
-					if(rand_mode == RANDOM)
-					{
-						for(int s = 0; s < smgd_size; s++)
-							workset[s] = index[non_static_rand()%active_size];
-					}
-					for(int s=0; s<smgd_size; s++)
-					{
-						i = workset[s];
+						i = index[Iup[s]];
 						feature_node * const xi = prob->x[i];
-						innerG[s] = y[i]*sparse_operator::dot(w, xi) -1 +alpha[i]*diag[GETI(i)];
+						IupG[s] = y[i]*sparse_operator::dot(w, xi) -1 +alpha[i]*diag[GETI(i)];
+					}
+					for(int s=0; s<Ilow_size; s++)
+					{
+						j = index[Ilow[s]];
+						feature_node * const xj = prob->x[j];
+						IlowG[s] = y[j]*sparse_operator::dot(w, xj) -1 +alpha[j]*diag[GETI(j)];
 					}
 					int best_i=-1;
 					int best_j=-1;
@@ -4781,16 +4777,18 @@ void Solver::bias_semigd2()
 					// get the smallest dualobj
 					double min_diff_obj = INF;
 					double diff_obj;
-					for(int si=0; si<smgd_size; si++)
+					for(int si=0; si<Iup_size; si++)
 					{
-						i = workset[si];
+						i = index[Iup[si]];
 						feature_node const * xi = prob->x[i];
-						G_i = innerG[si];
+						G_i = IupG[si];
 						C_i = upper_bound[GETI(i)];
-						for(int sj=si+1; sj<smgd_size; sj++)
+						for(int sj=0; sj<Ilow_size; sj++)
 						{
-							j = workset[sj];
-							G_j = innerG[sj];
+							j = index[Ilow[sj]];
+							if(i == j)
+								continue;
+							G_j = IlowG[sj];
 							C_j = upper_bound[GETI(j)];
 
 							feature_node const * xj = prob->x[j];
