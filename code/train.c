@@ -148,28 +148,18 @@ void exit_with_help()
 	"//for one-class svm\n"
 	"ONECLASS_L1_RD_1000 = 50111,\n"
 	"ONECLASS_L1_RD_SH = 50112,\n"
-	"ONECLASS_L2_RD_1000 = 50121,\n"
-	"ONECLASS_L2_RD_SH = 50122,\n"
 	"ONECLASS_L1_SEMIGD_1000 = 50211,\n"
 	"ONECLASS_L1_SEMIGD_SH = 50212,\n"
-	"ONECLASS_L2_SEMIGD_1000 = 50221,\n"
-	"ONECLASS_L2_SEMIGD_SH = 50222,\n"
 	"ONECLASS_L1_FIRST_1000 = 50311,\n"
-	"ONECLASS_L2_FIRST_1000 = 50321,\n"
 	"ONECLASS_L1_SECOND_1000 = 50411,\n"
-	"ONECLASS_L2_SECOND_1000 = 50421,\n"
 	"ONECLASS_L1_SEMIGD_RAND_1000 = 50511,\n"
 	"ONECLASS_L1_SEMIGD_RAND_SH = 50512,\n"
-	"ONECLASS_L2_SEMIGD_RAND_1000 = 50521,\n"
-	"ONECLASS_L2_SEMIGD_RAND_SH = 50522,\n"
 	"ONECLASS_L1_SEMIGD_CY_2_1000 = 50611,\n"
 	"ONECLASS_L1_SEMIGD_CY_2_SH = 50612,\n"
-	"ONECLASS_L2_SEMIGD_CY_2_1000 = 50621,\n"
-	"ONECLASS_L2_SEMIGD_CY_2_SH = 50622,\n"
 	"ONECLASS_L1_SEMIGD_RD_2_1000 = 50711,\n"
 	"ONECLASS_L1_SEMIGD_RD_2_SH = 50712,\n"
-	"ONECLASS_L2_SEMIGD_RD_2_1000 = 50721,\n"
-	"ONECLASS_L2_SEMIGD_RD_2_SH = 50722,\n"
+	"ONECLASS_L1_CY_1000 = 50811,\n"
+	"ONECLASS_L1_CY_SH = 50812,\n"
 	);
 	exit(1);
 }
@@ -438,10 +428,9 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 
 	strcpy(input_file_name, argv[i]);
 
+	char log_file_name[1024]={'\0'};
 	if(i<argc-1)
-		param.log_fp = fopen(argv[i+1], "w");
-	else
-		param.log_fp = stdout;
+		strcpy(log_file_name, argv[i+1]);
 
 	if(i<argc-2)
 	{
@@ -450,6 +439,14 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 			fprintf(stderr,"can't open resume file %s\n",argv[i+2]);
 			exit(1);
 		}
+		param.log_fp = fopen(log_file_name, "a");
+	}
+	else
+	{
+		if(strlen(log_file_name) != 0)
+			param.log_fp = fopen(log_file_name, "w");
+		else
+			param.log_fp = stdout;
 	}
 
 	if(i<argc-3)
@@ -598,6 +595,10 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 			case ONECLASS_L1_SEMIGD_RD_2_SH:
 			case ONECLASS_L2_SEMIGD_RD_2_1000:
 			case ONECLASS_L2_SEMIGD_RD_2_SH:
+			case ONECLASS_L1_CY_1000:
+			case ONECLASS_L1_CY_SH:
+			case ONECLASS_L2_CY_1000:
+			case ONECLASS_L2_CY_SH:
 				param.eps = 0.01;
 				break;
 		}
