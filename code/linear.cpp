@@ -4632,11 +4632,11 @@ void Solver::bias_semigd2()
 				if(Iup_size <= 0 || Ilow_size <= 0)
 					break;
 
+				shrunk_size = 0;
 				if(wss_mode == SEMIGD_FIRST)
 				{
 					// use first info to select inner workset
 					// i.e. maximal violating pair
-					shrunk_size = 0;
 					i=-1;
 					double yGmax = -INF;
 					for(int s = 0; s < Iup_size; s++)
@@ -4648,19 +4648,11 @@ void Solver::bias_semigd2()
 						{
 								schar ysi = y[si];
 								double yG_si = -ysi*G_si;
-								if( (alpha_status[si] == UPPER_BOUND && ysi == +1) ||
-									(alpha_status[si] == LOWER_BOUND && ysi == -1) )
-								{
-									if(yG_si > PGmax_old)
-											shrunk_inds[shrunk_size++]=Iup[s];
-									else
-										PGmin_new = min(PGmin_new, yG_si);
-								}
-								else if( (alpha_status[si] == UPPER_BOUND && ysi == -1) ||
+								if( (alpha_status[si] == UPPER_BOUND && ysi == -1) ||
 									(alpha_status[si] == LOWER_BOUND && ysi == +1) )
 								{
 									if(yG_si < PGmin_old)
-											shrunk_inds[shrunk_size++]=Iup[s];
+										shrunk_inds[shrunk_size++]=Iup[s];
 									else
 										PGmax_new = max(PGmax_new, yG_si);
 								}
@@ -4692,17 +4684,9 @@ void Solver::bias_semigd2()
 									(alpha_status[sj] == LOWER_BOUND && ysj == -1) )
 								{
 									if(yG_sj > PGmax_old)
-											shrunk_inds[shrunk_size++]=Ilow[s];
+										shrunk_inds[shrunk_size++]=Ilow[s];
 									else
 										PGmin_new = min(PGmin_new, yG_sj);
-								}
-								else if( (alpha_status[sj] == UPPER_BOUND && ysj == -1) ||
-									(alpha_status[sj] == LOWER_BOUND && ysj == +1) )
-								{
-									if(yG_sj < PGmin_old)
-											shrunk_inds[shrunk_size++]=Ilow[s];
-									else
-										PGmax_new = max(PGmax_new, yG_sj);
 								}
 								else
 								{
@@ -4763,12 +4747,58 @@ void Solver::bias_semigd2()
 						i = index[Iup[s]];
 						feature_node * const xi = prob->x[i];
 						IupG[s] = y[i]*sparse_operator::dot(w, xi) -1 +alpha[i]*diag[GETI(i)];
+						if(sh_mode == SH_ON)
+						{
+							double yG_i = -y[i]*IupG[s];
+							if( (alpha_status[i] == UPPER_BOUND && y[i] == -1) ||
+								(alpha_status[i] == LOWER_BOUND && y[i] == +1) )
+							{
+								if(yG_i < PGmin_old)
+								{
+									shrunk_inds[shrunk_size++]=Iup[s];
+									--Iup_size;
+									swap(Iup[s], Iup[Iup_size]);
+									--s; //check s again
+									continue;
+								}
+								else
+									PGmax_new = max(PGmax_new, yG_i);
+							}
+							else
+							{
+								PGmax_new = max(PGmax_new, yG_i);
+								PGmin_new = min(PGmin_new, yG_i);
+							}
+						}
 					}
 					for(int s=0; s<Ilow_size; s++)
 					{
 						j = index[Ilow[s]];
 						feature_node * const xj = prob->x[j];
 						IlowG[s] = y[j]*sparse_operator::dot(w, xj) -1 +alpha[j]*diag[GETI(j)];
+						if(sh_mode == SH_ON)
+						{
+							double yG_j = -y[j]*IlowG[s];
+							if( (alpha_status[j] == UPPER_BOUND && y[j] == +1) ||
+								(alpha_status[j] == LOWER_BOUND && y[j] == -1) )
+							{
+								if(yG_j > PGmax_old)
+								{
+									shrunk_inds[shrunk_size++]=Ilow[s];
+									--Ilow_size;
+									swap(Ilow[s], Ilow[Ilow_size]);
+									s--; //check s again
+									continue;
+								}
+								else
+									PGmin_new = min(PGmin_new, yG_j);
+							}
+							else
+							{
+								PGmax_new = max(PGmax_new, yG_j);
+								PGmin_new = min(PGmin_new, yG_j);
+							}
+						}
 					}
 					int best_i=-1;
 					int best_j=-1;
@@ -4807,6 +4837,20 @@ void Solver::bias_semigd2()
 							}
 						}
 					}
+					if(sh_mode == SH_ON)
+					{
+						if(shrunk_size > 0)
+						{
+							std::sort(shrunk_inds.begin(), shrunk_inds.begin()+shrunk_size, std::greater<int>());
+							auto last = std::unique(shrunk_inds.begin(), shrunk_inds.begin()+shrunk_size);
+							for(auto it=shrunk_inds.begin(); it!=last; ++it)
+							{
+								active_size--;
+								swap(index[*it], index[active_size]);
+							}
+							continue;
+						}
+					}
 					if(min_diff_obj >= 0)
 						continue;
 					i = best_i;
@@ -4833,7 +4877,7 @@ void Solver::bias_semigd2()
 				}
 			}
 		}
-		if(sh_mode == SH_ON && wss_mode == SEMIGD_FIRST)
+		if(sh_mode == SH_ON)
 		{
 			if(PGmax_new - PGmin_new <= eps && iter > 1)
 			{
