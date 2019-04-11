@@ -4718,7 +4718,8 @@ void Solver::bias_semigd2()
 					C_j = upper_bound[GETI(j)];
 					Q_ij = yi * yj * sparse_operator::feature_dot(xi, xj);
 					
-					calculate_bias_newalpha(newalpha_ij, QD[i],QD[j],Q_ij,C_i,C_j,alpha[i],alpha[j],G_i,G_j,yi,yj);
+					calculate_bias_newalpha(newalpha_ij, QD[i],QD[j],Q_ij,
+							C_i,C_j,alpha[i],alpha[j],G_i,G_j,yi,yj);
 				}
 				else if(wss_mode == SEMIGD_DUALOBJ)
 				{
@@ -6460,6 +6461,7 @@ void Solver::oneclass_semigd2()
 	int l = prob->l;
 	int i, j;
 	double G_i, G_j;
+	double Q_ij;
 	enum {LOWER_BOUND, UPPER_BOUND, FREE};
 	clock_t start;
 
@@ -6468,6 +6470,11 @@ void Solver::oneclass_semigd2()
 	int Ilow_size = 0;
 	int *Iup = new int[smgd_size];
 	int *Ilow = new int[smgd_size];
+
+	double *IupG = new double[smgd_size];
+	double *IlowG = new double[smgd_size];
+	std::pair<double,double> *newalpha_ij = new std::pair<double,double>;
+
 	std::vector<int> shrunk_inds(smgd_size*2);
 	int shrunk_size = 0; // this allow duplicate and will be delt with just before shrink
 
@@ -6535,12 +6542,13 @@ void Solver::oneclass_semigd2()
 				}
 				if(Iup_size <= 0 || Ilow_size <= 0)
 					break;
-				// use first info to select inner workset
-				// i.e. maximal violating pair
+				shrunk_size = 0;
+				if(wss_mode == SEMIGD_FIRST)
 				{
-					shrunk_size = 0;
+					// use first info to select inner workset
+					// i.e. maximal violating pair
 					i = -1;
-					Gmax = INF;
+					Gmax = INF; // Gmax has maximum -yG
 					for(int s = 0; s < Iup_size; s++)
 					{
 						int si = index[Iup[s]];
@@ -6568,7 +6576,7 @@ void Solver::oneclass_semigd2()
 						}
 					}
 					j = -1;
-					Gmin = -INF;
+					Gmin = -INF; // Gmax has minimum -yG
 					for(int s = 0; s < Ilow_size; s++)
 					{
 						int sj = index[Ilow[s]];
@@ -6609,78 +6617,152 @@ void Solver::oneclass_semigd2()
 							continue;
 						}
 					}
+					if(i==j)
+						continue;
+					// i and j are indices to be updated
+					feature_node const * xi = prob->x[i];
+					feature_node const * xj = prob->x[j];
+					
+					G_i = Gmax;
+					G_j = Gmin;
+					Q_ij = sparse_operator::feature_dot(xi, xj);
+					// oneclass can use bias functions with y=+1
+					calculate_bias_newalpha(newalpha_ij, QD[i],QD[j],Q_ij,
+							upper_bound[2],upper_bound[2],alpha[i],alpha[j],G_i,G_j,+1,+1);
 				}
-				if(i==j)
-					continue;
-				// i and j are indices to be updated
-				feature_node const * xi = prob->x[i];
-				feature_node const * xj = prob->x[j];
-				
-				double C_i = upper_bound[2];
-				double C_j = upper_bound[2];
-
-				G_i = Gmax;
-				G_j = Gmin;
-				double Q_ij = sparse_operator::feature_dot(xi, xj);
-
-				double old_alpha_i = alpha[i];
-				double old_alpha_j = alpha[j];
-
-				double quad_coef = QD[i] + QD[j] - 2*Q_ij;
-				if(quad_coef <= 0)
-					quad_coef = 1e-12;
-				double delta = (G_i-G_j)/quad_coef;
-				double sum = alpha[i] +alpha[j];
-				alpha[i] -= delta;
-				alpha[j] += delta;
-				if(sum > C_i)
+				else if(wss_mode == SEMIGD_DUALOBJ)
 				{
-					if(alpha[i] > C_i)
+					for(int s=0; s<Iup_size; s++)
 					{
-						alpha[i] = C_i;
-						alpha[j] = sum -C_i;
+						i = index[Iup[s]];
+						feature_node * const xi = prob->x[i];
+						IupG[s] = sparse_operator::dot(w, xi);
+						if(sh_mode == SH_ON)
+						{
+							double nG_i = -IupG[s];
+							if(alpha_status[i] == LOWER_BOUND)
+							{
+								if(nG_i < PGmin_old)
+								{
+									shrunk_inds[shrunk_size++]=Iup[s];
+									--Iup_size;
+									swap(Iup[s], Iup[Iup_size]);
+									--s; //check s again
+									continue;
+								}
+								else
+									PGmax_new = max(PGmax_new, nG_i);
+							}
+							else
+							{
+								PGmax_new = max(PGmax_new, nG_i);
+								PGmin_new = min(PGmin_new, nG_i);
+							}
+						}
 					}
+					for(int s=0; s<Ilow_size; s++)
+					{
+						j = index[Ilow[s]];
+						feature_node * const xj = prob->x[j];
+						IlowG[s] = sparse_operator::dot(w, xj);
+						if(sh_mode == SH_ON)
+						{
+							double nG_j = -IlowG[s];
+							if(alpha_status[j] == UPPER_BOUND)
+							{
+								if(nG_j > PGmax_old)
+								{
+									shrunk_inds[shrunk_size++]=Ilow[s];
+									--Ilow_size;
+									swap(Ilow[s], Ilow[Ilow_size]);
+									s--; //check s again
+									continue;
+								}
+								else
+									PGmin_new = min(PGmin_new, nG_j);
+							}
+							else
+							{
+								PGmax_new = max(PGmax_new, nG_j);
+								PGmin_new = min(PGmin_new, nG_j);
+							}
+						}
+					}
+					int best_i=-1;
+					int best_j=-1;
+					double best_alpha_i=INF;
+					double best_alpha_j=INF;
+					// get the smallest dualobj
+					double min_diff_obj = INF;
+					double diff_obj;
+					for(int si=0; si<Iup_size; si++)
+					{
+						i = index[Iup[si]];
+						feature_node const * xi = prob->x[i];
+						G_i = IupG[si];
+						;
+						for(int sj=0; sj<Ilow_size; sj++)
+						{
+							j = index[Ilow[sj]];
+							if(i == j)
+								continue;
+							G_j = IlowG[sj];
+
+							feature_node const * xj = prob->x[j];
+							Q_ij = sparse_operator::feature_dot(xi, xj);
+							calculate_bias_newalpha(newalpha_ij, QD[i],QD[j],Q_ij,
+									upper_bound[2],upper_bound[2],alpha[i],alpha[j],G_i,G_j,+1,+1);
+							diff_obj = bias_diff_obj(newalpha_ij->first - alpha[i], newalpha_ij->second - alpha[j],
+									QD[i], QD[j], Q_ij, G_i, G_j);
+							if(min_diff_obj > diff_obj)
+							{
+								min_diff_obj = diff_obj;
+								best_i = i;
+								best_j = j;
+								best_alpha_i = newalpha_ij->first;
+								best_alpha_j = newalpha_ij->second;
+							}
+						}
+					}
+					if(sh_mode == SH_ON)
+					{
+						if(shrunk_size > 0)
+						{
+							std::sort(shrunk_inds.begin(), shrunk_inds.begin()+shrunk_size, std::greater<int>());
+							auto last = std::unique(shrunk_inds.begin(), shrunk_inds.begin()+shrunk_size);
+							for(auto it=shrunk_inds.begin(); it!=last; ++it)
+							{
+								active_size--;
+								swap(index[*it], index[active_size]);
+							}
+							continue;
+						}
+					}
+					if(min_diff_obj >= 0)
+						continue;
+					i = best_i;
+					j = best_j;
+					newalpha_ij->first = best_alpha_i;
+					newalpha_ij->second = best_alpha_j;
 				}
 				else
 				{
-					if(alpha[j] < 0)
-					{
-						alpha[j] = 0;
-						alpha[i] = sum;
-					}
+					fprintf(stderr, "wss mode not specified\n");
+					return;
 				}
-				if(sum > C_j)
-				{
-					if(alpha[j] > C_j)
-					{
-						alpha[j] = C_j;
-						alpha[i] = sum -C_j;
-					}
-				}
-				else
-				{
-					if(alpha[i] < 0)
-					{
-						alpha[i] = 0;
-						alpha[j] = sum;
-					}
-				}
-				update_size+=2;
 				// update alpha status and w
-				if(fabs(alpha[i]-old_alpha_i) > 1e-16)
+				update_size+=2;
+				if(fabs(newalpha_ij->first-alpha[i]) > 1e-16)
 				{
 					success_size+=2;
-					if(fabs(alpha[i]-old_alpha_i) == upper_bound[2])
+					if(fabs(newalpha_ij->first-alpha[i]) == upper_bound[2])
 						n_exchange++;
-					sparse_operator::axpy(alpha[i]-old_alpha_i, prob->x[i], w);
-					sparse_operator::axpy(alpha[j]-old_alpha_j, prob->x[j], w);
+					sparse_operator::axpy(newalpha_ij->first-alpha[i], prob->x[i], w);
+					sparse_operator::axpy(newalpha_ij->second-alpha[j], prob->x[j], w);
+					alpha[i] = newalpha_ij->first;
+					alpha[j] = newalpha_ij->second;
 					alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[2]);
 					alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[2]);
-				}
-				else
-				{
-					alpha[i] = old_alpha_i;
-					alpha[j] = old_alpha_j;
 				}
 			}
 		}
