@@ -4595,6 +4595,7 @@ void Solver::bias_semigd2()
 	double *IlowG = new double[smgd_size];
 	std::pair<double,double> *newalpha_ij = new std::pair<double,double>;
 	std::vector<int> workset_s(smgd_size);
+	std::vector<int>::iterator workset_last;
 
 	if(isnan(PGmax_old))
 		PGmax_old = INF;
@@ -4604,9 +4605,6 @@ void Solver::bias_semigd2()
 	while(iter < max_iter)
 	{
 		start = clock();
-		success_size = 0;
-		nr_pos_y = 0;
-		nr_neg_y = 0;
 		PGmax_new = -INF;
 		PGmin_new = INF;
 
@@ -4621,43 +4619,60 @@ void Solver::bias_semigd2()
 			}
 		}
 		update_size = 0;
-		for(int cycle_i = 0; cycle_i+smgd_size-1 < active_size; cycle_i+=smgd_size)
+		success_size = 0;
+		nr_pos_y = 0;
+		nr_neg_y = 0;
+		for(int cycle_i = 0; cycle_i < active_size; cycle_i+=smgd_size)
 		{
 			if(rand_mode == CYCLIC)
 			{
 				for(int s = 0; s < smgd_size; s++)
-					workset_s[s] = cycle_i+s;
+				{
+					if(cycle_i+s >= active_size)
+					{
+						smgd_size = s;
+						break;
+					}
+					workset_s[smgd_size-s-1] = cycle_i+s;
+				}
+				workset_last = workset_s.begin()+smgd_size;
 			}
-			if(rand_mode == RANDOM)
+			else if(rand_mode == RANDOM)
 			{
 				for(int s = 0; s < smgd_size; s++)
 					workset_s[s] = non_static_rand()%active_size;
+				std::sort(workset_s.begin(), workset_s.begin()+smgd_size, std::greater<int>());
+				workset_last = std::unique(workset_s.begin(), workset_s.begin()+smgd_size);
 			}
-			std::sort(workset_s.begin(), workset_s.begin()+smgd_size, std::greater<int>());
-			auto last = std::unique(workset_s.begin(), workset_s.begin()+smgd_size);
-			Iup_size = 0;
-			Ilow_size = 0;
-			for(auto it=workset_s.begin(); it!=last; ++it)
+			else
 			{
-				int si = *it;
-				i = index[si];
-				const schar yi = y[i];
-				if( is_Ilow(alpha_status[i], yi) )
-					Ilow[Ilow_size++] = si;
-				if( is_Iup(alpha_status[i], yi) )
-					Iup[Iup_size++] = si;
+				fprintf(stderr, "random mode not specified\n");
+				return;
 			}
 			if(sh_mode == SH_OFF)
 			{
 				// when don't shrinking, this can prevent gradient calculation
 				// when shrinking, we must do gradient calculation to shrink
+				Iup_size = 0;
+				Ilow_size = 0;
+				for(auto it=workset_s.begin(); it!=workset_last; ++it)
+				{
+					int si = *it;
+					i = index[si];
+					const schar yi = y[i];
+					if( is_Ilow(alpha_status[i], yi) )
+						++Ilow_size;
+					if( is_Iup(alpha_status[i], yi) )
+						++Iup_size;
+				}
 				if(Iup_size <= 0 || Ilow_size <= 0)
 					continue;
 			}
-			bool shrink = false;
 			Iup_size = 0;
 			Ilow_size = 0;
-			for(auto it=workset_s.begin(); it!=last; ++it)
+			// as some variables may be shrunk, 
+			// we re-determine Iup and Ilow
+			for(auto it=workset_s.begin(); it!=workset_last; ++it)
 			{
 				int si = *it;
 				i = index[si];
@@ -4667,37 +4682,49 @@ void Solver::bias_semigd2()
 				double yG_i = -y[i]*G_i;
 				if( !is_Ilow(alpha_status[i], yi ) )
 				{
-					IupG[Iup_size++] = G_i;
 					if(yG_i < PGmin_old)
 					{
 						active_size--;
 						swap(index[si], index[active_size]);
-						shrink = true;
+					}
+					else
+					{
+						Iup[Iup_size] = si;
+						IupG[Iup_size] = G_i;
+						++Iup_size;
 					}
 					PGmax_new = max(PGmax_new, yG_i);
 				}
 				else if( !is_Iup(alpha_status[i], yi) )
 				{
-					IlowG[Ilow_size++] = G_i;
 					if(yG_i > PGmax_old)
 					{
 						active_size--;
 						swap(index[si], index[active_size]);
-						shrink = true;
+					}
+					else
+					{
+						Ilow[Ilow_size] = si;
+						IlowG[Ilow_size] = G_i;
+						++Ilow_size;
 					}
 					PGmin_new = min(PGmin_new, yG_i);
 				}
 				else //both Iup and Ilow
 				{
-					IupG[Iup_size++] = G_i;
-					IlowG[Ilow_size++] = G_i;
+					Iup[Iup_size] = si;
+					IupG[Iup_size] = G_i;
+					++Iup_size;
+					Ilow[Ilow_size] = si;
+					IlowG[Ilow_size] = G_i;
+					++Ilow_size;
 					PGmax_new = max(PGmax_new, yG_i);
 					PGmin_new = min(PGmin_new, yG_i);
 				}
 			}
 			if(sh_mode == SH_ON)
 			{
-				if(shrink || Iup_size <= 0 || Ilow_size <= 0)
+				if(Iup_size <= 0 || Ilow_size <= 0)
 					continue;
 			}
 			// inner CD
@@ -4720,6 +4747,7 @@ void Solver::bias_semigd2()
 						}
 					}
 					Gmax = -y[i]*yGmax; //recover from -yG to G
+
 					j = -1;
 					double yGmin = INF;
 					for(int s = 0; s < Ilow_size; s++)
@@ -4735,6 +4763,10 @@ void Solver::bias_semigd2()
 					Gmin = -y[j]*yGmin; //recover from -yG to G
 					if(i==j)
 						continue;
+					// i and j are indices to be updated
+					feature_node const * xi = prob->x[i];
+					feature_node const * xj = prob->x[j];
+
 					const schar yi = y[i];
 					if(yi == +1)
 						++nr_pos_y;
@@ -4745,10 +4777,6 @@ void Solver::bias_semigd2()
 						++nr_pos_y;
 					if(yj == -1)
 						++nr_neg_y;
-
-					// i and j are indices to be updated
-					feature_node const * xi = prob->x[i];
-					feature_node const * xj = prob->x[j];
 
 					G_i = Gmax;
 					G_j = Gmin;
@@ -5894,6 +5922,7 @@ void Solver::oneclass_semigd2()
 	double *IlowG = new double[smgd_size];
 	std::pair<double,double> *newalpha_ij = new std::pair<double,double>;
 	std::vector<int> workset_s(smgd_size);
+	std::vector<int>::iterator workset_last;
 
 	if(isnan(PGmax_old))
 		PGmax_old = INF;
@@ -5921,7 +5950,6 @@ void Solver::oneclass_semigd2()
 		n_exchange = 0;
 		for(int cycle_i = 0; cycle_i < active_size; cycle_i+=smgd_size)
 		{
-			std::vector<int>::iterator workset_last;
 			if(rand_mode == CYCLIC)
 			{
 				for(int s = 0; s < smgd_size; s++)
@@ -6005,7 +6033,7 @@ void Solver::oneclass_semigd2()
 					}
 					PGmin_new = min(PGmin_new, -G_i);
 				}
-				else
+				else //both Iup and Ilow
 				{
 					Iup[Iup_size] = si;
 					IupG[Iup_size] = G_i;
@@ -6041,6 +6069,7 @@ void Solver::oneclass_semigd2()
 							i = si;
 						}
 					}
+
 					j = -1;
 					Gmin = -INF; // Gmin has minimum -yG
 					for(int s = 0; s < Ilow_size; s++)
