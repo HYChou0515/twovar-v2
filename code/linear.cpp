@@ -1040,8 +1040,7 @@ public:
 	void bias_semigd2();
 	void bias_random();
 	//oneclass_update
-	void oneclass_random_shrink();
-	void oneclass_random_1000();
+	void oneclass_random();
 	void oneclass_first_1000();
 	void oneclass_second_1000();
 	void oneclass_semigd();
@@ -5377,13 +5376,15 @@ void Solver::bias_random()
 	delete [] alpha_status;
 }
 
-void Solver::oneclass_random_shrink()
+void Solver::oneclass_random()
 {
 	clock_t start;
 	int l = prob->l;
 	int i, j;
 	double G_i, G_j;
 	enum {LOWER_BOUND, UPPER_BOUND, FREE};
+	std::pair<double,double> *newalpha_ij = new std::pair<double,double>;
+
 	if(isnan(Gmax_old))
 		Gmax_old = INF;
 	if(isnan(Gmin_old))
@@ -5441,317 +5442,112 @@ void Solver::oneclass_random_shrink()
 			double Q_ij = 0;
 			sparse_operator::dot_three(&Q_ij, &G_i, &G_j, xi, xj, w);
 
-			int alp_st = alpha_status[i];
-			bool shrink = false;
-			if(alp_st == LOWER_BOUND)
+			if(sh_mode == SH_ON)
 			{
-				if(-G_i < Gmin_old)
+				int alp_st = alpha_status[i];
+				bool shrink = false;
+				if(alp_st == LOWER_BOUND)
 				{
-					//shrink
-					active_size--;
-					swap(index[si], index[active_size]);
-					shrink = true;
-				}
-				else
-					Gmax = max(-G_i, Gmax);
-			}
-			else if (alp_st == UPPER_BOUND)
-			{
-				if(-G_i > Gmax_old)
-				{
-					//shrink
-					active_size--;
-					swap(index[si], index[active_size]);
-					shrink = true;
-				}
-				else
-					Gmin = min(-G_i, Gmin);
-			}
-			else
-			{
-				Gmax = max(-G_i, Gmax);
-				Gmin = min(-G_i, Gmin);
-			}
-
-			alp_st = alpha_status[j];
-			if(alp_st == LOWER_BOUND)
-			{
-				if(-G_j < Gmin_old)
-				{
-					//shrink
-					active_size--;
-					swap(index[sj], index[active_size]);
-					shrink = true;
-				}
-				Gmax = max(-G_j, Gmax);
-			}
-			else if (alp_st == UPPER_BOUND)
-			{
-				if(-G_j > Gmax_old)
-				{
-					//shrink
-					active_size--;
-					swap(index[sj], index[active_size]);
-					shrink = true;
-				}
-				Gmin = min(-G_j, Gmin);
-			}
-			else
-			{
-				Gmax = max(-G_j, Gmax);
-				Gmin = min(-G_j, Gmin);
-			}
-			if(shrink)
-				continue;
-			xi = prob->x[i];
-			xj = prob->x[j];
-
-			double C_i = upper_bound[2];
-			double C_j = upper_bound[2];
-
-			double old_alpha_i = alpha[i];
-			double old_alpha_j = alpha[j];
-
-			double quad_coef = QD[i] + QD[j] - 2*Q_ij;
-			if(quad_coef <= 0)
-				quad_coef = 1e-12;
-			double delta = (G_i-G_j)/quad_coef;
-			double sum = alpha[i] +alpha[j];
-			alpha[i] -= delta;
-			alpha[j] += delta;
-			if(sum > C_i)
-			{
-				if(alpha[i] > C_i)
-				{
-					alpha[i] = C_i;
-					alpha[j] = sum -C_i;
-				}
-			}
-			else
-			{
-				if(alpha[j] < 0)
-				{
-					alpha[j] = 0;
-					alpha[i] = sum;
-				}
-			}
-			if(sum > C_j)
-			{
-				if(alpha[j] > C_j)
-				{
-					alpha[j] = C_j;
-					alpha[i] = sum -C_j;
-				}
-			}
-			else
-			{
-				if(alpha[i] < 0)
-				{
-					alpha[i] = 0;
-					alpha[j] = sum;
-				}
-			}
-			update_size+=2;
-			// update alpha status and w
-			if(fabs(alpha[i]-old_alpha_i) > 1e-16)
-			{
-				success_size+=2;
-				if(fabs(alpha[i]-old_alpha_i) == upper_bound[2])
-					n_exchange++;
-				sparse_operator::axpy(alpha[i]-old_alpha_i, prob->x[i], w);
-				sparse_operator::axpy(alpha[j]-old_alpha_j, prob->x[j], w);
-				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[2]);
-				alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[2]);
-			}
-			else
-			{
-				alpha[i] = old_alpha_i;
-				alpha[j] = old_alpha_j;
-			}
-		}
-		iter++;
-		duration += clock() - start;
-		log_message();
-		if(Gmax-Gmin< eps)
-		{
-			if(active_size == l)
-				break;
-			else
-			{
-				active_size = l;
-				Gmax_old = INF;
-				Gmin_old = -INF;
-			}
-		}
-		else
-		{
-			Gmax_old = Gmax;
-			Gmin_old = Gmin;
-		}
-		save_resume();
-		EXIT_IF_TIMEOUT();
-		EXIT_IF_OVER_CDSTEPS();
-		EXIT_IF_OPTIMAL(last_obj);
-	}
-	summary();
-}
-
-void Solver::oneclass_random_1000()
-{
-	clock_t start;
-	int i, j;
-	double G_i, G_j;
-	enum {LOWER_BOUND, UPPER_BOUND, FREE};
-
-	while(iter < max_iter)
-	{
-		start = clock();
-		success_size = 0;
-		n_exchange = 0;
-		update_size = 0;
-
-		if(rand_mode == CYCLIC)
-		{
-			for (i=0; i<active_size; i++)
-			{
-				j = i+non_static_rand()%(active_size-i);
-				swap(index[i], index[j]);
-			}
-		}
-		for(int index_i = 0; index_i+1<active_size; index_i+=2)
-		{
-			if(rand_mode == RANDOM)
-			{
-				i = non_static_rand()%active_size;
-				j = non_static_rand()%active_size;
-				while(i==j)
-				{
-					j = non_static_rand()%active_size;
-				}
-				i = index[i];
-				j = index[j];
-			}
-			else if(rand_mode == CYCLIC)
-			{
-				i = index[index_i];
-				j = index[index_i+1];
-			}
-			else
-			{
-				fprintf(stderr, "random mode not specified\n");
-				return;
-			}
-
-			feature_node const * xi = prob->x[i];
-			feature_node const * xj = prob->x[j];
-
-			double Q_ij = 0;
-			G_i = 0;
-			G_j = 0;
-			while(xi->index != -1 && xj->index != -1)
-			{
-				if(xi->index == xj->index)
-				{
-					Q_ij += xi->value * xj->value;
-					G_i += xi->value * w[xi->index-1];
-					G_j += xj->value * w[xj->index-1];
-					++xi;
-					++xj;
-				}
-				else
-				{
-					if(xi->index > xj->index)
+					if(-G_i < Gmin_old)
 					{
-						G_j += xj->value * w[xj->index-1];
-						++xj;
+						//shrink
+						active_size--;
+						swap(index[si], index[active_size]);
+						shrink = true;
 					}
 					else
+						Gmax = max(-G_i, Gmax);
+				}
+				else if (alp_st == UPPER_BOUND)
+				{
+					if(-G_i > Gmax_old)
 					{
-						G_i += xi->value * w[xi->index-1];
-						++xi;
+						//shrink
+						active_size--;
+						swap(index[si], index[active_size]);
+						shrink = true;
 					}
+					else
+						Gmin = min(-G_i, Gmin);
 				}
-			}
-			while(xi->index != -1)
-			{
-				G_i += xi->value * w[xi->index-1];
-				++xi;
-			}
-			while(xj->index != -1)
-			{
-				G_j += xj->value * w[xj->index-1];
-				++xj;
+				else
+				{
+					Gmax = max(-G_i, Gmax);
+					Gmin = min(-G_i, Gmin);
+				}
+
+				alp_st = alpha_status[j];
+				if(alp_st == LOWER_BOUND)
+				{
+					if(-G_j < Gmin_old)
+					{
+						//shrink
+						active_size--;
+						swap(index[sj], index[active_size]);
+						shrink = true;
+					}
+					Gmax = max(-G_j, Gmax);
+				}
+				else if (alp_st == UPPER_BOUND)
+				{
+					if(-G_j > Gmax_old)
+					{
+						//shrink
+						active_size--;
+						swap(index[sj], index[active_size]);
+						shrink = true;
+					}
+					Gmin = min(-G_j, Gmin);
+				}
+				else
+				{
+					Gmax = max(-G_j, Gmax);
+					Gmin = min(-G_j, Gmin);
+				}
+				if(shrink)
+					continue;
 			}
 
-			xi = prob->x[i];
-			xj = prob->x[j];
+			calculate_bias_newalpha(newalpha_ij, QD[i],QD[j],Q_ij,
+					upper_bound[2],upper_bound[2],alpha[i],alpha[j],G_i,G_j,+1,+1);
 
-			double C_i = upper_bound[2];
-			double C_j = upper_bound[2];
-
-			double old_alpha_i = alpha[i];
-			double old_alpha_j = alpha[j];
-
-			double quad_coef = QD[i] + QD[j] - 2*Q_ij;
-			if(quad_coef <= 0)
-				quad_coef = 1e-12;
-			double delta = (G_i-G_j)/quad_coef;
-			double sum = alpha[i] +alpha[j];
-			alpha[i] -= delta;
-			alpha[j] += delta;
-			if(sum > C_i)
-			{
-				if(alpha[i] > C_i)
-				{
-					alpha[i] = C_i;
-					alpha[j] = sum -C_i;
-				}
-			}
-			else
-			{
-				if(alpha[j] < 0)
-				{
-					alpha[j] = 0;
-					alpha[i] = sum;
-				}
-			}
-			if(sum > C_j)
-			{
-				if(alpha[j] > C_j)
-				{
-					alpha[j] = C_j;
-					alpha[i] = sum -C_j;
-				}
-			}
-			else
-			{
-				if(alpha[i] < 0)
-				{
-					alpha[i] = 0;
-					alpha[j] = sum;
-				}
-			}
-			update_size+=2;
 			// update alpha status and w
-			if(fabs(alpha[i]-old_alpha_i) > 1e-16)
+			update_size+=2;
+			if(fabs(newalpha_ij->first-alpha[i]) > 1e-16)
 			{
 				success_size+=2;
-				if(fabs(alpha[i]-old_alpha_i) == upper_bound[2])
+				if(fabs(newalpha_ij->first-alpha[i]) == upper_bound[2])
 					n_exchange++;
-				sparse_operator::axpy(alpha[i]-old_alpha_i, prob->x[i], w);
-				sparse_operator::axpy(alpha[j]-old_alpha_j, prob->x[j], w);
+				sparse_operator::axpy(newalpha_ij->first-alpha[i], prob->x[i], w);
+				sparse_operator::axpy(newalpha_ij->second-alpha[j], prob->x[j], w);
+				alpha[i] = newalpha_ij->first;
+				alpha[j] = newalpha_ij->second;
 				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[2]);
 				alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[2]);
-			}
-			else
-			{
-				alpha[i] = old_alpha_i;
-				alpha[j] = old_alpha_j;
 			}
 		}
 		iter++;
 		duration += clock() - start;
 		log_message();
+		if(sh_mode == SH_ON)
+		{
+			if(Gmax-Gmin< eps)
+			{
+				if(active_size == l)
+					break;
+				else
+				{
+					active_size = l;
+					Gmax_old = INF;
+					Gmin_old = -INF;
+				}
+			}
+			else
+			{
+				Gmax_old = Gmax;
+				Gmin_old = Gmin;
+			}
+		}
 		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OVER_CDSTEPS();
@@ -6661,19 +6457,23 @@ static void oneclass_update(
 	{
 		case ONECLASS_L1_RD_1000:
 			solver.rand_mode = Solver::RANDOM;
-			solver.oneclass_random_1000();
+			solver.sh_mode = Solver::SH_OFF;
+			solver.oneclass_random();
 			break;
 		case ONECLASS_L1_RD_SH:
 			solver.rand_mode = Solver::RANDOM;
-			solver.oneclass_random_shrink();
+			solver.sh_mode = Solver::SH_ON;
+			solver.oneclass_random();
 			break;
 		case ONECLASS_L1_CY_1000:
 			solver.rand_mode = Solver::CYCLIC;
-			solver.oneclass_random_1000();
+			solver.sh_mode = Solver::SH_OFF;
+			solver.oneclass_random();
 			break;
 		case ONECLASS_L1_CY_SH:
 			solver.rand_mode = Solver::CYCLIC;
-			solver.oneclass_random_shrink();
+			solver.sh_mode = Solver::SH_ON;
+			solver.oneclass_random();
 			break;
 		case ONECLASS_L1_FIRST_1000:
 			solver.oneclass_first_1000();
