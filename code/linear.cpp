@@ -5424,7 +5424,7 @@ void Solver::oneclass_random()
 				swap(index[i], index[j]);
 			}
 		}
-		for(int index_i = 0; index_i+1<active_size; index_i+=2)
+		for(int index_i = 0; index_i<active_size; index_i+=2)
 		{
 			int si;
 			int sj;
@@ -5440,7 +5440,7 @@ void Solver::oneclass_random()
 			else if(rand_mode == CYCLIC)
 			{
 				si = index_i;
-				sj = index_i+1;
+				sj = (index_i+1)%active_size;
 			}
 			else
 			{
@@ -5900,16 +5900,14 @@ void Solver::oneclass_semigd2()
 	if(isnan(PGmin_old))
 		PGmin_old = -INF;
 
+
 	while(iter < max_iter)
 	{
 		start = clock();
-		success_size = 0;
-		n_exchange = 0;
 		PGmax_new = -INF;
 		PGmin_new = INF;
 
 		smgd_size = adjust_smgd_size();
-
 		if(rand_mode == CYCLIC)
 		{
 			for (i=0; i<active_size; i++)
@@ -5919,42 +5917,59 @@ void Solver::oneclass_semigd2()
 			}
 		}
 		update_size = 0;
-		for(int cycle_i = 0; cycle_i+smgd_size-1 < active_size; cycle_i+=smgd_size)
+		success_size = 0;
+		n_exchange = 0;
+		for(int cycle_i = 0; cycle_i < active_size; cycle_i+=smgd_size)
 		{
+			std::vector<int>::iterator workset_last;
 			if(rand_mode == CYCLIC)
 			{
 				for(int s = 0; s < smgd_size; s++)
-					workset_s[s] = cycle_i+s;
+				{
+					if(cycle_i+s >= active_size)
+					{
+						smgd_size = s;
+						break;
+					}
+					workset_s[smgd_size-s-1] = cycle_i+s;
+				}
+				workset_last = workset_s.begin()+smgd_size;
 			}
-			if(rand_mode == RANDOM)
+			else if(rand_mode == RANDOM)
 			{
 				for(int s = 0; s < smgd_size; s++)
 					workset_s[s] = non_static_rand()%active_size;
+				std::sort(workset_s.begin(), workset_s.begin()+smgd_size, std::greater<int>());
+				workset_last = std::unique(workset_s.begin(), workset_s.begin()+smgd_size);
 			}
-			std::sort(workset_s.begin(), workset_s.begin()+smgd_size, std::greater<int>());
-			auto last = std::unique(workset_s.begin(), workset_s.begin()+smgd_size);
-			Iup_size = 0;
-			Ilow_size = 0;
-			for(auto it=workset_s.begin(); it!=last; ++it)
+			else
 			{
-				int si = *it;
-				i = index[si];
-				if( alpha_status[i] != LOWER_BOUND )
-					Ilow[Ilow_size++] = si;
-				if( alpha_status[i] != UPPER_BOUND )
-					Iup[Iup_size++] = si;
+				fprintf(stderr, "random mode not specified\n");
+				return;
 			}
 			if(sh_mode == SH_OFF)
 			{
 				// when don't shrinking, this can prevent gradient calculation
 				// when shrinking, we must do gradient calculation to shrink
+				Iup_size = 0;
+				Ilow_size = 0;
+				for(auto it=workset_s.begin(); it!=workset_last; ++it)
+				{
+					int si = *it;
+					i = index[si];
+					if( is_Ilow(alpha_status[i]) )
+						++Ilow_size;
+					if( is_Iup(alpha_status[i]) )
+						++Iup_size;
+				}
 				if(Iup_size <= 0 || Ilow_size <= 0)
 					continue;
 			}
-			bool shrink = false;
 			Iup_size = 0;
 			Ilow_size = 0;
-			for(auto it=workset_s.begin(); it!=last; ++it)
+			// as some variables may be shrunk, 
+			// we re-determine Iup and Ilow
+			for(auto it=workset_s.begin(); it!=workset_last; ++it)
 			{
 				int si = *it;
 				i = index[si];
@@ -5962,37 +5977,49 @@ void Solver::oneclass_semigd2()
 				G_i = sparse_operator::dot(w, xi);
 				if( !is_Ilow(alpha_status[i]) )
 				{
-					IupG[Iup_size++] = G_i;
 					if(-G_i < PGmin_old)
 					{
 						active_size--;
 						swap(index[si], index[active_size]);
-						shrink = true;
+					}
+					else
+					{
+						Iup[Iup_size] = si;
+						IupG[Iup_size] = G_i;
+						++Iup_size;
 					}
 					PGmax_new = max(PGmax_new, -G_i);
 				}
 				else if( !is_Iup(alpha_status[i]) )
 				{
-					IlowG[Ilow_size++] = G_i;
 					if(-G_i > PGmax_old)
 					{
 						active_size--;
 						swap(index[si], index[active_size]);
-						shrink = true;
+					}
+					else
+					{
+						Ilow[Ilow_size] = si;
+						IlowG[Ilow_size] = G_i;
+						++Ilow_size;
 					}
 					PGmin_new = min(PGmin_new, -G_i);
 				}
 				else
 				{
-					IupG[Iup_size++] = G_i;
-					IlowG[Ilow_size++] = G_i;
+					Iup[Iup_size] = si;
+					IupG[Iup_size] = G_i;
+					++Iup_size;
+					Ilow[Ilow_size] = si;
+					IlowG[Ilow_size] = G_i;
+					++Ilow_size;
 					PGmax_new = max(PGmax_new, -G_i);
 					PGmin_new = min(PGmin_new, -G_i);
 				}
 			}
 			if(sh_mode == SH_ON)
 			{
-				if(shrink || Iup_size <= 0 || Ilow_size <= 0)
+				if(Iup_size <= 0 || Ilow_size <= 0)
 					continue;
 			}
 			// inner CD
