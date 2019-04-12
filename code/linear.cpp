@@ -1038,8 +1038,7 @@ public:
 	//two_bias_update
 	void bias_semigd();
 	void bias_semigd2();
-	void bias_random_shrink();
-	void bias_random_1000();
+	void bias_random();
 	//oneclass_update
 	void oneclass_random_shrink();
 	void oneclass_random_1000();
@@ -4813,7 +4812,7 @@ void Solver::bias_semigd2()
 		log_message();
 		if(sh_mode == SH_ON)
 		{
-			if(PGmax_new - PGmin_new <= eps && iter > 1)
+			if(PGmax_new - PGmin_new <= eps)
 			{
 				if(active_size == l)
 					break;
@@ -5192,13 +5191,15 @@ void Solver::bias_semigd()
 	delete [] alpha_status;
 }
 
-void Solver::bias_random_shrink()
+void Solver::bias_random()
 {
 	int l = prob->l;
 	int i, j;
 	double G_i, G_j;
 	enum {LOWER_BOUND, UPPER_BOUND, FREE};
 	clock_t start;
+	std::pair<double,double> *newalpha_ij = new std::pair<double,double>;
+
 	if(isnan(PGmax_old))
 		PGmax_old = INF;
 	if(isnan(PGmin_old))
@@ -5256,441 +5257,117 @@ void Solver::bias_random_shrink()
 			double C_j = upper_bound[GETI(j)];
 
 			double Q_ij = 0;
-			G_i = 0;
-			G_j = 0;
-			while(xi->index != -1 && xj->index != -1)
-			{
-				if(xi->index == xj->index)
-				{
-					Q_ij += xi->value * xj->value;
-					G_i += xi->value * w[xi->index-1];
-					G_j += xj->value * w[xj->index-1];
-					++xi;
-					++xj;
-				}
-				else
-				{
-					if(xi->index > xj->index)
-					{
-						G_j += xj->value * w[xj->index-1];
-						++xj;
-					}
-					else
-					{
-						G_i += xi->value * w[xi->index-1];
-						++xi;
-					}
-				}
-			}
-			while(xi->index != -1)
-			{
-				G_i += xi->value * w[xi->index-1];
-				++xi;
-			}
-			while(xj->index != -1)
-			{
-				G_j += xj->value * w[xj->index-1];
-				++xj;
-			}
-			xi = prob->x[i];
-			xj = prob->x[j];
+			sparse_operator::dot_three(&Q_ij, &G_i, &G_j, xi, xj, w);
 			G_i = yi*G_i -1 +alpha[i]*diag[GETI(i)];
 			G_j = yj*G_j -1 +alpha[j]*diag[GETI(j)];
 			Q_ij = yi * yj * Q_ij;
-			double yG_i = -yi * G_i;
-			double yG_j = -yj * G_j;
-			bool to_be_shrunk = false;
-			//shrink
-			if( (alpha_status[i] == UPPER_BOUND && yi == +1) ||
-				(alpha_status[i] == LOWER_BOUND && yi == -1) )
+
+			if(sh_mode == SH_ON)
 			{
-				if(yG_i > PGmax_old)
+				double yG_i = -yi * G_i;
+				double yG_j = -yj * G_j;
+
+				bool to_be_shrunk = false;
+				if( (alpha_status[i] == UPPER_BOUND && yi == +1) ||
+					(alpha_status[i] == LOWER_BOUND && yi == -1) )
 				{
-					active_size--;
-					swap(index[si], index[active_size]);
-					to_be_shrunk = true;
+					if(yG_i > PGmax_old)
+					{
+						active_size--;
+						swap(index[si], index[active_size]);
+						to_be_shrunk = true;
+					}
+					else
+						PGmin_new = min(PGmin_new, yG_i);
+				}
+				else if( (alpha_status[i] == UPPER_BOUND && yi == -1) ||
+					(alpha_status[i] == LOWER_BOUND && yi == +1) )
+				{
+					if(yG_i < PGmin_old)
+					{
+						active_size--;
+						swap(index[si], index[active_size]);
+						to_be_shrunk = true;
+					}
+					else
+						PGmax_new = max(PGmax_new, yG_i);
 				}
 				else
-					PGmin_new = min(PGmin_new, yG_i);
-			}
-			else if( (alpha_status[i] == UPPER_BOUND && yi == -1) ||
-				(alpha_status[i] == LOWER_BOUND && yi == +1) )
-			{
-				if(yG_i < PGmin_old)
 				{
-					active_size--;
-					swap(index[si], index[active_size]);
-					to_be_shrunk = true;
-				}
-				else
 					PGmax_new = max(PGmax_new, yG_i);
-			}
-			else
-			{
-				PGmax_new = max(PGmax_new, yG_i);
-				PGmin_new = min(PGmin_new, yG_i);
-			}
-			if( (alpha_status[j] == UPPER_BOUND && yj == +1) ||
-				(alpha_status[j] == LOWER_BOUND && yj == -1) )
-			{
-				if(yG_j > PGmax_old)
-				{
-					active_size--;
-					swap(index[sj], index[active_size]);
-					to_be_shrunk = true;
+					PGmin_new = min(PGmin_new, yG_i);
 				}
-				else
-					PGmin_new = min(PGmin_new, yG_j);
-			}
-			else if( (alpha_status[j] == UPPER_BOUND && yj == -1) ||
-				(alpha_status[j] == LOWER_BOUND && yj == +1) )
-			{
-				if(yG_j < PGmin_old)
+				if( (alpha_status[j] == UPPER_BOUND && yj == +1) ||
+					(alpha_status[j] == LOWER_BOUND && yj == -1) )
 				{
-					active_size--;
-					swap(index[sj], index[active_size]);
-					to_be_shrunk = true;
-				}
-				else
-					PGmax_new = max(PGmax_new, yG_j);
-			}
-			else
-			{
-				PGmax_new = max(PGmax_new, yG_j);
-				PGmin_new = min(PGmin_new, yG_j);
-			}
-			if(to_be_shrunk)
-				continue;
-
-			double old_alpha_i = alpha[i];
-			double old_alpha_j = alpha[j];
-
-			if(y[i] == y[j])
-			{
-				double quad_coef = QD[i] + QD[j] - 2*Q_ij;
-				if(quad_coef <= 0)
-					quad_coef = 1e-12;
-				double delta = (G_i-G_j)/quad_coef;
-				double sum = alpha[i] + alpha[j];
-				alpha[i] -= delta;
-				alpha[j] += delta;
-
-				if(sum > C_i)
-				{
-					if(alpha[i] > C_i)
+					if(yG_j > PGmax_old)
 					{
-						alpha[i] = C_i;
-						alpha[j] = sum -C_i;
-					}
-				}
-				else
-				{
-					if(alpha[j] < 0)
-					{
-						alpha[j] = 0;
-						alpha[i] = sum;
-					}
-				}
-				if(sum > C_j)
-				{
-					if(alpha[j] > C_j)
-					{
-						alpha[j] = C_j;
-						alpha[i] = sum -C_j;
-					}
-				}
-				else
-				{
-					if(alpha[i] < 0)
-					{
-						alpha[i] = 0;
-						alpha[j] = sum;
-					}
-				}
-			}
-			else
-			{
-				double quad_coef = QD[i] + QD[j] + 2*Q_ij;
-				if(quad_coef <= 0)
-					quad_coef = 1e-12;
-				double delta = (-G_i-G_j)/quad_coef;
-				double diff = alpha[i] - alpha[j];
-				alpha[i] += delta;
-				alpha[j] += delta;
-				if(diff > 0)
-				{
-					if(alpha[j] < 0)
-					{
-						alpha[j] = 0;
-						alpha[i] = diff;
-					}
-				}
-				else
-				{
-					if(alpha[i] < 0)
-					{
-						alpha[i] = 0;
-						alpha[j] = -diff;
-					}
-				}
-				if(diff > C_i - C_j)
-				{
-					if(alpha[i] > C_i)
-					{
-						alpha[i] = C_i;
-						alpha[j] = C_i - diff;
-					}
-				}
-				else
-				{
-					if(alpha[j] > C_j)
-					{
-						alpha[j] = C_j;
-						alpha[i] = C_j + diff;
-					}
-				}
-			}
-
-			update_size+=2;
-			// update alpha status and w
-			if(fabs(alpha[i]-old_alpha_i) > 1e-16)
-			{
-				success_size+=2;
-				sparse_operator::axpy(y[i]*(alpha[i]-old_alpha_i), prob->x[i], w);
-				sparse_operator::axpy(y[j]*(alpha[j]-old_alpha_j), prob->x[j], w);
-				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[GETI(i)]);
-				alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[GETI(j)]);
-			}
-			else
-			{
-				alpha[i] = old_alpha_i;
-				alpha[j] = old_alpha_j;
-			}
-		}
-		if(PGmax_new - PGmin_new <= eps)
-		{
-			if(active_size == l)
-				break;
-			else
-			{
-				active_size = l;
-				PGmax_old = INF;
-				PGmin_old = -INF;
-				continue;
-			}
-		}
-		PGmax_old = PGmax_new;
-		PGmin_old = PGmin_new;
-		iter++;
-		duration += clock() - start;
-		log_message();
-		save_resume();
-		EXIT_IF_TIMEOUT();
-		EXIT_IF_OVER_CDSTEPS();
-		EXIT_IF_OPTIMAL(last_obj);
-	}
-	summary();
-	delete [] alpha_status;
-}
-
-void Solver::bias_random_1000()
-{
-	int i, j;
-	double G_i, G_j;
-	enum {LOWER_BOUND, UPPER_BOUND, FREE};
-	clock_t start;
-	while(iter < max_iter)
-	{
-		start = clock();
-		success_size = 0;
-		update_size = 0;
-
-		if(rand_mode == CYCLIC)
-		{
-			for (i=0; i<active_size; i++)
-			{
-				j = i+non_static_rand()%(active_size-i);
-				swap(index[i], index[j]);
-			}
-		}
-		for(int si = 0; si+1 < active_size; si+=2)
-		{
-			if(rand_mode == RANDOM)
-			{
-				i = non_static_rand()%active_size;
-				j = non_static_rand()%active_size;
-				while(i==j)
-				{
-					j = non_static_rand()%active_size;
-				}
-			}
-			else if(rand_mode == CYCLIC)
-			{
-				i = index[si];
-				j = index[si+1];
-			}
-			else
-			{
-				fprintf(stderr, "random mode not specified\n");
-				return;
-			}
-
-			feature_node const * xi = prob->x[i];
-			feature_node const * xj = prob->x[j];
-
-			const schar yi = y[i];
-			const schar yj = y[j];
-			double C_i = upper_bound[GETI(i)];
-			double C_j = upper_bound[GETI(j)];
-
-			double Q_ij = 0;
-			G_i = 0;
-			G_j = 0;
-			while(xi->index != -1 && xj->index != -1)
-			{
-				if(xi->index == xj->index)
-				{
-					Q_ij += xi->value * xj->value;
-					G_i += xi->value * w[xi->index-1];
-					G_j += xj->value * w[xj->index-1];
-					++xi;
-					++xj;
-				}
-				else
-				{
-					if(xi->index > xj->index)
-					{
-						G_j += xj->value * w[xj->index-1];
-						++xj;
+						active_size--;
+						swap(index[sj], index[active_size]);
+						to_be_shrunk = true;
 					}
 					else
-					{
-						G_i += xi->value * w[xi->index-1];
-						++xi;
-					}
+						PGmin_new = min(PGmin_new, yG_j);
 				}
+				else if( (alpha_status[j] == UPPER_BOUND && yj == -1) ||
+					(alpha_status[j] == LOWER_BOUND && yj == +1) )
+				{
+					if(yG_j < PGmin_old)
+					{
+						active_size--;
+						swap(index[sj], index[active_size]);
+						to_be_shrunk = true;
+					}
+					else
+						PGmax_new = max(PGmax_new, yG_j);
+				}
+				else
+				{
+					PGmax_new = max(PGmax_new, yG_j);
+					PGmin_new = min(PGmin_new, yG_j);
+				}
+				if(to_be_shrunk)
+					continue;
 			}
-			while(xi->index != -1)
-			{
-				G_i += xi->value * w[xi->index-1];
-				++xi;
-			}
-			while(xj->index != -1)
-			{
-				G_j += xj->value * w[xj->index-1];
-				++xj;
-			}
-			G_i = yi*G_i -1 +alpha[i]*diag[GETI(i)];
-			G_j = yj*G_j -1 +alpha[j]*diag[GETI(j)];
-			Q_ij = yi * yj * Q_ij;
 
-			double old_alpha_i = alpha[i];
-			double old_alpha_j = alpha[j];
+			calculate_bias_newalpha(newalpha_ij, QD[i],QD[j],Q_ij,
+					C_i,C_j,alpha[i],alpha[j],G_i,G_j,yi,yj);
 
-			if(y[i] == y[j])
-			{
-				double quad_coef = QD[i] + QD[j] - 2*Q_ij;
-				if(quad_coef <= 0)
-					quad_coef = 1e-12;
-				double delta = (G_i-G_j)/quad_coef;
-				double sum = alpha[i] + alpha[j];
-				alpha[i] -= delta;
-				alpha[j] += delta;
-
-				if(sum > C_i)
-				{
-					if(alpha[i] > C_i)
-					{
-						alpha[i] = C_i;
-						alpha[j] = sum -C_i;
-					}
-				}
-				else
-				{
-					if(alpha[j] < 0)
-					{
-						alpha[j] = 0;
-						alpha[i] = sum;
-					}
-				}
-				if(sum > C_j)
-				{
-					if(alpha[j] > C_j)
-					{
-						alpha[j] = C_j;
-						alpha[i] = sum -C_j;
-					}
-				}
-				else
-				{
-					if(alpha[i] < 0)
-					{
-						alpha[i] = 0;
-						alpha[j] = sum;
-					}
-				}
-			}
-			else
-			{
-				double quad_coef = QD[i] + QD[j] + 2*Q_ij;
-				if(quad_coef <= 0)
-					quad_coef = 1e-12;
-				double delta = (-G_i-G_j)/quad_coef;
-				double diff = alpha[i] - alpha[j];
-				alpha[i] += delta;
-				alpha[j] += delta;
-				if(diff > 0)
-				{
-					if(alpha[j] < 0)
-					{
-						alpha[j] = 0;
-						alpha[i] = diff;
-					}
-				}
-				else
-				{
-					if(alpha[i] < 0)
-					{
-						alpha[i] = 0;
-						alpha[j] = -diff;
-					}
-				}
-				if(diff > C_i - C_j)
-				{
-					if(alpha[i] > C_i)
-					{
-						alpha[i] = C_i;
-						alpha[j] = C_i - diff;
-					}
-				}
-				else
-				{
-					if(alpha[j] > C_j)
-					{
-						alpha[j] = C_j;
-						alpha[i] = C_j + diff;
-					}
-				}
-			}
 			update_size+=2;
 			// update alpha status and w
-			if(fabs(alpha[i]-old_alpha_i) > 1e-16)
+			if(fabs(newalpha_ij->first-alpha[i]) > 1e-16)
 			{
 				success_size+=2;
-				sparse_operator::axpy(y[i]*(alpha[i]-old_alpha_i), prob->x[i], w);
-				sparse_operator::axpy(y[j]*(alpha[j]-old_alpha_j), prob->x[j], w);
+				sparse_operator::axpy(y[i]*(newalpha_ij->first-alpha[i]), prob->x[i], w);
+				sparse_operator::axpy(y[j]*(newalpha_ij->second-alpha[j]), prob->x[j], w);
+				alpha[i] = newalpha_ij->first;
+				alpha[j] = newalpha_ij->second;
 				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[GETI(i)]);
 				alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[GETI(j)]);
-			}
-			else
-			{
-				alpha[i] = old_alpha_i;
-				alpha[j] = old_alpha_j;
 			}
 		}
 		iter++;
 		duration += clock() - start;
 		log_message();
+		if(sh_mode == SH_ON)
+		{
+			if(PGmax_new - PGmin_new <= eps)
+			{
+				if(active_size == l)
+					break;
+				else
+				{
+					active_size = l;
+					PGmax_old = INF;
+					PGmin_old = -INF;
+				}
+			}
+			else
+			{
+				PGmax_old = PGmax_new;
+				PGmin_old = PGmin_new;
+			}
+		}
 		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OVER_CDSTEPS();
@@ -6608,7 +6285,7 @@ void Solver::oneclass_semigd2()
 		log_message();
 		if(sh_mode == SH_ON)
 		{
-			if(PGmax_new - PGmin_new <= eps && iter > 1)
+			if(PGmax_new - PGmin_new <= eps)
 			{
 				if(active_size == l)
 					break;
@@ -7177,28 +6854,32 @@ static void two_bias_update(
 		case BIAS_L2_RD_1000:
 		{
 			solver.rand_mode = Solver::RANDOM;
-			solver.bias_random_1000();
+			solver.sh_mode = Solver::SH_OFF;
+			solver.bias_random();
 			break;
 		}
 		case BIAS_L1_RD_SH:
 		case BIAS_L2_RD_SH:
 		{
 			solver.rand_mode = Solver::RANDOM;
-			solver.bias_random_shrink();
+			solver.sh_mode = Solver::SH_ON;
+			solver.bias_random();
 			break;
 		}
 		case BIAS_L1_CY_1000:
 		case BIAS_L2_CY_1000:
 		{
 			solver.rand_mode = Solver::CYCLIC;
-			solver.bias_random_1000();
+			solver.sh_mode = Solver::SH_OFF;
+			solver.bias_random();
 			break;
 		}
 		case BIAS_L1_CY_SH:
 		case BIAS_L2_CY_SH:
 		{
 			solver.rand_mode = Solver::CYCLIC;
-			solver.bias_random_shrink();
+			solver.sh_mode = Solver::SH_ON;
+			solver.bias_random();
 			break;
 		}
 		case BIAS_L1_SEMIGD_1000:
