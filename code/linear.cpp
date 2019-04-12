@@ -1532,7 +1532,7 @@ void Solver::save_resume()
 	//if(iter/10 <= resume_count)
 	//	return;
 	//resume_count = iter/10+1;
-	FILE* fp = fopen(_resume->fname, "a");
+	FILE* fp = fopen(_resume->fname, "w");
 	fprintf(fp, "iter\n%d\n", iter);
 	fprintf(fp, "duration\n%ju\n", (uintmax_t) duration);
 	fprintf(fp, "cdsteps\n%d\n", cdsteps);
@@ -5247,6 +5247,24 @@ void Solver::bias_random()
 			i = index[si];
 			j = index[sj];
 
+			if(sh_mode == SH_OFF)
+			{
+				// if both i,j are not Iup or not Ilow,
+				// then we don't need to calculate the gradient
+				// but if shrinking mode is on
+				// we still need calculate the gradient
+				if( ( (alpha_status[i] == UPPER_BOUND && y[i] == -1) ||
+					(alpha_status[i] == LOWER_BOUND && y[i] == +1) )&&
+				( (alpha_status[j] == UPPER_BOUND && y[j] == -1) ||
+					(alpha_status[j] == LOWER_BOUND && y[j] == +1) ) )
+					continue; // both i,j are not Ilow
+				if( ( (alpha_status[i] == UPPER_BOUND && y[i] == +1) ||
+					(alpha_status[i] == LOWER_BOUND && y[i] == -1) )&&
+				( (alpha_status[j] == UPPER_BOUND && y[j] == +1) ||
+					(alpha_status[j] == LOWER_BOUND && y[j] == -1) ) )
+					continue; // both i,j are not Iup
+			}
+
 			feature_node const * xi = prob->x[i];
 			feature_node const * xj = prob->x[j];
 
@@ -5435,6 +5453,20 @@ void Solver::oneclass_random()
 
 			i = index[si];
 			j = index[sj];
+
+			if(sh_mode == SH_OFF)
+			{
+				// if both i,j are not Iup or not Ilow,
+				// then we don't need to calculate the gradient
+				// but if shrinking mode is on
+				// we still need calculate the gradient
+				if( alpha_status[i] == LOWER_BOUND && 
+						alpha_status[j] == LOWER_BOUND )
+					continue; // both i,j are not Ilow
+				if( alpha_status[i] == UPPER_BOUND && 
+						alpha_status[j] == UPPER_BOUND )
+					continue; // both i,j are not Iup
+			}
 
 			feature_node const * xi = prob->x[i];
 			feature_node const * xj = prob->x[j];
