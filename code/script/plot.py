@@ -244,11 +244,7 @@ class CdPlotter(Plotter):
 		else:
 			subsyy = []
 		plt.yscale('log', subsy=subsyy, figure=self.fig)
-		if(min(min_ys) > 1.0e-2):
-			plt.tick_params(axis='y', which='minor', labelsize=14)
-			plt.gca().yaxis.set_minor_formatter(FuncFormatter(format_label))
-		else:
-			plt.gca().yaxis.set_major_locator(plt.LogLocator(numticks=7))
+		plt.gca().yaxis.set_major_locator(plt.LogLocator(numticks=7))
 		plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
 		plt.tick_params(axis='x', which='major', labelsize=20)
 		Plotter.setup_fig(self)
@@ -312,11 +308,7 @@ class TimePlotter(Plotter):
 		else:
 			subsyy = []
 		plt.yscale('log', subsy=subsyy, figure=self.fig)
-		if(min(min_ys) > 1.0e-2):
-			plt.tick_params(axis='y', which='minor', labelsize=14)
-			plt.gca().yaxis.set_minor_formatter(FuncFormatter(format_label))
-		else:
-			plt.gca().yaxis.set_major_locator(plt.LogLocator(numticks=7))
+		plt.gca().yaxis.set_major_locator(plt.LogLocator(numticks=7))
 		plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
 		plt.tick_params(axis='x', which='major', labelsize=20)
 		Plotter.setup_fig(self)

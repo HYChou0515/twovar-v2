@@ -177,7 +177,7 @@ def compress(filepath, filetmp, max_line):
 					'decr_rate': (DECR_RATE, float, lambda x: "%.3e "%x),
 					'actsize': (SUM, int, lambda x: "%d "%x),
 					'updsize': (SUM, int, lambda x: "%d "%x),
-					'sucpair': (SUM, int, lambda x: "%d "%x),
+					'sucsize': (SUM, int, lambda x: "%d "%x),
 					'sucs_rate': (SUCS_RATE, lambda s: float(s[:-1])/100, lambda x: "%.2f%% "%(100*x)),
 					'nSV': (EXACT, int, lambda x: "%d "%x),
 					'nBSV': (EXACT, int, lambda x: "%d "%x),
@@ -193,6 +193,7 @@ def compress(filepath, filetmp, max_line):
 					'alpha_diff': (SUM, float, lambda x: "%.16g "%x),
 					'nr_pos_y': (EXACT, int, lambda x: "%d "%x),
 					'nr_neg_y': (EXACT, int, lambda x: "%d "%x),
+					'cdsteps': (EXACT, int, lambda x: "%d "%x),
 			}
 			assert len(self.colnames) == len(self.column_type)
 			self.cols = [None] * len(self.colnames)
@@ -229,9 +230,12 @@ def compress(filepath, filetmp, max_line):
 						out_str += to_str((self.last_obj-this_obj)/ math.fabs(this_obj))
 						self.last_obj = this_obj
 					if t == SUCS_RATE:
-						sucpair = self.cols[self.colnames.index('sucpair')]
+						sucsize = self.cols[self.colnames.index('sucsize')]
 						updsize = self.cols[self.colnames.index('updsize')]
-						out_str += to_str(sucpair/updsize)
+						try:
+							out_str += to_str(sucsize/updsize)
+						except Exception:
+							out_str += to_str(float('nan'))
 				self.cols = [None] * len(self.colnames)
 				self.counter = 0
 				return out_str

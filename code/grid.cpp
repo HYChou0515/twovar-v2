@@ -134,23 +134,45 @@ void exit_with_help()
 	"BIAS_L1_SEMIGD_RAND_SH = 40312,\n"
 	"BIAS_L2_SEMIGD_RAND_1000 = 40321,\n"
 	"BIAS_L2_SEMIGD_RAND_SH = 40322,\n"
+	"BIAS_L1_SEMIGD_CY_FIRST_1000 = 40411,\n"
+	"BIAS_L1_SEMIGD_CY_FIRST_SH = 40412,\n"
+	"BIAS_L2_SEMIGD_CY_FIRST_1000 = 40421,\n"
+	"BIAS_L2_SEMIGD_CY_FIRST_SH = 40422,\n"
+	"BIAS_L1_SEMIGD_RD_FIRST_1000 = 40511,\n"
+	"BIAS_L1_SEMIGD_RD_FIRST_SH = 40512,\n"
+	"BIAS_L2_SEMIGD_RD_FIRST_1000 = 40521,\n"
+	"BIAS_L2_SEMIGD_RD_FIRST_SH = 40522,\n"
+	"BIAS_L1_CY_1000 = 40611,\n"
+	"BIAS_L1_CY_SH = 40612,\n"
+	"BIAS_L2_CY_1000 = 40621,\n"
+	"BIAS_L2_CY_SH = 40622,\n"
+	"BIAS_L1_SEMIGD_CY_DUALOBJ_1000 = 40711,\n"
+	"BIAS_L1_SEMIGD_CY_DUALOBJ_SH = 40712,\n"
+	"BIAS_L2_SEMIGD_CY_DUALOBJ_1000 = 40721,\n"
+	"BIAS_L2_SEMIGD_CY_DUALOBJ_SH = 40722,\n"
+	"BIAS_L1_SEMIGD_RD_DUALOBJ_1000 = 40811,\n"
+	"BIAS_L1_SEMIGD_RD_DUALOBJ_SH = 40812,\n"
+	"BIAS_L2_SEMIGD_RD_DUALOBJ_1000 = 40821,\n"
+	"BIAS_L2_SEMIGD_RD_DUALOBJ_SH = 40822,\n"
 	"//for one-class svm\n"
 	"ONECLASS_L1_RD_1000 = 50111,\n"
 	"ONECLASS_L1_RD_SH = 50112,\n"
-	"ONECLASS_L2_RD_1000 = 50121,\n"
-	"ONECLASS_L2_RD_SH = 50122,\n"
 	"ONECLASS_L1_SEMIGD_1000 = 50211,\n"
 	"ONECLASS_L1_SEMIGD_SH = 50212,\n"
-	"ONECLASS_L2_SEMIGD_1000 = 50221,\n"
-	"ONECLASS_L2_SEMIGD_SH = 50222,\n"
 	"ONECLASS_L1_FIRST_1000 = 50311,\n"
-	"ONECLASS_L2_FIRST_1000 = 50321,\n"
 	"ONECLASS_L1_SECOND_1000 = 50411,\n"
-	"ONECLASS_L2_SECOND_1000 = 50421,\n"
 	"ONECLASS_L1_SEMIGD_RAND_1000 = 50511,\n"
 	"ONECLASS_L1_SEMIGD_RAND_SH = 50512,\n"
-	"ONECLASS_L2_SEMIGD_RAND_1000 = 50521,\n"
-	"ONECLASS_L2_SEMIGD_RAND_SH = 50522,\n"
+	"ONECLASS_L1_SEMIGD_CY_FIRST_1000 = 50611,\n"
+	"ONECLASS_L1_SEMIGD_CY_FIRST_SH = 50612,\n"
+	"ONECLASS_L1_SEMIGD_RD_FIRST_1000 = 50711,\n"
+	"ONECLASS_L1_SEMIGD_RD_FIRST_SH = 50712,\n"
+	"ONECLASS_L1_CY_1000 = 50811,\n"
+	"ONECLASS_L1_CY_SH = 50812,\n"
+	"ONECLASS_L1_SEMIGD_CY_DUALOBJ_1000 = 50911,\n"
+	"ONECLASS_L1_SEMIGD_CY_DUALOBJ_SH = 50912,\n"
+	"ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000 = 51011,\n"
+	"ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH = 51012,\n"
 	);
 	exit(1);
 }
@@ -175,10 +197,12 @@ static void ltrim(char* s)
 				++trim_idx;
 				break;
 			default:
-				if(trim_idx-1 >= 0)
-					s[trim_idx-1]='\0';
 				end=true;
 		}
+	}
+	for(int i=0; i+trim_idx<slen+1; i++) //move \0 too
+	{
+		s[i] = s[i+trim_idx];
 	}
 }
 
@@ -203,10 +227,11 @@ static void rtrim(char* s)
 	}
 }
 
-static void trim(char* s)
+static int trim(char* s)
 {
-	ltrim(s);
 	rtrim(s);
+	ltrim(s);
+	return (int) strlen(s);
 }
 
 static char *line = NULL;
@@ -499,29 +524,33 @@ void parse_stdin(char *input_file_name, GridItem* grid_item, char *param_str)
 		}
 		key_token = strtok(NULL, " ");
 	}
-	if(key_token != NULL)
+	char log_file_name[1024]={'\0'};
+	if(key_token != NULL && trim(key_token) != 0)
 	{
-		trim(key_token);
-		grid_item->param.log_fp = fopen(key_token, "w");
+		strcpy(log_file_name, key_token);
 	}
-	else
-		grid_item->param.log_fp = stdout;
 
 	key_token = strtok(NULL, " ");
-	if(key_token != NULL)
+	if(key_token != NULL && trim(key_token) != 0)
 	{
-		trim(key_token);
 		if((grid_item->param._resume = load_resume(key_token)) == NULL)
 		{
 			fprintf(stderr,"can't open resume file %s\n",key_token);
 			exit(1);
 		}
+		grid_item->param.log_fp = fopen(log_file_name, "a");
+	}
+	else
+	{
+		if(strlen(log_file_name) != 0)
+			grid_item->param.log_fp = fopen(log_file_name, "w");
+		else
+			grid_item->param.log_fp = stdout;
 	}
 
 	key_token = strtok(NULL, " ");
-	if(key_token != NULL)
+	if(key_token != NULL && trim(key_token) != 0)
 	{
-		trim(key_token);
 		strcpy(grid_item->model_file_name, key_token);
 	}
 	else
@@ -618,6 +647,12 @@ void parse_stdin(char *input_file_name, GridItem* grid_item, char *param_str)
 			case TWO_L2_SEMIRDTWO_1000:
 			case BIAS_L1_RD_1000:
 			case BIAS_L2_RD_1000:
+			case BIAS_L1_RD_SH:
+			case BIAS_L2_RD_SH:
+			case BIAS_L1_CY_1000:
+			case BIAS_L2_CY_1000:
+			case BIAS_L1_CY_SH:
+			case BIAS_L2_CY_SH:
 			case BIAS_L1_SEMIGD_1000:
 			case BIAS_L2_SEMIGD_1000:
 			case BIAS_L1_SEMIGD_SH:
@@ -626,28 +661,44 @@ void parse_stdin(char *input_file_name, GridItem* grid_item, char *param_str)
 			case BIAS_L2_SEMIGD_RAND_1000:
 			case BIAS_L1_SEMIGD_RAND_SH:
 			case BIAS_L2_SEMIGD_RAND_SH:
-			case BIAS_L1_RD_SH:
-			case BIAS_L2_RD_SH:
+			case BIAS_L1_SEMIGD_CY_FIRST_1000:
+			case BIAS_L2_SEMIGD_CY_FIRST_1000:
+			case BIAS_L1_SEMIGD_CY_FIRST_SH:
+			case BIAS_L2_SEMIGD_CY_FIRST_SH:
+			case BIAS_L1_SEMIGD_RD_FIRST_1000:
+			case BIAS_L2_SEMIGD_RD_FIRST_1000:
+			case BIAS_L1_SEMIGD_RD_FIRST_SH:
+			case BIAS_L2_SEMIGD_RD_FIRST_SH:
+			case BIAS_L1_SEMIGD_CY_DUALOBJ_1000:
+			case BIAS_L2_SEMIGD_CY_DUALOBJ_1000:
+			case BIAS_L1_SEMIGD_CY_DUALOBJ_SH:
+			case BIAS_L2_SEMIGD_CY_DUALOBJ_SH:
+			case BIAS_L1_SEMIGD_RD_DUALOBJ_1000:
+			case BIAS_L2_SEMIGD_RD_DUALOBJ_1000:
+			case BIAS_L1_SEMIGD_RD_DUALOBJ_SH:
+			case BIAS_L2_SEMIGD_RD_DUALOBJ_SH:
 			case TWO_L1_RD_SH:
 			case TWO_L2_RD_SH:
 			case TWO_L1_RD_SH2:
 			case TWO_L2_RD_SH2:
 			case ONECLASS_L1_RD_1000:
 			case ONECLASS_L1_RD_SH:
-			case ONECLASS_L2_RD_1000:
-			case ONECLASS_L2_RD_SH:
+			case ONECLASS_L1_CY_1000:
+			case ONECLASS_L1_CY_SH:
 			case ONECLASS_L1_SECOND_1000:
 			case ONECLASS_L1_FIRST_1000:
-			case ONECLASS_L2_FIRST_1000:
-			case ONECLASS_L2_SECOND_1000:
 			case ONECLASS_L1_SEMIGD_1000:
 			case ONECLASS_L1_SEMIGD_SH:
-			case ONECLASS_L2_SEMIGD_1000:
-			case ONECLASS_L2_SEMIGD_SH:
 			case ONECLASS_L1_SEMIGD_RAND_1000:
 			case ONECLASS_L1_SEMIGD_RAND_SH:
-			case ONECLASS_L2_SEMIGD_RAND_1000:
-			case ONECLASS_L2_SEMIGD_RAND_SH:
+			case ONECLASS_L1_SEMIGD_CY_FIRST_1000:
+			case ONECLASS_L1_SEMIGD_CY_FIRST_SH:
+			case ONECLASS_L1_SEMIGD_RD_FIRST_1000:
+			case ONECLASS_L1_SEMIGD_RD_FIRST_SH:
+			case ONECLASS_L1_SEMIGD_CY_DUALOBJ_1000:
+			case ONECLASS_L1_SEMIGD_CY_DUALOBJ_SH:
+			case ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000:
+			case ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH:
 				grid_item->param.eps = 0.01;
 				break;
 		}
