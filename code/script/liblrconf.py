@@ -150,7 +150,7 @@ def is_semigd(code):
 		return False
 	else:
 		semigd_prefix = [203, 204, 205, 206, 207,
-				402, 403, 404, 405, 502, 505, 506, 507, 509, 510]
+				402, 403, 404, 405, 407, 408, 502, 505, 506, 507, 509, 510]
 		return str_code[:3] in map(str, semigd_prefix)
 
 def is_shrink(code):
