@@ -948,7 +948,7 @@ public:
 	int nr_pos_y;
 	int nr_neg_y;
 	int cdsteps;
-	int order_n_op;
+	int nr_n_ops;
 
 	// local variables
 	struct timeval start_tv;
@@ -1061,7 +1061,7 @@ Solver::Solver(int _solver_type)
 	_resume = NULL;
 	iter = 0;
 	cdsteps = 0;
-	order_n_op = 0;
+	nr_n_ops = 0;
 	duration = 0;
 	PGmax_new = nan("");
 	PGmin_new = nan("");
@@ -1368,23 +1368,23 @@ double Solver::calculate_rho()
 }
 double Solver::dot_n(const double *s, const feature_node *x)
 {
-	++order_n_op;
+	++nr_n_ops;
 	return sparse_operator::dot(s, x);
 }
 void Solver::axpy_n(const double a, const feature_node *x, double *y)
 {
-	++order_n_op;
+	++nr_n_ops;
 	sparse_operator::axpy(a, x, y);
 }
 double Solver::feature_dot_n(const feature_node *x1, const feature_node *x2)
 {
-	++order_n_op;
+	++nr_n_ops;
 	return sparse_operator::feature_dot(x1, x2);
 }
 void Solver::dot_three_n(double *xixj, double *xiw, double *xjw, 
 			const feature_node *xi, const feature_node *xj, double *w)
 {
-	order_n_op+=3;
+	nr_n_ops+=3;
 	return sparse_operator::dot_three(xixj, xiw, xjw, xi, xj, w);
 }
 int Solver:: adjust_smgd_size()
@@ -1512,7 +1512,7 @@ void Solver::log_message()
 		log_info("nr_pos_y %d ", nr_pos_y);
 		log_info("nr_neg_y %d ", nr_neg_y);
 		log_info("cdsteps %d ", cdsteps);
-//		log_info("order_n_op %d ", order_n_op);
+		log_info("nr_n_ops %d ", nr_n_ops);
 
 		log_info("\n");
 	}
@@ -1573,7 +1573,7 @@ void Solver::save_resume()
 	fprintf(fp, "iter\n%d\n", iter);
 	fprintf(fp, "duration\n%ju\n", (uintmax_t) duration);
 	fprintf(fp, "cdsteps\n%d\n", cdsteps);
-//	fprintf(fp, "order_n_op\n%d\n", order_n_op);
+	fprintf(fp, "nr_n_ops\n%d\n", nr_n_ops);
 	fprintf(fp, "nr_rand_calls\n%d\n", nr_rand_calls);
 	fprintf(fp, "last_obj\n%.17g\n", last_obj);
 	fprintf(fp, "active_size\n%d\n", active_size);
@@ -2358,7 +2358,7 @@ void Solver::use_resume()
 		fprintf(stderr, "ERROR: resume w_size not consistent\n");
 	iter = _resume->iter;
 	cdsteps = _resume->cdsteps;
-//	order_n_op = _resume->order_n_op;
+	nr_n_ops = _resume->nr_n_ops;
 	duration = _resume->duration;
 	last_obj = _resume->last_obj;
 	active_size = _resume->active_size;
@@ -8345,10 +8345,10 @@ struct resume *load_resume(const char *resume_file_name)
 		{
 			FSCANF(fp, "%d", &_resume->cdsteps);
 		}
-//		else if(strcmp(cmd, "order_n_op")==0)
-//		{
-//			FSCANF(fp, "%d", &_resume->order_n_op);
-//		}
+		else if(strcmp(cmd, "nr_n_ops")==0)
+		{
+			FSCANF(fp, "%d", &_resume->nr_n_ops);
+		}
 		else if(strcmp(cmd, "nr_rand_calls")==0)
 		{
 			FSCANF(fp, "%d", &_resume->nr_rand_calls);

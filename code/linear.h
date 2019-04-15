@@ -171,7 +171,7 @@ struct resume
 	bool read_resume;
 	int iter;
 	int cdsteps;
-	int order_n_op;
+	int nr_n_ops;
 	clock_t duration;
 	int nr_rand_calls;
 	double last_obj;
