@@ -182,6 +182,73 @@ class Plotter(object):
 		plt.legend(loc=0)
 		self.fig.savefig(self.figpath+self.get_figname_fmt()%(self.dstr, self.c),format='png',dpi=100)
 
+class NrNOpPlotter(Plotter):
+	PLOTTYPE = "nrnop"
+	XLIM = (0, 1e12)
+	def init_new_fig(self):
+		self.xy_range = []
+	def get_xlim(self, tp):
+		key = "s%d_c%g_iter" % (tp, self.c)
+		if key in dlim.keys():
+			if self.dstr in dlim[key]:
+				return dlim[key][self.dstr]
+			else:
+				return 100
+		else:
+			return 100
+	def get_figname_fmt(self):
+		sname = ''
+		for s in filter(lambda s: s is not None, self.stype):
+			sname += 's'+str(s)
+		return "%s_"+sname+"_c%g_cdsteps.png"
+	def get_xy(self, tp, e, r):
+		logfile = self.get_logfile(tp, e, r)
+		ys = []
+		xs = []
+		nr_n_ops = 0
+		minimal = self.get_minimal(tp)
+
+		min_x = None
+		max_x = None
+		max_y = 0
+		min_y = 1e10
+		for line in logfile:
+			line = line.split(' ')
+			if 'iter' in line and 'obj' in line:
+				val = float(line[line.index('obj')+1])
+				relval = calculate_relval(val, minimal)
+				nr_n_ops = (float(line[line.index('nr_n_ops')+1]))
+				if relval > self.YLIM[1] or nr_n_ops < NrNOpPlotter.XLIM[0]:
+					continue
+				if relval < self.YLIM[0] or nr_n_ops > NrNOpPlotter.XLIM[1]:
+					break;
+				ys.append(relval)
+				xs.append(nr_n_ops)
+				if min_x is None:
+					min_x = nr_n_ops
+				max_x = nr_n_ops
+				min_y = min(relval,min_y)
+				max_y = max(relval,max_y)
+				#print('nr_n_ops: %.16g\t relval: %.16g' % (nr_n_ops, relval))
+		xy_range = (min_x, max_x, min_y, max_y)
+		if all(xy_range):
+			self.xy_range.append(xy_range)
+		print("xy_range={}".format(xy_range))
+		logfile.close()
+		return ys, xs
+	def setup_fig(self):
+		min_xs, max_xs, min_ys, max_ys = zip(*self.xy_range) # list of tuples to tuple of lists
+		Plotter.set_xy_lim(self, min_xs, max_xs, min_ys, max_ys)
+		if(min(min_ys) > 1.0e-2):
+			subsyy = [2,3,4,5,7]
+		else:
+			subsyy = []
+		plt.yscale('log', subsy=subsyy, figure=self.fig)
+		plt.gca().yaxis.set_major_locator(plt.LogLocator(numticks=7))
+		plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
+		plt.tick_params(axis='x', which='major', labelsize=20)
+		Plotter.setup_fig(self)
+
 class CdPlotter(Plotter):
 	PLOTTYPE = "cd"
 	XLIM = (0, 1e12)

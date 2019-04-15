@@ -194,6 +194,7 @@ def compress(filepath, filetmp, max_line):
 					'nr_pos_y': (EXACT, int, lambda x: "%d "%x),
 					'nr_neg_y': (EXACT, int, lambda x: "%d "%x),
 					'cdsteps': (EXACT, int, lambda x: "%d "%x),
+					'nr_n_ops': (EXACT, int, lambda x: "%d "%x),
 			}
 			assert len(self.colnames) == len(self.column_type)
 			self.cols = [None] * len(self.colnames)
