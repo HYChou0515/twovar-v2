@@ -1373,7 +1373,6 @@ double Solver::dot_n(const double *s, const feature_node *x)
 }
 void Solver::axpy_n(const double a, const feature_node *x, double *y)
 {
-	++nr_n_ops;
 	sparse_operator::axpy(a, x, y);
 }
 double Solver::feature_dot_n(const feature_node *x1, const feature_node *x2)
