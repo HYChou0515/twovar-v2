@@ -23,15 +23,14 @@ def exit_with_help():
 if len(sys.argv) != 2:
 	exit_with_help()
 mode = -1
+ind = 0
 if sys.argv[1] == "run":
 	mode = 0
 elif sys.argv[1] == "print":
-	ind = 0
 	bashfile_name="out_run.bash"
 	bashfile = open(bashfile_name, 'w')
 	mode = 1
 elif sys.argv[1] == "grid":
-	ind = 0
 	bashfile_name="out_run.bash"
 	bashfile = open(bashfile_name, 'w')
 	gridjob_name_format="grid_%s.job.%d"
@@ -39,7 +38,7 @@ elif sys.argv[1] == "grid":
 else:
 	exit_with_help()
 
-for data in dataset:
+for data_count, data in enumerate(dataset):
 	print("Running "+ data)
 	if mode == 2:
 		process_count = PROCESS_MAX
@@ -93,10 +92,11 @@ for data in dataset:
 			if need_r:
 				cmd = cmd + " -r %g" % (r)
 			cmd = cmd+ " %s" % datapath
-			print(cmd)
+			print(str(ind) + ': ' + cmd)
 			if mode == 0:
 				cmd = cmd + " %s %s" % (filename, resumename)
 				subprocess.Popen(cmd.split(' '))
+				ind += 1
 			elif mode == 1:
 				cmd = cmd+ " > %s\n" % (filename)
 				ind += 1
@@ -119,8 +119,7 @@ for data in dataset:
 			gridjob_file.close()
 			gridjob_count += 1
 		for i in range(gridjob_count):
-			bashfile.write("%s%s %s < " % (ROOT_PATH, grid, datapath) +\
-					gridjob_name_format % (data, i) + " \n" )
+			bashfile.write("%s%s %s < %s && echo \"job %d finished\"\n" % (ROOT_PATH, grid, datapath, gridjob_name_format % (data, i), data_count*gridjob_count+i))
 
 if mode == 1 or mode == 2:
 	bashfile.close()
