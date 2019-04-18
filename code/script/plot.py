@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import math, bisect
-import sys
-import os
+import sys, os, resource
 import numpy as np
 from plotconst import *
 from liblrconf import *
@@ -182,6 +181,79 @@ class Plotter(object):
 		plt.legend(loc=0)
 		self.fig.savefig(self.figpath+self.get_figname_fmt()%(self.dstr, self.c),format='png',dpi=100)
 
+class OpPerSucs_ObjPlotter(Plotter):
+	PLOTTYPE = "opspersucs_obj"
+	XLIM = (9e-3, 1000)
+	def init_new_fig(self):
+		self.xy_range = []
+		self.summary = []
+	def get_xlim(self, tp):
+		key = "s%d_c%g_iter" % (tp, self.c)
+		if key in dlim.keys():
+			if self.dstr in dlim[key]:
+				return dlim[key][self.dstr]
+			else:
+				return 100
+		else:
+			return 100
+	def get_figname_fmt(self):
+		sname = ''
+		for s in filter(lambda s: s is not None, self.stype):
+			sname += 's'+str(s)
+		return "%s_"+sname+"_c%g_opspersucsobj.png"
+	def get_xy(self, tp, e, r):
+		logfile = self.get_logfile(tp, e, r)
+		ys = []
+		xs = []
+		minimal = self.get_minimal(tp)
+
+		min_x = 1e10
+		max_x = 0
+		max_y = 0
+		min_y = 1e10
+		iternum = 0
+		nrnop = 0
+		sucsize = 0
+		for line in logfile:
+			line = line.split(' ')
+			if 'ops_per_sucs' in line and 'obj' in line:
+				val = float(line[line.index('obj')+1])
+				relval = calculate_relval(val, minimal)
+				ops_per_sucs = 2*float(line[line.index('ops_per_sucs')+1])
+				if ops_per_sucs > self.YLIM[1] or relval < OpPerSucs_ObjPlotter.XLIM[0]:
+					continue
+				if ops_per_sucs < self.YLIM[0] or relval > OpPerSucs_ObjPlotter.XLIM[1]:
+					continue
+				iternum = int(line[line.index('iter')+1])
+				sucsize += int(line[line.index('sucsize')+1])
+				nrnop += ops_per_sucs * int(line[line.index('sucsize')+1])
+				ys.append(ops_per_sucs)
+				xs.append(relval)
+				min_x = min(relval, min_x)
+				max_x = max(relval, max_x)
+				min_y = min(ops_per_sucs,min_y)
+				max_y = max(ops_per_sucs,max_y)
+		xy_range = (min_x, max_x, min_y, max_y)
+		if all(xy_range):
+			self.xy_range.append(xy_range)
+		print("xy_range={}".format(xy_range))
+		self.summary.append("iter: %d op/suc: %g" % (iternum, float(nrnop)/sucsize))
+		logfile.close()
+		return ys, xs
+	def setup_fig(self):
+		min_xs, max_xs, min_ys, max_ys = zip(*self.xy_range) # list of tuples to tuple of lists
+		Plotter.set_xy_lim(self, min_xs, max_xs, min_ys, max_ys)
+		plt.ylim(min(min_ys), max(max_ys))
+		plt.yscale('linear', figure=self.fig)
+		plt.xscale('log', figure=self.fig)
+		plt.gca().xaxis.set_major_locator(plt.LogLocator(numticks=7))
+		plt.xlim(min(min_xs), max(max_xs))
+
+		summary = "\n".join(self.summary)
+		plt.annotate(summary, (0,0), (0, -20), xycoords='axes fraction', textcoords='offset points', va='top')
+		plt.subplots_adjust(bottom=0.15)
+		Plotter.setup_fig(self)
+
 class NrNOpPlotter(Plotter):
 	PLOTTYPE = "nrnop"
 	XLIM = (0, 1e12)
@@ -200,7 +272,7 @@ class NrNOpPlotter(Plotter):
 		sname = ''
 		for s in filter(lambda s: s is not None, self.stype):
 			sname += 's'+str(s)
-		return "%s_"+sname+"_c%g_cdsteps.png"
+		return "%s_"+sname+"_c%g_nrnop.png"
 	def get_xy(self, tp, e, r):
 		logfile = self.get_logfile(tp, e, r)
 		ys = []
@@ -284,7 +356,7 @@ class CdPlotter(Plotter):
 			if 'iter' in line and 'obj' in line:
 				val = float(line[line.index('obj')+1])
 				relval = calculate_relval(val, minimal)
-				CDsteps = CDsteps + (float(line[line.index('updsize')+1]))
+				CDsteps = (float(line[line.index('cdsteps')+1]))
 				if relval > self.YLIM[1] or CDsteps < CdPlotter.XLIM[0]:
 					continue
 				if relval < self.YLIM[0] or CDsteps > CdPlotter.XLIM[1]:
@@ -505,7 +577,26 @@ def main():
 			plotter = plotter_class(stype, loss, dataset, real_clist, min(elist), args)
 	plotter.draw_all()
 
+def memory_limit():
+	soft, hard = resource.getrlimit(resource.RLIMIT_AS)
+	resource.setrlimit(resource.RLIMIT_AS, (get_memory() * 1024 / 2, hard))
+
+def get_memory():
+	with open('/proc/meminfo', 'r') as mem:
+		free_memory = 0
+		for i in mem:
+			sline = i.split()
+			if str(sline[0]) in ('MemFree:', 'Buffers:', 'Cached:'):
+				free_memory += int(sline[1])
+	return free_memory
+
 if __name__ == '__main__':
 	assert sys.version_info[:3] == (2,7,12)
 	assert matplotlib.__version__ == '1.5.3'
-	main()
+	memory_limit()
+	try:
+		main()
+	except MemoryError as e:
+		sys.stderr.write('Memory exceed limit\n')
+		sys.stderr.write(str(e))
+

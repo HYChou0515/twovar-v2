@@ -161,8 +161,9 @@ def cut_key_column_to(filepath, outpath, key):
 
 def compress(filepath, filetmp, max_line):
 	cmpr_line = int(math.ceil((line_number(filepath)-LOG_SUMMARY_LINES)*1.0/max_line))
-        MAX_FILE_LINES = 4000000
+	MAX_FILE_LINES = 4000000
 	BUFF_READ_LINE = 4000
+	MUST_PRINT = 1000
 	SUM='sum'
 	EXACT='exact'
 	DECR_RATE='DR'
@@ -174,11 +175,14 @@ def compress(filepath, filetmp, max_line):
 					'iter': (EXACT, int, lambda x: "%d "%x),
 					't': (EXACT, float, lambda x: "%f "%x),
 					'obj': (EXACT, float, lambda x: "%.16g "%x),
-					'decr_rate': (DECR_RATE, float, lambda x: "%.3e "%x),
-					'actsize': (SUM, int, lambda x: "%d "%x),
-					'updsize': (SUM, int, lambda x: "%d "%x),
-					'sucsize': (SUM, int, lambda x: "%d "%x),
-					'sucs_rate': (SUCS_RATE, lambda s: float(s[:-1])/100, lambda x: "%.2f%% "%(100*x)),
+					'decr_rate': (EXACT, float, lambda x: "%.3e "%x),
+					'actsize': (EXACT, int, lambda x: "%d "%x),
+					'sucsize': (EXACT, int, lambda x: "%d "%x),
+					'nr_n_ops': (EXACT, int, lambda x: "%d "%x),
+					'ops_per_sucs': (EXACT, float, lambda x: "%.2f "%x),
+					'updsize': (EXACT, int, lambda x: "%d "%x),
+					'sucs_rate': (EXACT, lambda s: float(s[:-1])/100, lambda x: "%.2f%% "%(100*x)),
+					'cdsteps': (EXACT, int, lambda x: "%d "%x),
 					'nSV': (EXACT, int, lambda x: "%d "%x),
 					'nBSV': (EXACT, int, lambda x: "%d "%x),
 					'nFree': (EXACT, int, lambda x: "%d "%x),
@@ -189,22 +193,20 @@ def compress(filepath, filetmp, max_line):
 					'Gmax': (EXACT, float, lambda x: "%.16g "%x),
 					'Gmin': (EXACT, float, lambda x: "%.16g "%x),
 					'Gdiff': (EXACT, float, lambda x: "%.3f "%x),
-					'n_exchange': (SUM, int, lambda x: '-1 ' if x<0 else "%d "%x),
-					'alpha_diff': (SUM, float, lambda x: "%.16g "%x),
+					'n_exchange': (EXACT, int, lambda x: '-1 ' if x<0 else "%d "%x),
+					'alpha_diff': (EXACT, float, lambda x: "%.16g "%x),
 					'nr_pos_y': (EXACT, int, lambda x: "%d "%x),
 					'nr_neg_y': (EXACT, int, lambda x: "%d "%x),
-					'cdsteps': (EXACT, int, lambda x: "%d "%x),
-					'nr_n_ops': (EXACT, int, lambda x: "%d "%x),
 			}
 			assert len(self.colnames) == len(self.column_type)
 			self.cols = [None] * len(self.colnames)
 			self.counter = 0
 			self.cmpr_line = cmpr_line
 			self.last_obj = float('nan')
+			self.must_print = MUST_PRINT
 			assert self.cmpr_line >= 1
 
 		def append(self, vals):
-			self.counter += 1
 			for i in range(len(self.colnames)):
 				colname = self.colnames[i]
 				t, to_val, to_str = self.column_type[colname]
@@ -216,7 +218,9 @@ def compress(filepath, filetmp, max_line):
 						self.cols[i] += val
 					if t == EXACT:
 						self.cols[i] = val
-			if self.counter == self.cmpr_line:
+			out_str = None
+			if self.counter == 0 or self.must_print > 0:
+				self.must_print -= 1
 				out_str = ''
 				for i in range(len(self.colnames)):
 					colname = self.colnames[i]
@@ -238,21 +242,19 @@ def compress(filepath, filetmp, max_line):
 						except Exception:
 							out_str += to_str(float('nan'))
 				self.cols = [None] * len(self.colnames)
-				self.counter = 0
-				return out_str
-			else:
-				return None
+			self.counter = (self.counter+1)%self.cmpr_line
+			return out_str
 
 	with open(filepath) as f:
 		colnames = f.readline().strip().split(' ')[::2]
 		aggregator = Aggregator(colnames, cmpr_line)
 
 	def next_n_lines(f, n):
-	    return [x.strip() for x in islice(f, n)]
+		return [x.strip() for x in islice(f, n)]
 	with open(filepath) as fin, open(filetmp, 'w') as fout:
-                line_count = 0
+		line_count = 0
 		while line_count < MAX_FILE_LINES:
-                        line_count += BUFF_READ_LINE
+			line_count += BUFF_READ_LINE
 			lines = next_n_lines(fin, BUFF_READ_LINE)
 			if len(lines) == 0:
 				break
@@ -265,7 +267,7 @@ def compress(filepath, filetmp, max_line):
 				out_str = aggregator.append(vals)
 				if out_str is not None:
 					fout.write(out_str + os.linesep)
-                assert line_count < MAX_FILE_LINES, 'file too large'
+		assert line_count < MAX_FILE_LINES, 'file too large'
 
 def exit_with_help():
 	print("USAGE: " + sys.argv[0] + " filepath")
