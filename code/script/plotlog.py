@@ -2,6 +2,7 @@
 import argparse
 import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
 import os
 import numpy as np
 import math
@@ -17,6 +18,19 @@ class Plotter(object):
 
 		self.yaxis = args.yaxis*2 -1
 		self.ylabel = args.yaxis*2 -2
+
+		self.yrange = [None, None]
+		if args.yrange is not None:
+			try:
+				self.yrange[0] = float(args.yrange[0])
+			except Exception:
+				pass
+			try:
+				self.yrange[1] = float(args.yrange[1])
+			except Exception:
+				pass
+
+		self.args = args
 
 	def draw(self):
 		# plot setting
@@ -36,6 +50,18 @@ class Plotter(object):
 			fields = f.readline().strip().split(' ')
 			plt.xlabel(fields[self.xlabel])
 			plt.ylabel(fields[self.ylabel])
+
+		if self.args.xtype == 'int':
+			ax = self.fig.gca()
+			ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+
+		yrange_min, yrange_max = plt.ylim()
+		if self.yrange[0] is not None:
+			yrange_min = self.yrange[0]
+		if self.yrange[1] is not None:
+			yrange_max = self.yrange[1]
+		plt.ylim(yrange_min, yrange_max)
+
 		plt.legend(loc=0)
 		self.fig.savefig(self.figname,format='png',dpi=100)
 
@@ -54,7 +80,11 @@ class Plotter(object):
 			for line in f:
 				fields = line.strip().split(' ')
 				try:
-					nums.append(float(fields[fieldid]))
+					field = fields[fieldid]
+					if(field[-1] == '%'):
+						nums.append(float(field[:-1])/100)
+					else:
+						nums.append(float(field))
 				except:
 					break
 		return nums
@@ -82,6 +112,14 @@ class Parser:
 				type=float, action='store',
 				default=float('Inf'),
 				help='x limit')
+		self.parser.add_argument('--xtype', dest='xtype',
+				type=str, choices=['float', 'int'],
+				default='float',
+				help='type of x (shown in xticks)')
+		self.parser.add_argument('--yrange', dest='yrange',
+				nargs=2, metavar=('ymin_range', 'ymax_range'),
+				default=None,
+				help='range of y axis, \'None\' for not specified')
 		#positional arguments
 		self.parser.add_argument('xaxis', type=int,
 				help='xaxis position(see viewlog)')

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-read -r -a fields <<< "iter t obj decr_rate actsize updsize sucpair sucs_rate nSV nBSV nFree nNonSV PGmax PGmin PGdiff Gmax Gmin Gdiff n_exchange alpha_diff nr_pos_y nr_neg_y"
+read -r -a fields <<< "iter t obj decr_rate actsize sucsize nr_n_ops ops_per_sucs updsize sucs_rate cdsteps nSV nBSV nFree nNonSV PGmax PGmin PGdiff Gmax Gmin Gdiff n_exchange alpha_diff nr_pos_y nr_neg_y"
 
 function exit_with_help
 {

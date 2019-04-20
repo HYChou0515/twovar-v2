@@ -19,9 +19,17 @@ mkdir -p old
 WORK_DIR=../../
 
 git checkout $OLD_HASH
+if [ "$?" -ne 0 ]; then
+	>&2 echo "Error on checkout out to old_hash: $OLD_HASH"
+	exit 1
+fi
 make -C $WORK_DIR clean
 cp -r $WORK_DIR/* old/
 
 git checkout $NEW_HASH
+if [ "$?" -ne 0 ]; then
+	>&2 echo "Error on checkout out to new_hash: $NEW_HASH"
+	exit 1
+fi
 make -C $WORK_DIR clean
 cp -r $WORK_DIR/* new/

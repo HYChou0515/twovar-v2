@@ -1,14 +1,10 @@
-# exp-2019-04-04
+# exp-2019-04-18
 # generate log
 ./runexp.py run 
 
-324 log files
+216 log files
 
 # generate plot
-When plotting ONECLASS_*, uncomment nlist=0.1 as 
-such exp has done before.
-Groups should be noticed.
 
-For a group, use
-
-./plot.py --logpath ../log/ time 
+./plot.py --logpath ../log/ nrnop
+./plot.py --logpath ../log/ opspersucs_obj
