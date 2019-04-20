@@ -1023,10 +1023,8 @@ public:
 			const feature_node *xi, const feature_node *xj, double *w);
 
 	//onetwo_nobias_update
-	void one_random_shrink();
-	void one_cyclic_1000();
-	void one_cyclic_shrink();
-	void one_random_1000();
+	void one_liblinear();
+	void one_random();
 	void one_semigd_1000();
 	void one_semigd_shrink();
 	void one_semigd_dualobj_1000();
@@ -2382,150 +2380,7 @@ void Solver::use_resume()
 	}
 }
 
-void Solver::one_random_shrink()
-{
-	int l = max_set;
-	int i, s, si;
-	double C, d, G;
-	// PG: projected gradient, for shrinking and stopping
-	double PG;
-	clock_t start;
-	if(isnan(PGmax_old))
-		PGmax_old = INF;
-	if(isnan(PGmin_old))
-		PGmin_old = -INF;
-
-	while (iter < max_iter)
-	{
-		start = clock();
-		success_size = 0;
-		update_size = 0;
-		PGmax_new = -INF;
-		PGmin_new = INF;
-		for (s=0; s<active_size; s++)
-		{
-			++update_size;
-			si = non_static_rand()%active_size;
-			i = index[si];
-			const schar yi = y[i];
-			feature_node * const xi = prob->x[i];
-			G = yi*dot_n(w, xi)-1;
-			C = upper_bound[GETI(i)];
-			G += alpha[i]*diag[GETI(i)];
-
-			PG = 0;
-			if (alpha[i] == 0)
-			{
-				if (G > PGmax_old)
-				{
-					active_size--;
-					swap(index[si], index[active_size]);
-					continue;
-				}
-				else if (G < 0)
-					PG = G;
-			}
-			else if (alpha[i] == C)
-			{
-				if (G < PGmin_old)
-				{
-					active_size--;
-					swap(index[si], index[active_size]);
-					continue;
-				}
-				else if (G > 0)
-					PG = G;
-			}
-			else
-				PG = G;
-
-			PGmax_new = max(PGmax_new, PG);
-			PGmin_new = min(PGmin_new, PG);
-
-			double alpha_old = alpha[i];
-			alpha[i] = min(max(alpha[i] - G/QD[i], 0.0), C);
-			d = (alpha[i] - alpha_old)*yi;
-			if(fabs(d) > 1.0e-16)
-			{
-				success_size++;
-				axpy_n(d, xi, w);
-			}
-		}
-		iter++;
-		duration += clock() - start;
-		log_message();
-		if(PGmax_new - PGmin_new <= eps)
-		{
-			if(active_size == l)
-				break;
-			else
-			{
-				active_size = l;
-				PGmax_old = INF;
-				PGmin_old = -INF;
-				continue;
-			}
-		}
-		PGmax_old = PGmax_new;
-		PGmin_old = PGmin_new;
-		if (PGmax_old <= 0)
-			PGmax_old = INF;
-		if (PGmin_old >= 0)
-			PGmin_old = -INF;
-		save_resume();
-		EXIT_IF_TIMEOUT();
-		EXIT_IF_OVER_CDSTEPS();
-		EXIT_IF_OPTIMAL(last_obj);
-	}
-	summary();
-}
-
-void Solver::one_random_1000()
-{
-	int i, s;
-	double C, d, G;
-	clock_t start;
-
-	while (iter < max_iter)
-	{
-		start = clock();
-		success_size = 0;
-		update_size = 0;
-		nr_pos_y = 0;
-		nr_neg_y = 0;
-		for (s=0; s<active_size; s++)
-		{
-			++update_size;
-			i = index[non_static_rand()%active_size];
-			const schar yi = y[i];
-			count_pos_neg_y(yi);
-			feature_node * const xi = prob->x[i];
-			G = yi*dot_n(w, xi)-1;
-			C = upper_bound[GETI(i)];
-			G += alpha[i]*diag[GETI(i)];
-
-			double alpha_old = alpha[i];
-			alpha[i] = min(max(alpha[i] - G/QD[i], 0.0), C);
-			d = (alpha[i] - alpha_old)*yi;
-			if(fabs(d) > 1.0e-16)
-			{
-				success_size++;
-				axpy_n(d, xi, w);
-			}
-		}
-
-		iter++;
-		duration += clock() - start;
-		log_message();
-		save_resume();
-		EXIT_IF_TIMEOUT();
-		EXIT_IF_OVER_CDSTEPS();
-		EXIT_IF_OPTIMAL(last_obj);
-	}
-	summary();
-}
-
-void Solver::one_cyclic_shrink()
+void Solver::one_liblinear()
 {
 	int l = max_set;
 	int i, s;
@@ -2632,46 +2487,124 @@ void Solver::one_cyclic_shrink()
 	summary();
 }
 
-void Solver::one_cyclic_1000()
+void Solver::one_random()
 {
-	int i, s;
+	int l = max_set;
+	int i, s, si;
 	double C, d, G;
 	clock_t start;
+	// PG: projected gradient, for shrinking and stopping
+	double PG;
+	if(isnan(PGmax_old))
+		PGmax_old = INF;
+	if(isnan(PGmin_old))
+		PGmin_old = -INF;
 
 	while (iter < max_iter)
 	{
 		start = clock();
+		PGmax_new = -INF;
+		PGmin_new = INF;
+		nr_pos_y = 0;
+		nr_neg_y = 0;
 		success_size = 0;
 		update_size = 0;
-		for (i=0; i<active_size; i++)
+		if(rand_mode == CYCLIC)
 		{
-			int j = i+non_static_rand()%(active_size-i);
-			swap(index[i], index[j]);
+			for (i=0; i<active_size; i++)
+			{
+				int j = i+non_static_rand()%(active_size-i);
+				swap(index[i], index[j]);
+			}
 		}
 		for (s=0; s<active_size; s++)
 		{
 			++update_size;
-			i = index[s];
+			if(rand_mode == CYCLIC)
+				si = s;
+			else if(rand_mode == RANDOM)
+				si = non_static_rand()%active_size;
+			else
+			{
+				fprintf(stderr, "random mode not specified\n");
+				return;
+			}
+			i = index[si];
 			const schar yi = y[i];
+			count_pos_neg_y(yi);
 			feature_node * const xi = prob->x[i];
 
 			G = yi*dot_n(w, xi)-1;
-
 			C = upper_bound[GETI(i)];
 			G += alpha[i]*diag[GETI(i)];
+
+			if(sh_mode == SH_ON)
+			{
+				PG = 0;
+				if (alpha[i] == 0)
+				{
+					if (G > PGmax_old)
+					{
+						active_size--;
+						swap(index[si], index[active_size]);
+						s--;
+						continue;
+					}
+					else if (G < 0)
+						PG = G;
+				}
+				else if (alpha[i] == C)
+				{
+					if (G < PGmin_old)
+					{
+						active_size--;
+						swap(index[si], index[active_size]);
+						s--;
+						continue;
+					}
+					else if (G > 0)
+						PG = G;
+				}
+				else
+					PG = G;
+
+				PGmax_new = max(PGmax_new, PG);
+				PGmin_new = min(PGmin_new, PG);
+			}
 
 			double alpha_old = alpha[i];
 			alpha[i] = min(max(alpha[i] - G/QD[i], 0.0), C);
 			d = (alpha[i] - alpha_old)*yi;
 			if(fabs(d) > 1.0e-16)
 			{
-				success_size++;
 				axpy_n(d, xi, w);
+				success_size++;
 			}
 		}
 		iter++;
-		duration += clock() -start;
+		duration += clock()- start;
 		log_message();
+		if(sh_mode == SH_ON)
+		{
+			if(PGmax_new - PGmin_new <= eps)
+			{
+				if(active_size == l)
+					break;
+				else
+				{
+					active_size = l;
+					PGmax_old = INF;
+					PGmin_old = -INF;
+					continue;
+				}
+			}
+			PGmax_old = PGmax_new;
+			PGmin_old = PGmin_new;
+			if (PGmax_old <= 0)
+				PGmax_old = INF;
+			if (PGmin_old >= 0)
+				PGmin_old = -INF;
+		}
 		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OVER_CDSTEPS();
@@ -5932,30 +5865,42 @@ static inline void onetwo_nobias_update(
 	solver.use_resume();
 	switch(solver_type)
 	{
-		case ONE_L1_RD_SH:
-		case ONE_L2_RD_SH:
+		case OLD_ONE_L1_CY_SH:
+		case OLD_ONE_L2_CY_SH:
 		{
-			solver.one_random_shrink();
+			solver.one_liblinear();
 			break;
 		}
 		case ONE_L1_CY_1000:
 		case ONE_L2_CY_1000:
 		{
-			solver.one_cyclic_1000();
+			solver.sh_mode = Solver::SH_OFF;
+			solver.rand_mode = Solver::CYCLIC;
+			solver.one_random();
 			break;
 		}
-		case OLD_ONE_L1_CY_SH:
-		case OLD_ONE_L2_CY_SH:
 		case ONE_L1_CY_SH:
 		case ONE_L2_CY_SH:
 		{
-			solver.one_cyclic_shrink();
+			solver.sh_mode = Solver::SH_ON;
+			solver.rand_mode = Solver::CYCLIC;
+			solver.one_random();
 			break;
 		}
 		case ONE_L1_RD_1000:
 		case ONE_L2_RD_1000:
 		{
-			solver.one_random_1000();
+			solver.sh_mode = Solver::SH_OFF;
+			solver.rand_mode = Solver::RANDOM;
+			solver.one_random();
+			break;
+		}
+		case ONE_L1_RD_SH:
+		case ONE_L2_RD_SH:
+		{
+			solver.sh_mode = Solver::SH_ON;
+			solver.rand_mode = Solver::RANDOM;
+			solver.one_random();
 			break;
 		}
 		case ONE_L1_SEMIGD_1000:
