@@ -3860,7 +3860,7 @@ void Solver::bias_semigd2()
 				return;
 			}
 			update_size += 1;
-			for(int inner_iter = 0; inner_iter < 1; inner_iter++)
+			for(int inner_iter = 0; inner_iter < smgd_size*10; inner_iter++)
 			{
 				// update_size += (int) (workset_last - workset_s.begin());
 				if(sh_mode == SH_OFF)

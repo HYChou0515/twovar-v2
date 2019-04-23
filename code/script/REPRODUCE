@@ -1,10 +1,9 @@
-# exp-2019-04-18
+# exp-2019-04-23
 # generate log
 ./runexp.py run 
 
-216 log files
+384 log files
 
 # generate plot
 
-./plot.py --logpath ../log/ nrnop
-./plot.py --logpath ../log/ opspersucs_obj
+./plot --logpath ../log/ cd
