@@ -949,6 +949,7 @@ public:
 	int nr_neg_y;
 	int cdsteps;
 	int nr_n_ops;
+	int ttl_success_size;
 
 	// local variables
 	struct timeval start_tv;
@@ -1070,6 +1071,7 @@ Solver::Solver(int _solver_type)
 	w_size = -1;
 	active_size = -1;
 	success_size = -1;
+	ttl_success_size = 0;
 	n_exchange = -1;
 	update_size = -1;
 	solver_type = _solver_type;
@@ -1462,6 +1464,8 @@ void Solver::log_message()
 
 	if(update_size >= 0)
 		cdsteps += update_size;
+	if(success_size >= 0)
+		ttl_success_size += success_size;
 
 	countSVs();
 
@@ -1488,6 +1492,7 @@ void Solver::log_message()
 		log_info("decr_rate %.3e ", (last_obj-new_obj)/fabs(new_obj));
 		log_info("actsize %d ", active_size);
 		log_info("sucsize %d ", success_size);
+		log_info("ttl_sucsize %d ", ttl_success_size);
 		log_info("nr_n_ops %d ", nr_n_ops);
 		log_info("ops_per_sucs %.2f ", (double)(nr_n_ops-nr_n_ops_old)/success_size);
 		log_info("updsize %d ", update_size);

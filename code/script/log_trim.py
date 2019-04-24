@@ -178,6 +178,7 @@ def compress(filepath, filetmp, max_line):
 					'decr_rate': (EXACT, float, lambda x: "%.3e "%x),
 					'actsize': (EXACT, int, lambda x: "%d "%x),
 					'sucsize': (EXACT, int, lambda x: "%d "%x),
+					'ttl_sucsize': (EXACT, int, lambda x: "%d "%x),
 					'nr_n_ops': (EXACT, int, lambda x: "%d "%x),
 					'ops_per_sucs': (EXACT, float, lambda x: "%.2f "%x),
 					'updsize': (EXACT, int, lambda x: "%d "%x),
