@@ -323,9 +323,10 @@ class NrNOpPlotter(Plotter):
 
 class CdPlotter(Plotter):
 	PLOTTYPE = "cd"
-	XLIM = (0, 1e12)
+	XLIM = (0, 1e120)
 	def init_new_fig(self):
 		self.xy_range = []
+		self.summary = []
 	def get_xlim(self, tp):
 		key = "s%d_c%g_iter" % (tp, self.c)
 		if key in dlim.keys():
@@ -373,6 +374,8 @@ class CdPlotter(Plotter):
 		if all(xy_range):
 			self.xy_range.append(xy_range)
 		print("xy_range={}".format(xy_range))
+		#self.summary.append((xs, ys))
+		self.summary.append(xs[100] if 100 < len(xs) else xs[-1])
 		logfile.close()
 		return ys, xs
 	def setup_fig(self):
@@ -386,6 +389,35 @@ class CdPlotter(Plotter):
 		plt.gca().yaxis.set_major_locator(plt.LogLocator(numticks=7))
 		plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
 		plt.tick_params(axis='x', which='major', labelsize=20)
+		Plotter.setup_fig(self)
+
+		summary = []
+		#early_y = 1e-2
+		#for su in self.summary:
+		#	ys = su[1]
+		#	while ys[-1] > early_y:
+		#		early_y *= 2
+		#for i in range(len(self.summary)/2):
+		#	ys = self.summary[i][1]
+		#	cdxs = self.summary[i][0]
+		#	sucxs = self.summary[i+len(self.summary)/2][0]
+		#	early_idx = 0
+		#	print(len(ys), len(cdxs), len(sucxs))
+		#	assert(len(ys) == len(cdxs) == len(sucxs))
+		#	while early_idx < len(ys) and ys[early_idx] > early_y:
+		#		early_idx += 1
+		#	summary.append(sucxs[early_idx] / cdxs[early_idx])
+		#	print(sucxs[early_idx], cdxs[early_idx])
+		#summary = "  ".join(map(lambda s: "suc/cd %g" % s, summary))
+		#summary = ("includes iterations until reach relval=%g\n" % early_y) + summary
+		for i in range(len(self.summary)/2):
+			cd = self.summary[i]
+			suc = self.summary[i+len(self.summary)/2]
+			summary.append(suc/cd)
+		summary = "  ".join(map(lambda s: "suc/cd %g" % s, summary))
+		summary = ("includes first 100 iterations\n") + summary
+		plt.annotate(summary, (0,0), (0, -20), xycoords='axes fraction', textcoords='offset points', va='top')
+		plt.subplots_adjust(bottom=0.15)
 		Plotter.setup_fig(self)
 
 class TimePlotter(Plotter):
