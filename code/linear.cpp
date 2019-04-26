@@ -3009,7 +3009,7 @@ void Solver::two_semicyclic_1000()
 		update_size = 0;
 		for(si=0; si<active_size; si++)
 		{
-			update_size+=1;
+			update_size+=2;
 			j = index[si];
 			if(i==j)
 				continue;
@@ -3076,7 +3076,7 @@ void Solver::two_random_shrink2()
 		update_size = 0;
 		for(s=0; s<active_size; s++)
 		{
-			update_size+=1;
+			update_size+=2;
 			int si = non_static_rand()%active_size;
 			int sj = non_static_rand()%active_size;
 
@@ -3225,7 +3225,7 @@ void Solver::two_random_shrink()
 		PGmin_new = INF;
 		for(s=0; s<active_size; s++)
 		{
-			update_size+=1;
+			update_size+=2;
 			int si = non_static_rand()%active_size;
 			int sj = non_static_rand()%active_size;
 
@@ -3391,7 +3391,7 @@ void Solver::two_cyclic_1000()
 		update_size = 0;
 		for(si=0; si<active_size; si++)
 		{
-			update_size+=1;
+			update_size+=2;
 			int tempidx = all_index[s];
 			i = tempidx / full_l;
 			j = tempidx - i*full_l;
@@ -3458,7 +3458,7 @@ void Solver::two_semirandom2_1000()
 		}
 		for(si=0; si<max_set-1; si++)
 		{
-			update_size+=1;
+			update_size+=2;
 			i = index[si];
 			j = index[si+1];
 
@@ -3522,7 +3522,7 @@ void Solver::two_semirandom1_1000()
 		}
 		for(si=0; si<active_size-1; si+=2)
 		{
-			update_size+=1;
+			update_size+=2;
 			i = index[si];
 			j = index[si+1];
 
@@ -3582,7 +3582,7 @@ void Solver::two_random_1000()
 		update_size = 0;
 		for(si=0; si<active_size; si++)
 		{
-			update_size+=1;
+			update_size+=2;
 			i = index[non_static_rand()%active_size];
 			j = index[non_static_rand()%active_size];
 
@@ -3864,7 +3864,7 @@ void Solver::bias_semigd2()
 				fprintf(stderr, "random mode not specified\n");
 				return;
 			}
-			update_size += 1;
+			update_size+=2;
 			for(int inner_iter = 0; inner_iter < 1; inner_iter++)
 			{
 				// update_size += (int) (workset_last - workset_s.begin());
@@ -4247,7 +4247,7 @@ void Solver::bias_semigd()
 		update_size = 0;
 		for(int s = 0; s < smgd_size; s++)
 		{
-			update_size+=1;
+			update_size+=2;
 			i = Iup_max[s];
 			j = Ilow_min[s];
 
@@ -4335,7 +4335,7 @@ void Solver::bias_random()
 		}
 		for(int s = 0; s+1 < active_size; s+=2)
 		{
-			update_size+=1;
+			update_size+=2;
 			int si = -1;
 			int sj = -1;
 			if(rand_mode == RANDOM)
@@ -4538,7 +4538,7 @@ void Solver::oneclass_random()
 		}
 		for(int index_i = 0; index_i<active_size; index_i+=2)
 		{
-			update_size+=1;
+			update_size+=2;
 			int si;
 			int sj;
 			if(rand_mode == RANDOM)
@@ -4710,7 +4710,7 @@ void Solver::oneclass_first_1000()
 	int i, j;
 	double G_i, G_j;
 	double *G = new double[l];
-	update_size = 1;
+	update_size = 2;
 	int Gmax_index= -1, Gmin_index = -1;
 	double Gmax=-INF, Gmin = INF;
 	std::pair<double,double> *newalpha_ij = new std::pair<double,double>;
@@ -4746,7 +4746,7 @@ void Solver::oneclass_first_1000()
 				}
 			}
 		}
-		update_size=1;
+		update_size=2;
 		if(maxIup_le_minIlow(+1, alpha_status[Gmax_index], G[Gmax_index], 
 					+1, alpha_status[Gmin_index], G[Gmin_index]))
 			continue;
@@ -4790,7 +4790,7 @@ void Solver::oneclass_second_1000()
 	clock_t start;
 	int l = prob->l;
 	int i, j;
-	update_size = 1;
+	update_size = 2;
 	double G_i, G_j;
 	double *G = new double[l];
 	int Gmax_index= -1, Gmin_index = -1;
@@ -4799,7 +4799,7 @@ void Solver::oneclass_second_1000()
 
 	while(iter < max_iter)
 	{
-		update_size=1;
+		update_size=2;
 		start = clock();
 		success_size = 0;
 		Gmax = -INF;
@@ -4948,7 +4948,7 @@ void Solver::oneclass_semigd2()
 				fprintf(stderr, "random mode not specified\n");
 				return;
 			}
-			update_size+=1;
+			update_size+=2;
 			if(sh_mode == SH_OFF)
 			{
 				// when don't shrinking, this can prevent gradient calculation
@@ -5303,7 +5303,7 @@ void Solver::oneclass_semigd()
 		update_size = 0;
 		for(int index_i = 0; index_i<smgd_size; index_i++)
 		{
-			update_size+=1;
+			update_size+=2;
 			i = Max_order_index[index_i];
 			j = Min_order_index[index_i];
 

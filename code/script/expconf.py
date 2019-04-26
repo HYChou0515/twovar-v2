@@ -2,14 +2,22 @@ logfolder='log_notime'
 resumefolder='resume'
 
 runtype = [
-		"ONE_L1_CY_1000",
-		"ONE_L2_CY_1000",
-		"BIAS_L1_SEMIGD_CY_FIRST_1000",
-		"BIAS_L2_SEMIGD_CY_FIRST_1000",
+		#"ONE_L1_CY_1000",
+		#"ONE_L2_CY_1000",
+		#"BIAS_L1_SEMIGD_CY_FIRST_1000",
+		#"BIAS_L2_SEMIGD_CY_FIRST_1000",
+		#"ONE_L1_RD_1000",
+		#"ONE_L2_RD_1000",
+		#"BIAS_L1_SEMIGD_RD_FIRST_1000",
+		#"BIAS_L2_SEMIGD_RD_FIRST_1000",
 		"ONE_L1_CY_SH",
 		"ONE_L2_CY_SH",
 		"BIAS_L1_SEMIGD_CY_FIRST_SH",
 		"BIAS_L2_SEMIGD_CY_FIRST_SH",
+		"ONE_L1_RD_SH",
+		"ONE_L2_RD_SH",
+		"BIAS_L1_SEMIGD_RD_FIRST_SH",
+		"BIAS_L2_SEMIGD_RD_FIRST_SH",
 ]
 nlist = [
 		0.1,
@@ -28,7 +36,7 @@ rlist = [
 	#0.064,0.128,0.256,
 	#0.512,0.9,0.95,
 	#float('inf'),
-	2,3,4
+	2,4
 	#0.6,0.7,0.8,0.9,0.99
 	#1,0.95,0.9,0.5,0.1,0.001
 	#,0.5
@@ -53,19 +61,27 @@ PROCESS_MAX = 1
 
 # plot config
 
-MARKER = ["--","-.","-.","-.","-.","-."]
+MARKER = ["--","-.","-.",":",":",":"]
 Y_BUFFER = 2
 MIN_SQUASH = 0.2
 YLIM = (1e-9, 1e20)
 
 uselabel = {
-	40411: "bias-first-l1",
-	20111: "no-bias-l1",
-	40412: "bias-first-l1-sh",
-	20112: "no-bias-l1-sh",
-	40421: "bias-first-l2",
-	20121: "no-bias-l2",
-	40422: "bias-first-l2-sh",
-	20122: "no-bias-l2-sh",
+	40411: "bias-first-l1-cd",
+	40511: "bias-first-l1-suc",
+	20111: "no-bias-l1-cd",
+	20211: "no-bias-l1-suc",
+	40412: "bias-first-l1-sh-cd",
+	40512: "bias-first-l1-sh-suc",
+	20112: "no-bias-l1-sh-cd",
+	20212: "no-bias-l1-sh-suc",
+	40421: "bias-first-l2-cd",
+	40521: "bias-first-l2-suc",
+	20121: "no-bias-l2-cd",
+	20221: "no-bias-l2-suc",
+	40422: "bias-first-l2-sh-cd",
+	40522: "bias-first-l2-sh-suc",
+	20122: "no-bias-l2-sh-cd",
+	20222: "no-bias-l2-sh-suc",
 }
 
