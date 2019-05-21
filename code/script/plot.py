@@ -559,23 +559,57 @@ def main():
 
 	stype = [runs[k] for k in runtype]
 
-	#check losses are same
-	losses = map(lambda st: is_L1(st), filter(lambda s: s is not None, stype))
-	assert losses.count(losses[0])==len(losses), "Need all stype have same loss"
-	loss = "L1" if is_L1(stype[0]) else "L2"
+	#grouping l1/l2 and svc/ocsvm
+	svc_l1loss_stype = []
+	svc_l2loss_stype = []
+	ocsvm_l1loss_stype = []
+	ocsvm_l2loss_stype = []
+	for st in stype:
+		if st is None:
+			# st is STUB
+			ocsvm_l1loss_stype.append(st)
+			svc_l1loss_stype.append(st)
+			ocsvm_l2loss_stype.append(st)
+			svc_l2loss_stype.append(st)
+		else:
+			if is_L1(st):
+				if is_oneclass(st):
+					ocsvm_l1loss_stype.append(st)
+				else:
+					svc_l1loss_stype.append(st)
+			else:
+				if is_oneclass(st):
+					ocsvm_l2loss_stype.append(st)
+				else:
+					svc_l2loss_stype.append(st)
 
-	#check all or none in oneclass
-	oneclass_types = map(lambda st: is_oneclass(st), filter(lambda s: s is not None, stype))
-	assert oneclass_types.count(oneclass_types[0])==len(oneclass_types), "Need all or none of stype are oneclass"
-	if is_oneclass(stype[0]):
-		real_clist = nlist
-	else:
-		real_clist = clist
+	#L1 ocsvm
+	if len(filter(lambda s: s is not None, ocsvm_l1loss_stype)) != 0:
+		for plotter_class in Plotter.__subclasses__():
+			if args.plottype == plotter_class.PLOTTYPE:
+				plotter = plotter_class(ocsvm_l1loss_stype, "L1", dataset, nlist, min(elist), args)
+		plotter.draw_all()
 
-	for plotter_class in Plotter.__subclasses__():
-		if args.plottype == plotter_class.PLOTTYPE:
-			plotter = plotter_class(stype, loss, dataset, real_clist, min(elist), args)
-	plotter.draw_all()
+	#L1 svc
+	if len(filter(lambda s: s is not None, svc_l1loss_stype)) != 0:
+		for plotter_class in Plotter.__subclasses__():
+			if args.plottype == plotter_class.PLOTTYPE:
+				plotter = plotter_class(svc_l1loss_stype, "L1", dataset, clist, min(elist), args)
+		plotter.draw_all()
+
+	#L2 ocsvm
+	if len(filter(lambda s: s is not None, ocsvm_l2loss_stype)) != 0:
+		for plotter_class in Plotter.__subclasses__():
+			if args.plottype == plotter_class.PLOTTYPE:
+				plotter = plotter_class(ocsvm_l2loss_stype, "L2", dataset, nlist, min(elist), args)
+		plotter.draw_all()
+
+	#L2 svc
+	if len(filter(lambda s: s is not None, svc_l2loss_stype)) != 0:
+		for plotter_class in Plotter.__subclasses__():
+			if args.plottype == plotter_class.PLOTTYPE:
+				plotter = plotter_class(svc_l2loss_stype, "L2", dataset, clist, min(elist), args)
+		plotter.draw_all()
 
 def memory_limit():
 	soft, hard = resource.getrlimit(resource.RLIMIT_AS)

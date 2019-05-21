@@ -949,6 +949,7 @@ public:
 	int nr_neg_y;
 	int cdsteps;
 	int nr_n_ops;
+	int ttl_success_size;
 
 	// local variables
 	struct timeval start_tv;
@@ -1023,10 +1024,8 @@ public:
 			const feature_node *xi, const feature_node *xj, double *w);
 
 	//onetwo_nobias_update
-	void one_random_shrink();
-	void one_cyclic_1000();
-	void one_cyclic_shrink();
-	void one_random_1000();
+	void one_liblinear();
+	void one_random();
 	void one_semigd_1000();
 	void one_semigd_shrink();
 	void one_semigd_dualobj_1000();
@@ -1072,6 +1071,7 @@ Solver::Solver(int _solver_type)
 	w_size = -1;
 	active_size = -1;
 	success_size = -1;
+	ttl_success_size = 0;
 	n_exchange = -1;
 	update_size = -1;
 	solver_type = _solver_type;
@@ -1464,6 +1464,8 @@ void Solver::log_message()
 
 	if(update_size >= 0)
 		cdsteps += update_size;
+	if(success_size >= 0)
+		ttl_success_size += success_size;
 
 	countSVs();
 
@@ -1490,6 +1492,7 @@ void Solver::log_message()
 		log_info("decr_rate %.3e ", (last_obj-new_obj)/fabs(new_obj));
 		log_info("actsize %d ", active_size);
 		log_info("sucsize %d ", success_size);
+		log_info("ttl_sucsize %d ", ttl_success_size);
 		log_info("nr_n_ops %d ", nr_n_ops);
 		log_info("ops_per_sucs %.2f ", (double)(nr_n_ops-nr_n_ops_old)/success_size);
 		log_info("updsize %d ", update_size);
@@ -2328,7 +2331,7 @@ void Solver::bias_deltaF_of_indices()
 		}
 
 		// update alpha status and w
-		update_size+=2;
+		update_size+=1;
 		if(fabs(alpha[i]-old_alpha_i) > 1e-16)
 		{
 			success_size+=2;
@@ -2382,150 +2385,7 @@ void Solver::use_resume()
 	}
 }
 
-void Solver::one_random_shrink()
-{
-	int l = max_set;
-	int i, s, si;
-	double C, d, G;
-	// PG: projected gradient, for shrinking and stopping
-	double PG;
-	clock_t start;
-	if(isnan(PGmax_old))
-		PGmax_old = INF;
-	if(isnan(PGmin_old))
-		PGmin_old = -INF;
-
-	while (iter < max_iter)
-	{
-		start = clock();
-		success_size = 0;
-		update_size = 0;
-		PGmax_new = -INF;
-		PGmin_new = INF;
-		for (s=0; s<active_size; s++)
-		{
-			++update_size;
-			si = non_static_rand()%active_size;
-			i = index[si];
-			const schar yi = y[i];
-			feature_node * const xi = prob->x[i];
-			G = yi*dot_n(w, xi)-1;
-			C = upper_bound[GETI(i)];
-			G += alpha[i]*diag[GETI(i)];
-
-			PG = 0;
-			if (alpha[i] == 0)
-			{
-				if (G > PGmax_old)
-				{
-					active_size--;
-					swap(index[si], index[active_size]);
-					continue;
-				}
-				else if (G < 0)
-					PG = G;
-			}
-			else if (alpha[i] == C)
-			{
-				if (G < PGmin_old)
-				{
-					active_size--;
-					swap(index[si], index[active_size]);
-					continue;
-				}
-				else if (G > 0)
-					PG = G;
-			}
-			else
-				PG = G;
-
-			PGmax_new = max(PGmax_new, PG);
-			PGmin_new = min(PGmin_new, PG);
-
-			double alpha_old = alpha[i];
-			alpha[i] = min(max(alpha[i] - G/QD[i], 0.0), C);
-			d = (alpha[i] - alpha_old)*yi;
-			if(fabs(d) > 1.0e-16)
-			{
-				success_size++;
-				axpy_n(d, xi, w);
-			}
-		}
-		iter++;
-		duration += clock() - start;
-		log_message();
-		if(PGmax_new - PGmin_new <= eps)
-		{
-			if(active_size == l)
-				break;
-			else
-			{
-				active_size = l;
-				PGmax_old = INF;
-				PGmin_old = -INF;
-				continue;
-			}
-		}
-		PGmax_old = PGmax_new;
-		PGmin_old = PGmin_new;
-		if (PGmax_old <= 0)
-			PGmax_old = INF;
-		if (PGmin_old >= 0)
-			PGmin_old = -INF;
-		save_resume();
-		EXIT_IF_TIMEOUT();
-		EXIT_IF_OVER_CDSTEPS();
-		EXIT_IF_OPTIMAL(last_obj);
-	}
-	summary();
-}
-
-void Solver::one_random_1000()
-{
-	int i, s;
-	double C, d, G;
-	clock_t start;
-
-	while (iter < max_iter)
-	{
-		start = clock();
-		success_size = 0;
-		update_size = 0;
-		nr_pos_y = 0;
-		nr_neg_y = 0;
-		for (s=0; s<active_size; s++)
-		{
-			++update_size;
-			i = index[non_static_rand()%active_size];
-			const schar yi = y[i];
-			count_pos_neg_y(yi);
-			feature_node * const xi = prob->x[i];
-			G = yi*dot_n(w, xi)-1;
-			C = upper_bound[GETI(i)];
-			G += alpha[i]*diag[GETI(i)];
-
-			double alpha_old = alpha[i];
-			alpha[i] = min(max(alpha[i] - G/QD[i], 0.0), C);
-			d = (alpha[i] - alpha_old)*yi;
-			if(fabs(d) > 1.0e-16)
-			{
-				success_size++;
-				axpy_n(d, xi, w);
-			}
-		}
-
-		iter++;
-		duration += clock() - start;
-		log_message();
-		save_resume();
-		EXIT_IF_TIMEOUT();
-		EXIT_IF_OVER_CDSTEPS();
-		EXIT_IF_OPTIMAL(last_obj);
-	}
-	summary();
-}
-
-void Solver::one_cyclic_shrink()
+void Solver::one_liblinear()
 {
 	int l = max_set;
 	int i, s;
@@ -2632,46 +2492,124 @@ void Solver::one_cyclic_shrink()
 	summary();
 }
 
-void Solver::one_cyclic_1000()
+void Solver::one_random()
 {
-	int i, s;
+	int l = max_set;
+	int i, s, si;
 	double C, d, G;
 	clock_t start;
+	// PG: projected gradient, for shrinking and stopping
+	double PG;
+	if(isnan(PGmax_old))
+		PGmax_old = INF;
+	if(isnan(PGmin_old))
+		PGmin_old = -INF;
 
 	while (iter < max_iter)
 	{
 		start = clock();
+		PGmax_new = -INF;
+		PGmin_new = INF;
+		nr_pos_y = 0;
+		nr_neg_y = 0;
 		success_size = 0;
 		update_size = 0;
-		for (i=0; i<active_size; i++)
+		if(rand_mode == CYCLIC)
 		{
-			int j = i+non_static_rand()%(active_size-i);
-			swap(index[i], index[j]);
+			for (i=0; i<active_size; i++)
+			{
+				int j = i+non_static_rand()%(active_size-i);
+				swap(index[i], index[j]);
+			}
 		}
 		for (s=0; s<active_size; s++)
 		{
 			++update_size;
-			i = index[s];
+			if(rand_mode == CYCLIC)
+				si = s;
+			else if(rand_mode == RANDOM)
+				si = non_static_rand()%active_size;
+			else
+			{
+				fprintf(stderr, "random mode not specified\n");
+				return;
+			}
+			i = index[si];
 			const schar yi = y[i];
+			count_pos_neg_y(yi);
 			feature_node * const xi = prob->x[i];
 
 			G = yi*dot_n(w, xi)-1;
-
 			C = upper_bound[GETI(i)];
 			G += alpha[i]*diag[GETI(i)];
+
+			if(sh_mode == SH_ON)
+			{
+				PG = 0;
+				if (alpha[i] == 0)
+				{
+					if (G > PGmax_old)
+					{
+						active_size--;
+						swap(index[si], index[active_size]);
+						s--;
+						continue;
+					}
+					else if (G < 0)
+						PG = G;
+				}
+				else if (alpha[i] == C)
+				{
+					if (G < PGmin_old)
+					{
+						active_size--;
+						swap(index[si], index[active_size]);
+						s--;
+						continue;
+					}
+					else if (G > 0)
+						PG = G;
+				}
+				else
+					PG = G;
+
+				PGmax_new = max(PGmax_new, PG);
+				PGmin_new = min(PGmin_new, PG);
+			}
 
 			double alpha_old = alpha[i];
 			alpha[i] = min(max(alpha[i] - G/QD[i], 0.0), C);
 			d = (alpha[i] - alpha_old)*yi;
 			if(fabs(d) > 1.0e-16)
 			{
-				success_size++;
 				axpy_n(d, xi, w);
+				success_size++;
 			}
 		}
 		iter++;
-		duration += clock() -start;
+		duration += clock()- start;
 		log_message();
+		if(sh_mode == SH_ON)
+		{
+			if(PGmax_new - PGmin_new <= eps)
+			{
+				if(active_size == l)
+					break;
+				else
+				{
+					active_size = l;
+					PGmax_old = INF;
+					PGmin_old = -INF;
+					continue;
+				}
+			}
+			PGmax_old = PGmax_new;
+			PGmin_old = PGmin_new;
+			if (PGmax_old <= 0)
+				PGmax_old = INF;
+			if (PGmin_old >= 0)
+				PGmin_old = -INF;
+		}
 		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OVER_CDSTEPS();
@@ -3171,6 +3109,7 @@ void Solver::two_random_shrink2()
 				{
 					active_size--;
 					swap(index[si],index[active_size]);
+					s--;
 					continue;
 				}
 			}
@@ -3180,6 +3119,7 @@ void Solver::two_random_shrink2()
 				{
 					active_size--;
 					swap(index[si], index[active_size]);
+					s--;
 					continue;
 				}
 			}
@@ -3197,6 +3137,7 @@ void Solver::two_random_shrink2()
 				{
 					active_size--;
 					swap(index[sj],index[active_size]);
+					s--;
 					continue;
 				}
 			}
@@ -3206,6 +3147,7 @@ void Solver::two_random_shrink2()
 				{
 					active_size--;
 					swap(index[sj], index[active_size]);
+					s--;
 					continue;
 				}
 			}
@@ -3316,6 +3258,7 @@ void Solver::two_random_shrink()
 				{
 					active_size--;
 					swap(index[si],index[active_size]);
+					s--;
 					continue;
 				}
 				else if(G_i < 0)
@@ -3327,6 +3270,7 @@ void Solver::two_random_shrink()
 				{
 					active_size--;
 					swap(index[si], index[active_size]);
+					s--;
 					continue;
 				}
 				else if(G_i > 0)
@@ -3344,6 +3288,7 @@ void Solver::two_random_shrink()
 				{
 					active_size--;
 					swap(index[sj],index[active_size]);
+					s--;
 					continue;
 				}
 				else if(G_j < 0)
@@ -3355,6 +3300,7 @@ void Solver::two_random_shrink()
 				{
 					active_size--;
 					swap(index[sj], index[active_size]);
+					s--;
 					continue;
 				}
 				else if(G_j > 0)
@@ -3918,97 +3864,102 @@ void Solver::bias_semigd2()
 				fprintf(stderr, "random mode not specified\n");
 				return;
 			}
-			update_size += smgd_size;
-			if(sh_mode == SH_OFF)
+			update_size+=2;
+			for(int inner_iter = 0; inner_iter < 1; inner_iter++)
 			{
-				// when don't shrinking, this can prevent gradient calculation
-				// when shrinking, we must do gradient calculation to shrink
+				// update_size += (int) (workset_last - workset_s.begin());
+				if(sh_mode == SH_OFF)
+				{
+					// when don't shrinking, this can prevent gradient calculation
+					// when shrinking, we must do gradient calculation to shrink
+					Iup_size = 0;
+					Ilow_size = 0;
+					for(auto it=workset_s.begin(); it!=workset_last; ++it)
+					{
+						int si = *it;
+						i = index[si];
+						const schar yi = y[i];
+						if( is_Ilow(alpha_status[i], yi) )
+							++Ilow_size;
+						if( is_Iup(alpha_status[i], yi) )
+							++Iup_size;
+					}
+					if(Iup_size <= 0 || Ilow_size <= 0)
+						break; // B optimized
+				}
 				Iup_size = 0;
 				Ilow_size = 0;
+				int workset_size = 0;
+				nyGmax = -INF;
+				nyGmin = INF;
+				// as some variables may be shrunk, 
+				// we re-determine Iup and Ilow
 				for(auto it=workset_s.begin(); it!=workset_last; ++it)
 				{
 					int si = *it;
 					i = index[si];
 					const schar yi = y[i];
-					if( is_Ilow(alpha_status[i], yi) )
-						++Ilow_size;
-					if( is_Iup(alpha_status[i], yi) )
-						++Iup_size;
-				}
-				if(Iup_size <= 0 || Ilow_size <= 0)
-					continue;
-			}
-			Iup_size = 0;
-			Ilow_size = 0;
-			nyGmax = -INF;
-			nyGmin = INF;
-			// as some variables may be shrunk, 
-			// we re-determine Iup and Ilow
-			for(auto it=workset_s.begin(); it!=workset_last; ++it)
-			{
-				int si = *it;
-				i = index[si];
-				const schar yi = y[i];
-				feature_node * const xi = prob->x[i];
-				G_i = y[i]*dot_n(w, xi)-1+alpha[i]*diag[GETI(i)];
-				double yG_i = -y[i]*G_i;
-				if( !is_Ilow(alpha_status[i], yi ) )
-				{
-					if(yG_i < PGmin_old)
+					feature_node * const xi = prob->x[i];
+					G_i = y[i]*dot_n(w, xi)-1+alpha[i]*diag[GETI(i)];
+					double yG_i = -y[i]*G_i;
+					if( !is_Ilow(alpha_status[i], yi ) )
 					{
-						active_size--;
-						swap(index[si], index[active_size]);
+						if(yG_i < PGmin_old) // if not shrink, PGmin_old=-INF
+						{
+							active_size--;
+							swap(index[si], index[active_size]);
+						}
+						else
+						{
+							Iup[Iup_size] = si;
+							IupG[Iup_size] = G_i;
+							++Iup_size;
+							nyGmax = max(nyGmax, yG_i);
+							workset_s[workset_size++] = si;
+						}
+						PGmax_new = max(PGmax_new, yG_i);
 					}
-					else
+					else if( !is_Iup(alpha_status[i], yi) )
+					{
+						if(yG_i > PGmax_old) // if not shrink, PGmax_old=INF
+						{
+							active_size--;
+							swap(index[si], index[active_size]);
+						}
+						else
+						{
+							Ilow[Ilow_size] = si;
+							IlowG[Ilow_size] = G_i;
+							++Ilow_size;
+							nyGmin = min(nyGmin, yG_i);
+							workset_s[workset_size++] = si;
+						}
+						PGmin_new = min(PGmin_new, yG_i);
+					}
+					else //both Iup and Ilow
 					{
 						Iup[Iup_size] = si;
 						IupG[Iup_size] = G_i;
 						++Iup_size;
-						nyGmax = max(nyGmax, yG_i);
-					}
-					PGmax_new = max(PGmax_new, yG_i);
-				}
-				else if( !is_Iup(alpha_status[i], yi) )
-				{
-					if(yG_i > PGmax_old)
-					{
-						active_size--;
-						swap(index[si], index[active_size]);
-					}
-					else
-					{
 						Ilow[Ilow_size] = si;
 						IlowG[Ilow_size] = G_i;
 						++Ilow_size;
+						workset_s[workset_size++] = si;
+						PGmax_new = max(PGmax_new, yG_i);
+						PGmin_new = min(PGmin_new, yG_i);
+						nyGmax = max(nyGmax, yG_i);
 						nyGmin = min(nyGmin, yG_i);
 					}
-					PGmin_new = min(PGmin_new, yG_i);
 				}
-				else //both Iup and Ilow
+				workset_last = workset_s.begin()+workset_size;
+				if(sh_mode == SH_ON)
 				{
-					Iup[Iup_size] = si;
-					IupG[Iup_size] = G_i;
-					++Iup_size;
-					Ilow[Ilow_size] = si;
-					IlowG[Ilow_size] = G_i;
-					++Ilow_size;
-					PGmax_new = max(PGmax_new, yG_i);
-					PGmin_new = min(PGmin_new, yG_i);
-					nyGmax = max(nyGmax, yG_i);
-					nyGmin = min(nyGmin, yG_i);
+					if(Iup_size <= 0 || Ilow_size <= 0)
+						break; // B optimized
 				}
-			}
-			if(sh_mode == SH_ON)
-			{
-				if(Iup_size <= 0 || Ilow_size <= 0)
-					continue;
-			}
-			if(nyGmax <= nyGmin)
-				continue;
-			// inner CD
-			for(int inner_iter = 0; inner_iter < 1; inner_iter++)
-			//Iup and Ilow should be redefined if inner_iter >= 2
-			{
+				if(nyGmax <= nyGmin)
+					break; // B optimized
+				// Used defined Iup and Ilow to select B for inner CD
 				if(wss_mode == SEMIGD_FIRST)
 				{
 					// use first info to select inner workset
@@ -4449,6 +4400,7 @@ void Solver::bias_random()
 					{
 						active_size--;
 						swap(index[si], index[active_size]);
+						s--;
 						to_be_shrunk = true;
 					}
 					else
@@ -4460,6 +4412,7 @@ void Solver::bias_random()
 					{
 						active_size--;
 						swap(index[si], index[active_size]);
+						s--;
 						to_be_shrunk = true;
 					}
 					else
@@ -4476,6 +4429,7 @@ void Solver::bias_random()
 					{
 						active_size--;
 						swap(index[sj], index[active_size]);
+						s--;
 						to_be_shrunk = true;
 					}
 					else
@@ -4487,6 +4441,7 @@ void Solver::bias_random()
 					{
 						active_size--;
 						swap(index[sj], index[active_size]);
+						s--;
 						to_be_shrunk = true;
 					}
 					else
@@ -4642,6 +4597,7 @@ void Solver::oneclass_random()
 					{
 						active_size--;
 						swap(index[si], index[active_size]);
+						index_i--;
 						shrink = true;
 					}
 					else
@@ -4653,6 +4609,7 @@ void Solver::oneclass_random()
 					{
 						active_size--;
 						swap(index[si], index[active_size]);
+						index_i--;
 						shrink = true;
 					}
 					else
@@ -4670,6 +4627,7 @@ void Solver::oneclass_random()
 					{
 						active_size--;
 						swap(index[sj], index[active_size]);
+						index_i--;
 						shrink = true;
 					}
 					Gmax = max(-G_j, Gmax);
@@ -4680,6 +4638,7 @@ void Solver::oneclass_random()
 					{
 						active_size--;
 						swap(index[sj], index[active_size]);
+						index_i--;
 						shrink = true;
 					}
 					Gmin = min(-G_j, Gmin);
@@ -4989,7 +4948,7 @@ void Solver::oneclass_semigd2()
 				fprintf(stderr, "random mode not specified\n");
 				return;
 			}
-			update_size+=smgd_size;
+			update_size+=2;
 			if(sh_mode == SH_OFF)
 			{
 				// when don't shrinking, this can prevent gradient calculation
@@ -5932,30 +5891,42 @@ static inline void onetwo_nobias_update(
 	solver.use_resume();
 	switch(solver_type)
 	{
-		case ONE_L1_RD_SH:
-		case ONE_L2_RD_SH:
+		case OLD_ONE_L1_CY_SH:
+		case OLD_ONE_L2_CY_SH:
 		{
-			solver.one_random_shrink();
+			solver.one_liblinear();
 			break;
 		}
 		case ONE_L1_CY_1000:
 		case ONE_L2_CY_1000:
 		{
-			solver.one_cyclic_1000();
+			solver.sh_mode = Solver::SH_OFF;
+			solver.rand_mode = Solver::CYCLIC;
+			solver.one_random();
 			break;
 		}
-		case OLD_ONE_L1_CY_SH:
-		case OLD_ONE_L2_CY_SH:
 		case ONE_L1_CY_SH:
 		case ONE_L2_CY_SH:
 		{
-			solver.one_cyclic_shrink();
+			solver.sh_mode = Solver::SH_ON;
+			solver.rand_mode = Solver::CYCLIC;
+			solver.one_random();
 			break;
 		}
 		case ONE_L1_RD_1000:
 		case ONE_L2_RD_1000:
 		{
-			solver.one_random_1000();
+			solver.sh_mode = Solver::SH_OFF;
+			solver.rand_mode = Solver::RANDOM;
+			solver.one_random();
+			break;
+		}
+		case ONE_L1_RD_SH:
+		case ONE_L2_RD_SH:
+		{
+			solver.sh_mode = Solver::SH_ON;
+			solver.rand_mode = Solver::RANDOM;
+			solver.one_random();
 			break;
 		}
 		case ONE_L1_SEMIGD_1000:
