@@ -52,7 +52,7 @@ def calculate_relval(measure_val, true_val):
 		return diff
 		#return math.fabs(2*math.atan(true_val/measure_val)-math.pi/2)
 	if diff < 1e-16:
-		return 0.0
+		return 1e-16
 	return diff/true_val_abs
 
 class Plotter(object):
@@ -82,12 +82,20 @@ class Plotter(object):
 
 	def setup_color_marker(self):
 		self.fig = plt.figure()
-		cmap = plt.get_cmap('hsv')
-		totnum = len(self.stype)
-		for st in self.stype:
-			if is_semigd(st):
-				totnum = totnum + len(rlist) -1
-		totnum = max(totnum, 6)
+		cmap = plt.get_cmap('Paired')
+		totnum = 0
+		for tp in self.stype:
+			getrlist = self.get_rlist(tp)
+			e = self.get_eps(tp, self.eps)
+			for r in getrlist:
+				try:
+					self.get_logfile(tp, e, r)
+					totnum += 1
+				except IOError:
+					continue
+				except StubException:
+					totnum += 1
+					continue
 		self.colors = [cmap(j) for j in np.linspace(0, 1, totnum+1)]
 		self.makr = MARKER
 		self.makr = self.makr * int(math.ceil(float(len(self.colors))/len(self.makr)))
@@ -284,8 +292,11 @@ class NrNOpPlotter(Plotter):
 		max_x = None
 		max_y = 0
 		min_y = 1e10
+		stop = False
 		for line in logfile:
 			line = line.split(' ')
+			if stop:
+				break
 			if 'iter' in line and 'obj' in line:
 				val = float(line[line.index('obj')+1])
 				relval = calculate_relval(val, minimal)
@@ -293,7 +304,13 @@ class NrNOpPlotter(Plotter):
 				if relval > self.YLIM[1] or nr_n_ops < NrNOpPlotter.XLIM[0]:
 					continue
 				if relval < self.YLIM[0] or nr_n_ops > NrNOpPlotter.XLIM[1]:
-					break;
+					if len(ys) == 0 or len(xs) == 0:
+						break
+					interpolate_rate = 1-max((nr_n_ops-NrNOpPlotter.XLIM[1])/(nr_n_ops-xs[-1]),
+							(math.log(relval)-math.log(self.YLIM[0]))/(math.log(relval)-math.log(ys[-1])))
+					relval = math.exp(math.log(ys[-1]) + (math.log(relval)-math.log(ys[-1]))*interpolate_rate)
+					nr_n_ops = xs[-1] + (nr_n_ops-xs[-1])*interpolate_rate
+					stop = True
 				ys.append(relval)
 				xs.append(nr_n_ops)
 				if min_x is None:
@@ -351,8 +368,11 @@ class CdPlotter(Plotter):
 		max_x = None
 		max_y = 0
 		min_y = 1e10
+		stop = False
 		for line in logfile:
 			line = line.split(' ')
+			if stop:
+				break
 			if 'iter' in line and 'obj' in line:
 				val = float(line[line.index('obj')+1])
 				relval = calculate_relval(val, minimal)
@@ -360,7 +380,13 @@ class CdPlotter(Plotter):
 				if relval > self.YLIM[1] or CDsteps < CdPlotter.XLIM[0]:
 					continue
 				if relval < self.YLIM[0] or CDsteps > CdPlotter.XLIM[1]:
-					break;
+					if len(ys) == 0 or len(xs) == 0:
+						break
+					interpolate_rate = 1-max((CDsteps-CdPlotter.XLIM[1])/(CDsteps-xs[-1]),
+							(math.log(relval)-math.log(self.YLIM[0]))/(math.log(relval)-math.log(ys[-1])))
+					relval = math.exp(math.log(ys[-1]) + (math.log(relval)-math.log(ys[-1]))*interpolate_rate)
+					CDsteps = xs[-1] + (CDsteps-xs[-1])*interpolate_rate
+					stop = True
 				ys.append(relval)
 				xs.append(CDsteps)
 				if min_x is None:
@@ -415,8 +441,11 @@ class TimePlotter(Plotter):
 		max_x = None
 		max_y = 0
 		min_y = 1e10
+		stop = False
 		for line in logfile:
 			line = line.split(' ')
+			if stop:
+				break
 			if 't' in line and'obj' in line:
 				val = float(line[line.index('obj')+1])
 				relval = calculate_relval(val, minimal)
@@ -424,7 +453,13 @@ class TimePlotter(Plotter):
 				if relval > self.YLIM[1] or t < TimePlotter.XLIM[0]:
 					continue
 				if relval < self.YLIM[0] or t > TimePlotter.XLIM[1]:
-					break;
+					if len(ys) == 0 or len(xs) == 0:
+						break
+					interpolate_rate = 1-max((t-TimePlotter.XLIM[1])/(t-xs[-1]),
+							(math.log(relval)-math.log(self.YLIM[0]))/(math.log(relval)-math.log(ys[-1])))
+					relval = math.exp(math.log(ys[-1]) + (math.log(relval)-math.log(ys[-1]))*interpolate_rate)
+					t = xs[-1] + (t-xs[-1])*interpolate_rate
+					stop = True
 				xs.append(t)
 				ys.append(relval)
 				if min_x is None:
@@ -471,7 +506,7 @@ class SucrCdPlotter(Plotter):
 			line = line.split(' ')
 			if 'iter' in line and 'obj' in line:
 				val = float(line[line.index('sucpair')+1])/float(line[line.index('updsize')+1])
-				cdsteps = cdsteps + (float(line[line.index('updsize')+1]))
+				cdsteps = (float(line[line.index('cdsteps')+1]))
 				ys.append(val)
 				self.max_y = max(val,self.max_y)
 				xs.append(cdsteps)
@@ -506,7 +541,7 @@ class ObjSucPlotter(Plotter):
 			if 'iter' in line and 'obj' in line:
 				val = float(line[line.index('obj')+1])
 				relval = calculate_relval(val, minimal)
-				sucpair = sucpair + (float(line[line.index('sucpair')+1]))
+				sucpair = float(line[line.index('ttl_sucsize')+1])
 				if relval > self.YLIM[1]:
 					continue
 				if relval < self.YLIM[0]:

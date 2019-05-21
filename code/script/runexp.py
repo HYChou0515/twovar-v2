@@ -17,7 +17,7 @@ grid="grid"
 
 def exit_with_help():
 	print("USAGE: " + sys.argv[0] + " [option]")
-	print("option: [run,print]")
+	print("option: [run,print,grid]")
 	exit(1)
 
 if len(sys.argv) != 2:
