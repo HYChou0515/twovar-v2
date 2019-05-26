@@ -968,6 +968,10 @@ public:
 	double last_obj; //the obj calculated in the last log_message
 	int log_skip;
 	int log_count;
+	
+	// some constant
+	double EPS_MIN;
+	double EPS_DECR_RATE;
 	enum SolverCate 
 	{
 		ONE_NOBIAS,
@@ -1087,6 +1091,8 @@ Solver::Solver(int _solver_type)
 	resume_count = 0;
 	log_skip = -1;
 	log_count = 0;
+	EPS_MIN = 1e-15;
+	EPS_DECR_RATE = 0.1;
 	gettimeofday(&start_tv, NULL);
 
 	switch(solver_type)
@@ -1516,6 +1522,8 @@ void Solver::log_message()
 
 		log_info("nr_pos_y %d ", nr_pos_y);
 		log_info("nr_neg_y %d ", nr_neg_y);
+
+		log_info("eps %.15g ", eps);
 
 		log_info("\n");
 	}
@@ -2592,10 +2600,12 @@ void Solver::one_random()
 		{
 			if(PGmax_new - PGmin_new <= eps)
 			{
-				if(active_size == l)
+				if(active_size == l && eps <= EPS_MIN)
 					break;
 				else
 				{
+					if(active_size == l)
+						eps *= EPS_DECR_RATE;
 					active_size = l;
 					PGmax_old = INF;
 					PGmin_old = -INF;
@@ -4089,10 +4099,12 @@ void Solver::bias_semigd2()
 		{
 			if(PGmax_new - PGmin_new <= eps)
 			{
-				if(active_size == l)
+				if(active_size == l && eps <= EPS_MIN)
 					break;
 				else
 				{
+					if(active_size == l)
+						eps *= EPS_DECR_RATE;
 					active_size = l;
 					PGmax_old = INF;
 					PGmin_old = -INF;
@@ -4160,10 +4172,12 @@ void Solver::bias_semigd()
 		{
 			if(Gmax - Gmin < eps && iter>1)
 			{
-				if(active_size == l)
+				if(active_size == l && eps <= EPS_MIN)
 					break;
 				else
 				{
+					if(active_size == l)
+						eps *= EPS_DECR_RATE;
 					active_size = l;
 					counter = 0;
 					continue;
@@ -4492,10 +4506,12 @@ void Solver::bias_random()
 		{
 			if(PGmax_new - PGmin_new <= eps)
 			{
-				if(active_size == l)
+				if(active_size == l && eps <= EPS_MIN)
 					break;
 				else
 				{
+					if(active_size == l)
+						eps *= EPS_DECR_RATE;
 					active_size = l;
 					PGmax_old = INF;
 					PGmin_old = -INF;
@@ -4691,10 +4707,12 @@ void Solver::oneclass_random()
 		{
 			if(Gmax-Gmin< eps)
 			{
-				if(active_size == l)
+				if(active_size == l && eps <= EPS_MIN)
 					break;
 				else
 				{
+					if(active_size == l)
+						eps *= EPS_DECR_RATE;
 					active_size = l;
 					Gmax_old = INF;
 					Gmin_old = -INF;
@@ -5162,10 +5180,12 @@ void Solver::oneclass_semigd2()
 		{
 			if(PGmax_new - PGmin_new <= eps)
 			{
-				if(active_size == l)
+				if(active_size == l && eps <= EPS_MIN)
 					break;
 				else
 				{
+					if(active_size == l)
+						eps *= EPS_DECR_RATE;
 					active_size = l;
 					PGmax_old = INF;
 					PGmin_old = -INF;
@@ -5227,10 +5247,12 @@ void Solver::oneclass_semigd()
 		{
 			if(Gmax - Gmin < eps)
 			{
-				if(active_size == l)
+				if(active_size == l && eps <= EPS_MIN)
 					break;
 				else
 				{
+					if(active_size == l)
+						eps *= EPS_DECR_RATE;
 					active_size = l;
 					continue;
 				}

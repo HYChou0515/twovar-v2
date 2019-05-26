@@ -7,8 +7,8 @@ as we want to run random-greedy-r4 and semigd-r0.1,
 we first generate the grid.job and then 
 use the sed script to modify the r value to what we want.
 
-sed -i 's/50211\(.*\)-r 4\(.*\)_r4\(.*\)_r4/50211\1-r 0.1\2_r0.1\3_r0.1/g' grid_*
-sed -i 's/50511\(.*\)-r 4\(.*\)_r4\(.*\)_r4/50511\1-r 0.1\2_r0.1\3_r0.1/g' grid_*
+sed -i 's/50212\(.*\)-r 4\(.*\)_r4\(.*\)_r4/50212\1-r 0.1\2_r0.1\3_r0.1/g' grid_*
+sed -i 's/50512\(.*\)-r 4\(.*\)_r4\(.*\)_r4/50512\1-r 0.1\2_r0.1\3_r0.1/g' grid_*
 
 192 log files
 
