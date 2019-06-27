@@ -1051,14 +1051,12 @@ public:
 	void bias_semigd();
 	void bias_semigd2();
 	void bias_random();
-	//oneclass_update
+	//oneclass_update and svdd_update
 	void oneclass_random();
 	void oneclass_first_1000();
 	void oneclass_second_1000();
 	void oneclass_semigd();
 	void oneclass_semigd2();
-	//svdd_update
-	void svdd_random();
 };
 int Solver::non_static_rand()
 {
@@ -4664,8 +4662,21 @@ void Solver::oneclass_random()
 			feature_node const * xi = prob->x[i];
 			feature_node const * xj = prob->x[j];
 
-			G_i = dot_n(w, xi);
-			G_j = dot_n(w, xj);
+			if(category == ONECLASS)
+			{
+				G_i = dot_n(w, xi);
+				G_j = dot_n(w, xj);
+			}
+			else if(category == SVDD)
+			{
+				G_i = dot_n(w, xi) - 0.5*QD[i];
+				G_j = dot_n(w, xj) - 0.5*QD[j];
+			}
+			else
+			{
+				fprintf(stderr, "not supported for this type\n");
+				return;
+			}
 
 			if(sh_mode == SH_ON)
 			{
@@ -5452,208 +5463,6 @@ void Solver::oneclass_semigd()
 	delete [] Min_order_index;
 }
 
-void Solver::svdd_random()
-{
-	clock_t start;
-	int l = prob->l;
-	int i, j;
-	double G_i, G_j;
-	std::pair<double,double> *newalpha_ij = new std::pair<double,double>;
-
-	if(isnan(Gmax_old))
-		Gmax_old = INF;
-	if(isnan(Gmin_old))
-		Gmin_old = -INF;
-
-	while(iter < max_iter)
-	{
-		start = clock();
-		success_size = 0;
-		n_exchange = 0;
-		update_size = 0;
-		Gmax = -INF;
-		Gmin = INF;
-
-		if(rand_mode == CYCLIC)
-		{
-			for (i=0; i<active_size; i++)
-			{
-				j = i+non_static_rand()%(active_size-i);
-				swap(index[i], index[j]);
-			}
-		}
-		for(int index_i = 0; index_i<active_size; index_i+=2)
-		{
-			update_size+=2;
-			++cdsteps;
-			int si;
-			int sj;
-			if(rand_mode == RANDOM)
-			{
-				si = non_static_rand()%active_size;
-				sj = non_static_rand()%active_size;
-				while(si==sj)
-				{
-					sj = non_static_rand()%active_size;
-				}
-			}
-			else if(rand_mode == CYCLIC)
-			{
-				si = index_i;
-				sj = (index_i+1)%active_size;
-			}
-			else
-			{
-				fprintf(stderr, "random mode not specified\n");
-				return;
-			}
-			if(si<sj)
-				swap(si, sj); //we shrink si first, so it should be larger
-
-			i = index[si];
-			j = index[sj];
-
-			if(sh_mode == SH_OFF)
-			{
-				// if both i,j are not Iup or not Ilow,
-				// then we don't need to calculate the gradient
-				// but if shrinking mode is on
-				// we still need calculate the gradient
-				if( !is_Ilow(alpha_status[i]) &&
-					!is_Ilow(alpha_status[j]))
-					continue;
-				if( !is_Iup(alpha_status[i]) &&
-					!is_Iup(alpha_status[j]))
-					continue; // both i,j are not Iup
-			}
-
-			feature_node const * xi = prob->x[i];
-			feature_node const * xj = prob->x[j];
-
-			G_i = dot_n(w, xi) - 0.5*QD[i];
-			G_j = dot_n(w, xj) - 0.5*QD[j];
-
-			if(sh_mode == SH_ON)
-			{
-				int alp_st_i = alpha_status[i];
-				int alp_st_j = alpha_status[j];
-				bool shrink = false;
-				if( !is_Ilow(alp_st_i) )
-				{
-					if(-G_i < Gmin_old)
-					{
-						active_size--;
-						swap(index[si], index[active_size]);
-						index_i--;
-						shrink = true;
-					}
-					else
-						Gmax = max(-G_i, Gmax);
-				}
-				else if ( !is_Iup(alp_st_i) )
-				{
-					if(-G_i > Gmax_old)
-					{
-						active_size--;
-						swap(index[si], index[active_size]);
-						index_i--;
-						shrink = true;
-					}
-					else
-						Gmin = min(-G_i, Gmin);
-				}
-				else
-				{
-					Gmax = max(-G_i, Gmax);
-					Gmin = min(-G_i, Gmin);
-				}
-
-				if( !is_Ilow(alp_st_j) )
-				{
-					if(-G_j < Gmin_old)
-					{
-						active_size--;
-						swap(index[sj], index[active_size]);
-						index_i--;
-						shrink = true;
-					}
-					Gmax = max(-G_j, Gmax);
-				}
-				else if ( !is_Iup(alp_st_j) )
-				{
-					if(-G_j > Gmax_old)
-					{
-						active_size--;
-						swap(index[sj], index[active_size]);
-						index_i--;
-						shrink = true;
-					}
-					Gmin = min(-G_j, Gmin);
-				}
-				else
-				{
-					Gmax = max(-G_j, Gmax);
-					Gmin = min(-G_j, Gmin);
-				}
-				if(shrink)
-					continue;
-			}
-			if(maxIup_le_minIlow(+1, alpha_status[i], G_i, 
-						+1, alpha_status[j], G_j))
-				continue;
-
-			double Q_ij = feature_dot_n(xi, xj);
-			calculate_bias_newalpha(newalpha_ij, QD[i],QD[j],Q_ij,
-					upper_bound[2],upper_bound[2],alpha[i],alpha[j],G_i,G_j,+1,+1);
-
-			// update alpha status and w
-			if(fabs(newalpha_ij->first-alpha[i]) > 1e-16)
-			{
-				success_size+=2;
-				if(fabs(newalpha_ij->first-alpha[i]) == upper_bound[2])
-					n_exchange++;
-				axpy_n(newalpha_ij->first-alpha[i], prob->x[i], w);
-				axpy_n(newalpha_ij->second-alpha[j], prob->x[j], w);
-				alpha[i] = newalpha_ij->first;
-				alpha[j] = newalpha_ij->second;
-				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[2]);
-				alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[2]);
-			}
-			if(iter == 0)
-				log_message();
-		}
-		iter++;
-		duration += clock() - start;
-		log_message();
-		if(sh_mode == SH_ON)
-		{
-			if(Gmax-Gmin< eps)
-			{
-				if(active_size == l && eps <= EPS_MIN)
-					break;
-				else
-				{
-					if(active_size == l)
-						eps *= EPS_DECR_RATE;
-					active_size = l;
-					Gmax_old = INF;
-					Gmin_old = -INF;
-				}
-			}
-			else
-			{
-				Gmax_old = Gmax;
-				Gmin_old = Gmin;
-			}
-		}
-		save_resume();
-		EXIT_IF_TIMEOUT();
-		EXIT_IF_OVER_CDSTEPS();
-		EXIT_IF_OPTIMAL(last_obj);
-	}
-	summary();
-}
-
 static inline void svdd_update(
 		const problem *prob, double *w,
 		const parameter *param)
@@ -5748,7 +5557,7 @@ static inline void svdd_update(
 		case SVDD_L1_RD_1000:
 			solver.rand_mode = Solver::RANDOM;
 			solver.sh_mode = Solver::SH_OFF;
-			solver.svdd_random();
+			solver.oneclass_random();
 			break;
 //		case ONECLASS_L1_RD_SH:
 //			solver.rand_mode = Solver::RANDOM;
