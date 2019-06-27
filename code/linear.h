@@ -170,10 +170,10 @@ struct resume
 	char fname[1024];
 	bool read_resume;
 	int iter;
-	int cdsteps;
-	int nr_n_ops;
+	unsigned long long cdsteps;
+	unsigned long long nr_n_ops;
 	clock_t duration;
-	int nr_rand_calls;
+	unsigned long long nr_rand_calls;
 	double last_obj;
 	int active_size;
 	double PGmax_old;

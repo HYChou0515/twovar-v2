@@ -1,57 +1,20 @@
-# exp-2019-04-26
+# exp-2019-05-21
 # generate log
-./runexp.py run 
-ONE_L*_RD_* and BIAS_L*_SEMIGD_RD_FIRST_* should only be there when plotting,
-it's only a mock log of them with its cdsteps=ttl_sucsize/2 for bias (as I bias update 2 var one time)
-and cdsteps=ttl_sucsize.
-Use the code below for creating the mock log file.
 
-384 log files
+#we currently do not run shrinking 
+./runexp.py grid 
+as we want to run random-greedy-r4 and semigd-r0.1,
+we first generate the grid.job and then 
+use the sed script to modify the r value to what we want.
+
+sed -i 's/50212\(.*\)-r 4\(.*\)_r4\(.*\)_r4/50212\1-r 0.1\2_r0.1\3_r0.1/g' grid_*
+sed -i 's/50512\(.*\)-r 4\(.*\)_r4\(.*\)_r4/50512\1-r 0.1\2_r0.1\3_r0.1/g' grid_*
+
+192 log files
 
 # generate plot
-
-./plot --logpath ../log_notime/ cd
-
-use the following python code for creating the mock log file. 
-
-./hello.py *s404* *s201*
-
-##!/usr/bin/env python
-##hello.py
-#import os, sys
-#import traceback
-#def main():
-#	filepaths = sys.argv[1:]
-#	for filepath in filepaths:
-#		try:
-#			if 's404' in filepath:
-#				newfilepath = filepath.replace('s404', 's405')
-#			if 's201' in filepath:
-#				newfilepath = filepath.replace('s201', 's202')
-#			print(newfilepath)
-#			if not os.path.isfile(filepath):
-#				print("source file \"%s\" not exists" % filepath)
-#				continue
-#			if os.path.isfile(newfilepath):
-#				print("destination file \"%s\" already exists" % newfilepath)
-#				continue
-#			with open(filepath) as fin, open(newfilepath, 'w') as fout:
-#				issummary = False
-#				for line in fin:
-#					line = line.strip()
-#					if line != '' and not issummary:
-#						line = line.split(' ')
-#						line[line.index('cdsteps')+1] = str(int(line[line.index('ttl_sucsize')+1]))
-#						fout.write(' '.join(line)+os.linesep)
-#					else:
-#						issummary = True
-#						fout.write(line+os.linesep)
-#
-#		except Exception as e:
-#			sys.stderr.write('error: ' + filepath+os.linesep)
-#			_, _, tb = sys.exc_info()
-#			traceback.print_tb(tb) # Fixed format
-#
-#if __name__ == '__main__':
-#	main()
-#
+Uncomment all lines in runtype with only one #
+and run 
+./plot.py cd
+and 
+./plot.py nrnop

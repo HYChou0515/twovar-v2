@@ -926,7 +926,7 @@ public:
 	int *index;
 	int max_iter;
 	int timeout;
-	int max_cdstep;
+	unsigned long long max_cdstep;
 	double opt_val;
 
 	// logged variables
@@ -947,27 +947,31 @@ public:
 	double alpha_diff;
 	int nr_pos_y;
 	int nr_neg_y;
-	int cdsteps;
-	int nr_n_ops;
-	int ttl_success_size;
+	unsigned long long cdsteps;
+	unsigned long long nr_n_ops;
+	unsigned long long ttl_success_size;
 
 	// local variables
 	struct timeval start_tv;
 	struct timeval now_tv;
 	FILE* log_fp;
 	struct resume* _resume;
-	int nr_rand_calls;
+	unsigned long long nr_rand_calls;
 	int resume_count;
 	double PGmax_old;
 	double PGmin_old;
 	double Gmax_old;
 	double Gmin_old;
-	int nr_n_ops_old;
+	unsigned long long nr_n_ops_old;
 	std::default_random_engine generator;
 	std::uniform_int_distribution<int> distribution;
 	double last_obj; //the obj calculated in the last log_message
 	int log_skip;
 	int log_count;
+	
+	// some constant
+	double EPS_MIN;
+	double EPS_DECR_RATE;
 	enum SolverCate 
 	{
 		ONE_NOBIAS,
@@ -1087,6 +1091,8 @@ Solver::Solver(int _solver_type)
 	resume_count = 0;
 	log_skip = -1;
 	log_count = 0;
+	EPS_MIN = 1e-15;
+	EPS_DECR_RATE = 0.1;
 	gettimeofday(&start_tv, NULL);
 
 	switch(solver_type)
@@ -1462,8 +1468,6 @@ void Solver::log_message()
 {
 	double new_obj = calculate_obj();
 
-	if(update_size >= 0)
-		cdsteps += update_size;
 	if(success_size >= 0)
 		ttl_success_size += success_size;
 
@@ -1492,12 +1496,12 @@ void Solver::log_message()
 		log_info("decr_rate %.3e ", (last_obj-new_obj)/fabs(new_obj));
 		log_info("actsize %d ", active_size);
 		log_info("sucsize %d ", success_size);
-		log_info("ttl_sucsize %d ", ttl_success_size);
-		log_info("nr_n_ops %d ", nr_n_ops);
+		log_info("ttl_sucsize %llu ", ttl_success_size);
+		log_info("nr_n_ops %llu ", nr_n_ops);
 		log_info("ops_per_sucs %.2f ", (double)(nr_n_ops-nr_n_ops_old)/success_size);
 		log_info("updsize %d ", update_size);
 		log_info("sucs_rate %.2f%% ", (double)success_size/update_size*100);
-		log_info("cdsteps %d ", cdsteps);
+		log_info("cdsteps %llu ", cdsteps);
 
 		log_info("nSV %d ", sv);
 		log_info("nBSV %d ", bsv);
@@ -1519,6 +1523,8 @@ void Solver::log_message()
 		log_info("nr_pos_y %d ", nr_pos_y);
 		log_info("nr_neg_y %d ", nr_neg_y);
 
+		log_info("eps %.15g ", eps);
+
 		log_info("\n");
 	}
 	last_obj = new_obj;
@@ -1531,7 +1537,7 @@ void Solver::summary()
 	log_info("eps = %f ratio_update = %f\n", eps, ratio_update);
 	log_info("solver = %s\n", solver_name);
 	log_info("max_iter = %d\n", max_iter);
-	log_info("max_cdstep = %d\n", max_cdstep);
+	log_info("max_cdstep = %llu\n", max_cdstep);
 	log_info("timeout = %d\n", timeout);
 	log_info("opt_val = %g\n", opt_val);
 	log_info("obj = %.16g rho = %.16g\n", calculate_obj(), calculate_rho());
@@ -1578,9 +1584,9 @@ void Solver::save_resume()
 	FILE* fp = fopen(_resume->fname, "w");
 	fprintf(fp, "iter\n%d\n", iter);
 	fprintf(fp, "duration\n%ju\n", (uintmax_t) duration);
-	fprintf(fp, "cdsteps\n%d\n", cdsteps);
-	fprintf(fp, "nr_n_ops\n%d\n", nr_n_ops);
-	fprintf(fp, "nr_rand_calls\n%d\n", nr_rand_calls);
+	fprintf(fp, "cdsteps\n%llu\n", cdsteps);
+	fprintf(fp, "nr_n_ops\n%llu\n", nr_n_ops);
+	fprintf(fp, "nr_rand_calls\n%llu\n", nr_rand_calls);
 	fprintf(fp, "last_obj\n%.17g\n", last_obj);
 	fprintf(fp, "active_size\n%d\n", active_size);
 	fprintf(fp, "Gmax_old\n%.17g\n", Gmax_old);
@@ -2373,7 +2379,7 @@ void Solver::use_resume()
 	PGmax_old = _resume->PGmax_old;
 	PGmin_old = _resume->PGmin_old;
 	nr_rand_calls = 0;
-	for(int i=0; i<_resume->nr_rand_calls; i++)
+	for(unsigned long long i=0; i<_resume->nr_rand_calls; i++)
 		non_static_rand();
 	for(int i=0; i<w_size; i++)
 		w[i] = _resume->w[i];
@@ -2525,6 +2531,7 @@ void Solver::one_random()
 		for (s=0; s<active_size; s++)
 		{
 			++update_size;
+			++cdsteps;
 			if(rand_mode == CYCLIC)
 				si = s;
 			else if(rand_mode == RANDOM)
@@ -2593,10 +2600,12 @@ void Solver::one_random()
 		{
 			if(PGmax_new - PGmin_new <= eps)
 			{
-				if(active_size == l)
+				if(active_size == l && eps <= EPS_MIN)
 					break;
 				else
 				{
+					if(active_size == l)
+						eps *= EPS_DECR_RATE;
 					active_size = l;
 					PGmax_old = INF;
 					PGmin_old = -INF;
@@ -2712,6 +2721,7 @@ void Solver::one_semigd_1000()
 		for(s=0; s<smgd_size; s++)
 		{
 			++update_size;
+			++cdsteps;
 			i = workset[s];
 			const schar yi = y[i];
 			count_pos_neg_y(yi);
@@ -2858,6 +2868,7 @@ void Solver::one_semigd_dualobj_1000()
 		for(s=0; s<smgd_size; s++)
 		{
 			++update_size;
+			++cdsteps;
 			i = workset[s];
 			const schar yi = y[i];
 			count_pos_neg_y(yi);
@@ -3010,6 +3021,7 @@ void Solver::two_semicyclic_1000()
 		for(si=0; si<active_size; si++)
 		{
 			update_size+=2;
+			++cdsteps;
 			j = index[si];
 			if(i==j)
 				continue;
@@ -3077,6 +3089,7 @@ void Solver::two_random_shrink2()
 		for(s=0; s<active_size; s++)
 		{
 			update_size+=2;
+			++cdsteps;
 			int si = non_static_rand()%active_size;
 			int sj = non_static_rand()%active_size;
 
@@ -3226,6 +3239,7 @@ void Solver::two_random_shrink()
 		for(s=0; s<active_size; s++)
 		{
 			update_size+=2;
+			++cdsteps;
 			int si = non_static_rand()%active_size;
 			int sj = non_static_rand()%active_size;
 
@@ -3392,6 +3406,7 @@ void Solver::two_cyclic_1000()
 		for(si=0; si<active_size; si++)
 		{
 			update_size+=2;
+			++cdsteps;
 			int tempidx = all_index[s];
 			i = tempidx / full_l;
 			j = tempidx - i*full_l;
@@ -3459,6 +3474,7 @@ void Solver::two_semirandom2_1000()
 		for(si=0; si<max_set-1; si++)
 		{
 			update_size+=2;
+			++cdsteps;
 			i = index[si];
 			j = index[si+1];
 
@@ -3523,6 +3539,7 @@ void Solver::two_semirandom1_1000()
 		for(si=0; si<active_size-1; si+=2)
 		{
 			update_size+=2;
+			++cdsteps;
 			i = index[si];
 			j = index[si+1];
 
@@ -3583,6 +3600,7 @@ void Solver::two_random_1000()
 		for(si=0; si<active_size; si++)
 		{
 			update_size+=2;
+			++cdsteps;
 			i = index[non_static_rand()%active_size];
 			j = index[non_static_rand()%active_size];
 
@@ -3865,9 +3883,9 @@ void Solver::bias_semigd2()
 				return;
 			}
 			update_size+=2;
+			++cdsteps;
 			for(int inner_iter = 0; inner_iter < 1; inner_iter++)
 			{
-				// update_size += (int) (workset_last - workset_s.begin());
 				if(sh_mode == SH_OFF)
 				{
 					// when don't shrinking, this can prevent gradient calculation
@@ -4081,10 +4099,12 @@ void Solver::bias_semigd2()
 		{
 			if(PGmax_new - PGmin_new <= eps)
 			{
-				if(active_size == l)
+				if(active_size == l && eps <= EPS_MIN)
 					break;
 				else
 				{
+					if(active_size == l)
+						eps *= EPS_DECR_RATE;
 					active_size = l;
 					PGmax_old = INF;
 					PGmin_old = -INF;
@@ -4152,10 +4172,12 @@ void Solver::bias_semigd()
 		{
 			if(Gmax - Gmin < eps && iter>1)
 			{
-				if(active_size == l)
+				if(active_size == l && eps <= EPS_MIN)
 					break;
 				else
 				{
+					if(active_size == l)
+						eps *= EPS_DECR_RATE;
 					active_size = l;
 					counter = 0;
 					continue;
@@ -4248,6 +4270,7 @@ void Solver::bias_semigd()
 		for(int s = 0; s < smgd_size; s++)
 		{
 			update_size+=2;
+			++cdsteps;
 			i = Iup_max[s];
 			j = Ilow_min[s];
 
@@ -4336,6 +4359,7 @@ void Solver::bias_random()
 		for(int s = 0; s+1 < active_size; s+=2)
 		{
 			update_size+=2;
+			++cdsteps;
 			int si = -1;
 			int sj = -1;
 			if(rand_mode == RANDOM)
@@ -4482,10 +4506,12 @@ void Solver::bias_random()
 		{
 			if(PGmax_new - PGmin_new <= eps)
 			{
-				if(active_size == l)
+				if(active_size == l && eps <= EPS_MIN)
 					break;
 				else
 				{
+					if(active_size == l)
+						eps *= EPS_DECR_RATE;
 					active_size = l;
 					PGmax_old = INF;
 					PGmin_old = -INF;
@@ -4539,6 +4565,7 @@ void Solver::oneclass_random()
 		for(int index_i = 0; index_i<active_size; index_i+=2)
 		{
 			update_size+=2;
+			++cdsteps;
 			int si;
 			int sj;
 			if(rand_mode == RANDOM)
@@ -4680,10 +4707,12 @@ void Solver::oneclass_random()
 		{
 			if(Gmax-Gmin< eps)
 			{
-				if(active_size == l)
+				if(active_size == l && eps <= EPS_MIN)
 					break;
 				else
 				{
+					if(active_size == l)
+						eps *= EPS_DECR_RATE;
 					active_size = l;
 					Gmax_old = INF;
 					Gmin_old = -INF;
@@ -4747,6 +4776,7 @@ void Solver::oneclass_first_1000()
 			}
 		}
 		update_size=2;
+		++cdsteps;
 		if(maxIup_le_minIlow(+1, alpha_status[Gmax_index], G[Gmax_index], 
 					+1, alpha_status[Gmin_index], G[Gmin_index]))
 			continue;
@@ -4800,6 +4830,7 @@ void Solver::oneclass_second_1000()
 	while(iter < max_iter)
 	{
 		update_size=2;
+		++cdsteps;
 		start = clock();
 		success_size = 0;
 		Gmax = -INF;
@@ -4949,6 +4980,7 @@ void Solver::oneclass_semigd2()
 				return;
 			}
 			update_size+=2;
+			++cdsteps;
 			if(sh_mode == SH_OFF)
 			{
 				// when don't shrinking, this can prevent gradient calculation
@@ -5148,10 +5180,12 @@ void Solver::oneclass_semigd2()
 		{
 			if(PGmax_new - PGmin_new <= eps)
 			{
-				if(active_size == l)
+				if(active_size == l && eps <= EPS_MIN)
 					break;
 				else
 				{
+					if(active_size == l)
+						eps *= EPS_DECR_RATE;
 					active_size = l;
 					PGmax_old = INF;
 					PGmin_old = -INF;
@@ -5213,10 +5247,12 @@ void Solver::oneclass_semigd()
 		{
 			if(Gmax - Gmin < eps)
 			{
-				if(active_size == l)
+				if(active_size == l && eps <= EPS_MIN)
 					break;
 				else
 				{
+					if(active_size == l)
+						eps *= EPS_DECR_RATE;
 					active_size = l;
 					continue;
 				}
@@ -5304,6 +5340,7 @@ void Solver::oneclass_semigd()
 		for(int index_i = 0; index_i<smgd_size; index_i++)
 		{
 			update_size+=2;
+			++cdsteps;
 			i = Max_order_index[index_i];
 			j = Min_order_index[index_i];
 
@@ -8383,15 +8420,15 @@ struct resume *load_resume(const char *resume_file_name)
 		}
 		else if(strcmp(cmd, "cdsteps")==0)
 		{
-			FSCANF(fp, "%d", &_resume->cdsteps);
+			FSCANF(fp, "%llu", &_resume->cdsteps);
 		}
 		else if(strcmp(cmd, "nr_n_ops")==0)
 		{
-			FSCANF(fp, "%d", &_resume->nr_n_ops);
+			FSCANF(fp, "%llu", &_resume->nr_n_ops);
 		}
 		else if(strcmp(cmd, "nr_rand_calls")==0)
 		{
-			FSCANF(fp, "%d", &_resume->nr_rand_calls);
+			FSCANF(fp, "%llu", &_resume->nr_rand_calls);
 		}
 		else if(strcmp(cmd, "last_obj")==0)
 		{

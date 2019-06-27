@@ -18,7 +18,7 @@ import getpass
 import re
 from threading import Thread
 from string import find, split, join
-from time import time
+from time import time, sleep
 from subprocess import *
 from random import shuffle
 
@@ -124,6 +124,7 @@ class Grid:
 
         # fire ssh workers
         for host in self.workers:
+			sleep(0.1)
             SSHWorker(host, self.job_queue, self.result_queue, host, relpath).start()
 
         # gather results
