@@ -1209,6 +1209,23 @@ Solver::Solver(int _solver_type)
 			category = ONECLASS;
 			break;
 		case SVDD_L1_RD_1000:
+		case SVDD_L1_RD_SH:
+		case SVDD_L1_CY_1000:
+		case SVDD_L1_CY_SH:
+		case SVDD_L1_FIRST_1000:
+		case SVDD_L1_SECOND_1000:
+		case SVDD_L1_SEMIGD_1000:
+		case SVDD_L1_SEMIGD_SH:
+		case SVDD_L1_SEMIGD_RAND_1000:
+		case SVDD_L1_SEMIGD_RAND_SH:
+		case SVDD_L1_SEMIGD_CY_FIRST_1000:
+		case SVDD_L1_SEMIGD_CY_FIRST_SH:
+		case SVDD_L1_SEMIGD_RD_FIRST_1000:
+		case SVDD_L1_SEMIGD_RD_FIRST_SH:
+		case SVDD_L1_SEMIGD_CY_DUALOBJ_1000:
+		case SVDD_L1_SEMIGD_CY_DUALOBJ_SH:
+		case SVDD_L1_SEMIGD_RD_DUALOBJ_1000:
+		case SVDD_L1_SEMIGD_RD_DUALOBJ_SH:
 			category = SVDD;
 			break;
 	}
@@ -1314,6 +1331,23 @@ Solver::Solver(int _solver_type)
 		SAVE_NAME(ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000);
 		SAVE_NAME(ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH);
 		SAVE_NAME(SVDD_L1_RD_1000);
+		SAVE_NAME(SVDD_L1_RD_SH);
+		SAVE_NAME(SVDD_L1_CY_1000);
+		SAVE_NAME(SVDD_L1_CY_SH);
+		SAVE_NAME(SVDD_L1_FIRST_1000);
+		SAVE_NAME(SVDD_L1_SECOND_1000);
+		SAVE_NAME(SVDD_L1_SEMIGD_1000);
+		SAVE_NAME(SVDD_L1_SEMIGD_SH);
+		SAVE_NAME(SVDD_L1_SEMIGD_RAND_1000);
+		SAVE_NAME(SVDD_L1_SEMIGD_RAND_SH);
+		SAVE_NAME(SVDD_L1_SEMIGD_CY_FIRST_1000);
+		SAVE_NAME(SVDD_L1_SEMIGD_CY_FIRST_SH);
+		SAVE_NAME(SVDD_L1_SEMIGD_RD_FIRST_1000);
+		SAVE_NAME(SVDD_L1_SEMIGD_RD_FIRST_SH);
+		SAVE_NAME(SVDD_L1_SEMIGD_CY_DUALOBJ_1000);
+		SAVE_NAME(SVDD_L1_SEMIGD_CY_DUALOBJ_SH);
+		SAVE_NAME(SVDD_L1_SEMIGD_RD_DUALOBJ_1000);
+		SAVE_NAME(SVDD_L1_SEMIGD_RD_DUALOBJ_SH);
 	}
 #undef SAVE_NAME
 }
@@ -4823,7 +4857,19 @@ void Solver::oneclass_first_1000()
 		{
 			int G_index = index[i];
 			feature_node * const xi = prob->x[G_index];
-			G[i] = -dot_n(w, xi);
+			if(category == ONECLASS)
+			{
+				G[i] = -dot_n(w, xi);
+			}
+			else if(category == SVDD)
+			{
+				G[i] = -dot_n(w, xi) + 0.5*QD[i];
+			}
+			else
+			{
+				fprintf(stderr, "not supported for this type\n");
+				return;
+			}
 			if(is_Iup(alpha_status[G_index]))
 			{
 				if(Gmax <= G[i])
@@ -4905,7 +4951,19 @@ void Solver::oneclass_second_1000()
 		{
 			int G_index = index[i];
 			feature_node * const xi = prob->x[G_index];
-			G[i] = -dot_n(w, xi);
+			if(category == ONECLASS)
+			{
+				G[i] = -dot_n(w, xi);
+			}
+			else if(category == SVDD)
+			{
+				G[i] = -dot_n(w, xi) + 0.5*QD[i];
+			}
+			else
+			{
+				fprintf(stderr, "not supported for this type\n");
+				return;
+			}
 			if(is_Iup(alpha_status[G_index]))
 			{
 				if(Gmax <= G[i])
@@ -5077,7 +5135,19 @@ void Solver::oneclass_semigd2()
 				int si = *it;
 				i = index[si];
 				feature_node * const xi = prob->x[i];
-				G_i = dot_n(w, xi);
+				if(category == ONECLASS)
+				{
+					G_i = dot_n(w, xi);
+				}
+				else if(category == SVDD)
+				{
+					G_i = dot_n(w, xi) - 0.5*QD[i];
+				}
+				else
+				{
+					fprintf(stderr, "not supported for this type\n");
+					return;
+				}
 				if( !is_Ilow(alpha_status[i]) )
 				{
 					if(-G_i < PGmin_old)
@@ -5303,7 +5373,19 @@ void Solver::oneclass_semigd()
 		{
 			int G_index = index[i];
 			feature_node * const xi = prob->x[G_index];
-			G[i] = -dot_n(w, xi);
+			if(category == ONECLASS)
+			{
+				G[i] = -dot_n(w, xi);
+			}
+			else if(category == SVDD)
+			{
+				G[i] = -dot_n(w, xi) + 0.5*QD[i];
+			}
+			else
+			{
+				fprintf(stderr, "not supported for this type\n");
+				return;
+			}
 			if(sh_mode == SH_ON)
 			{
 				if( is_Iup(alpha_status[G_index]) )
@@ -5423,8 +5505,21 @@ void Solver::oneclass_semigd()
 				!is_Iup(alpha_status[j]))
 				continue;
 
-			G_i = dot_n(w, xi);
-			G_j = dot_n(w, xj);
+			if(category == ONECLASS)
+			{
+				G_i = dot_n(w, xi);
+				G_j = dot_n(w, xj);
+			}
+			else if(category == SVDD)
+			{
+				G_i = dot_n(w, xi) - 0.5*QD[i];
+				G_j = dot_n(w, xj) - 0.5*QD[j];
+			}
+			else
+			{
+				fprintf(stderr, "not supported for this type\n");
+				return;
+			}
 			if(maxIup_le_minIlow(+1, alpha_status[i], G_i, 
 						+1, alpha_status[j], G_j))
 				continue;
@@ -5480,23 +5575,23 @@ static inline void svdd_update(
 	double upper_bound[3] = {INF, 0, INF};
 
 	if(param->solver_type == SVDD_L1_RD_1000
-//	|| param->solver_type == ONECLASS_L1_RD_SH
-//	|| param->solver_type == ONECLASS_L1_CY_1000
-//	|| param->solver_type == ONECLASS_L1_CY_SH
-//	|| param->solver_type == ONECLASS_L1_SEMIGD_1000
-//	|| param->solver_type == ONECLASS_L1_SEMIGD_SH
-//	|| param->solver_type == ONECLASS_L1_SEMIGD_RAND_1000
-//	|| param->solver_type == ONECLASS_L1_SEMIGD_RAND_SH
-//	|| param->solver_type == ONECLASS_L1_FIRST_1000
-//	|| param->solver_type == ONECLASS_L1_SECOND_1000
-//	|| param->solver_type == ONECLASS_L1_SEMIGD_CY_FIRST_1000
-//	|| param->solver_type == ONECLASS_L1_SEMIGD_CY_FIRST_SH
-//	|| param->solver_type == ONECLASS_L1_SEMIGD_RD_FIRST_1000
-//	|| param->solver_type == ONECLASS_L1_SEMIGD_RD_FIRST_SH
-//	|| param->solver_type == ONECLASS_L1_SEMIGD_CY_DUALOBJ_1000
-//	|| param->solver_type == ONECLASS_L1_SEMIGD_CY_DUALOBJ_SH
-//	|| param->solver_type == ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000
-//	|| param->solver_type == ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH
+	|| param->solver_type == SVDD_L1_RD_SH
+	|| param->solver_type == SVDD_L1_CY_1000
+	|| param->solver_type == SVDD_L1_CY_SH
+	|| param->solver_type == SVDD_L1_SEMIGD_1000
+	|| param->solver_type == SVDD_L1_SEMIGD_SH
+	|| param->solver_type == SVDD_L1_SEMIGD_RAND_1000
+	|| param->solver_type == SVDD_L1_SEMIGD_RAND_SH
+	|| param->solver_type == SVDD_L1_FIRST_1000
+	|| param->solver_type == SVDD_L1_SECOND_1000
+	|| param->solver_type == SVDD_L1_SEMIGD_CY_FIRST_1000
+	|| param->solver_type == SVDD_L1_SEMIGD_CY_FIRST_SH
+	|| param->solver_type == SVDD_L1_SEMIGD_RD_FIRST_1000
+	|| param->solver_type == SVDD_L1_SEMIGD_RD_FIRST_SH
+	|| param->solver_type == SVDD_L1_SEMIGD_CY_DUALOBJ_1000
+	|| param->solver_type == SVDD_L1_SEMIGD_CY_DUALOBJ_SH
+	|| param->solver_type == SVDD_L1_SEMIGD_RD_DUALOBJ_1000
+	|| param->solver_type == SVDD_L1_SEMIGD_RD_DUALOBJ_SH
 	)
 	{
 		diag[0] = 0;
@@ -5559,95 +5654,95 @@ static inline void svdd_update(
 			solver.sh_mode = Solver::SH_OFF;
 			solver.oneclass_random();
 			break;
-//		case ONECLASS_L1_RD_SH:
-//			solver.rand_mode = Solver::RANDOM;
-//			solver.sh_mode = Solver::SH_ON;
-//			solver.oneclass_random();
-//			break;
-//		case ONECLASS_L1_CY_1000:
-//			solver.rand_mode = Solver::CYCLIC;
-//			solver.sh_mode = Solver::SH_OFF;
-//			solver.oneclass_random();
-//			break;
-//		case ONECLASS_L1_CY_SH:
-//			solver.rand_mode = Solver::CYCLIC;
-//			solver.sh_mode = Solver::SH_ON;
-//			solver.oneclass_random();
-//			break;
-//		case ONECLASS_L1_FIRST_1000:
-//			solver.oneclass_first_1000();
-//			break;
-//		case ONECLASS_L1_SECOND_1000:
-//			solver.oneclass_second_1000();
-//			break;
-//		case ONECLASS_L1_SEMIGD_1000:
-//			solver.wss_mode = Solver::SEMIGD_G;
-//			solver.sh_mode = Solver::SH_OFF;
-//			solver.oneclass_semigd();
-//			break;
-//		case ONECLASS_L1_SEMIGD_SH:
-//			solver.wss_mode = Solver::SEMIGD_G;
-//			solver.sh_mode = Solver::SH_ON;
-//			solver.oneclass_semigd();
-//			break;
-//		case ONECLASS_L1_SEMIGD_RAND_1000:
-//			solver.wss_mode = Solver::SEMIGD_G_RAND;
-//			solver.sh_mode = Solver::SH_OFF;
-//			solver.oneclass_semigd();
-//			break;
-//		case ONECLASS_L1_SEMIGD_RAND_SH:
-//			solver.wss_mode = Solver::SEMIGD_G_RAND;
-//			solver.sh_mode = Solver::SH_ON;
-//			solver.oneclass_semigd();
-//			break;
-//		case ONECLASS_L1_SEMIGD_CY_FIRST_1000:
-//			solver.wss_mode = Solver::SEMIGD_FIRST;
-//			solver.rand_mode = Solver::CYCLIC;
-//			solver.sh_mode = Solver::SH_OFF;
-//			solver.oneclass_semigd2();
-//			break;
-//		case ONECLASS_L1_SEMIGD_CY_FIRST_SH:
-//			solver.wss_mode = Solver::SEMIGD_FIRST;
-//			solver.rand_mode = Solver::CYCLIC;
-//			solver.sh_mode = Solver::SH_ON;
-//			solver.oneclass_semigd2();
-//			break;
-//		case ONECLASS_L1_SEMIGD_RD_FIRST_1000:
-//			solver.wss_mode = Solver::SEMIGD_FIRST;
-//			solver.rand_mode = Solver::RANDOM;
-//			solver.sh_mode = Solver::SH_OFF;
-//			solver.oneclass_semigd2();
-//			break;
-//		case ONECLASS_L1_SEMIGD_RD_FIRST_SH:
-//			solver.wss_mode = Solver::SEMIGD_FIRST;
-//			solver.rand_mode = Solver::RANDOM;
-//			solver.sh_mode = Solver::SH_ON;
-//			solver.oneclass_semigd2();
-//			break;
-//		case ONECLASS_L1_SEMIGD_CY_DUALOBJ_1000:
-//			solver.wss_mode = Solver::SEMIGD_DUALOBJ;
-//			solver.rand_mode = Solver::CYCLIC;
-//			solver.sh_mode = Solver::SH_OFF;
-//			solver.oneclass_semigd2();
-//			break;
-//		case ONECLASS_L1_SEMIGD_CY_DUALOBJ_SH:
-//			solver.wss_mode = Solver::SEMIGD_DUALOBJ;
-//			solver.rand_mode = Solver::CYCLIC;
-//			solver.sh_mode = Solver::SH_ON;
-//			solver.oneclass_semigd2();
-//			break;
-//		case ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000:
-//			solver.wss_mode = Solver::SEMIGD_DUALOBJ;
-//			solver.rand_mode = Solver::RANDOM;
-//			solver.sh_mode = Solver::SH_OFF;
-//			solver.oneclass_semigd2();
-//			break;
-//		case ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH:
-//			solver.wss_mode = Solver::SEMIGD_DUALOBJ;
-//			solver.rand_mode = Solver::RANDOM;
-//			solver.sh_mode = Solver::SH_ON;
-//			solver.oneclass_semigd2();
-//			break;
+		case SVDD_L1_RD_SH:
+			solver.rand_mode = Solver::RANDOM;
+			solver.sh_mode = Solver::SH_ON;
+			solver.oneclass_random();
+			break;
+		case SVDD_L1_CY_1000:
+			solver.rand_mode = Solver::CYCLIC;
+			solver.sh_mode = Solver::SH_OFF;
+			solver.oneclass_random();
+			break;
+		case SVDD_L1_CY_SH:
+			solver.rand_mode = Solver::CYCLIC;
+			solver.sh_mode = Solver::SH_ON;
+			solver.oneclass_random();
+			break;
+		case SVDD_L1_FIRST_1000:
+			solver.oneclass_first_1000();
+			break;
+		case SVDD_L1_SECOND_1000:
+			solver.oneclass_second_1000();
+			break;
+		case SVDD_L1_SEMIGD_1000:
+			solver.wss_mode = Solver::SEMIGD_G;
+			solver.sh_mode = Solver::SH_OFF;
+			solver.oneclass_semigd();
+			break;
+		case SVDD_L1_SEMIGD_SH:
+			solver.wss_mode = Solver::SEMIGD_G;
+			solver.sh_mode = Solver::SH_ON;
+			solver.oneclass_semigd();
+			break;
+		case SVDD_L1_SEMIGD_RAND_1000:
+			solver.wss_mode = Solver::SEMIGD_G_RAND;
+			solver.sh_mode = Solver::SH_OFF;
+			solver.oneclass_semigd();
+			break;
+		case SVDD_L1_SEMIGD_RAND_SH:
+			solver.wss_mode = Solver::SEMIGD_G_RAND;
+			solver.sh_mode = Solver::SH_ON;
+			solver.oneclass_semigd();
+			break;
+		case SVDD_L1_SEMIGD_CY_FIRST_1000:
+			solver.wss_mode = Solver::SEMIGD_FIRST;
+			solver.rand_mode = Solver::CYCLIC;
+			solver.sh_mode = Solver::SH_OFF;
+			solver.oneclass_semigd2();
+			break;
+		case SVDD_L1_SEMIGD_CY_FIRST_SH:
+			solver.wss_mode = Solver::SEMIGD_FIRST;
+			solver.rand_mode = Solver::CYCLIC;
+			solver.sh_mode = Solver::SH_ON;
+			solver.oneclass_semigd2();
+			break;
+		case SVDD_L1_SEMIGD_RD_FIRST_1000:
+			solver.wss_mode = Solver::SEMIGD_FIRST;
+			solver.rand_mode = Solver::RANDOM;
+			solver.sh_mode = Solver::SH_OFF;
+			solver.oneclass_semigd2();
+			break;
+		case SVDD_L1_SEMIGD_RD_FIRST_SH:
+			solver.wss_mode = Solver::SEMIGD_FIRST;
+			solver.rand_mode = Solver::RANDOM;
+			solver.sh_mode = Solver::SH_ON;
+			solver.oneclass_semigd2();
+			break;
+		case SVDD_L1_SEMIGD_CY_DUALOBJ_1000:
+			solver.wss_mode = Solver::SEMIGD_DUALOBJ;
+			solver.rand_mode = Solver::CYCLIC;
+			solver.sh_mode = Solver::SH_OFF;
+			solver.oneclass_semigd2();
+			break;
+		case SVDD_L1_SEMIGD_CY_DUALOBJ_SH:
+			solver.wss_mode = Solver::SEMIGD_DUALOBJ;
+			solver.rand_mode = Solver::CYCLIC;
+			solver.sh_mode = Solver::SH_ON;
+			solver.oneclass_semigd2();
+			break;
+		case SVDD_L1_SEMIGD_RD_DUALOBJ_1000:
+			solver.wss_mode = Solver::SEMIGD_DUALOBJ;
+			solver.rand_mode = Solver::RANDOM;
+			solver.sh_mode = Solver::SH_OFF;
+			solver.oneclass_semigd2();
+			break;
+		case SVDD_L1_SEMIGD_RD_DUALOBJ_SH:
+			solver.wss_mode = Solver::SEMIGD_DUALOBJ;
+			solver.rand_mode = Solver::RANDOM;
+			solver.sh_mode = Solver::SH_ON;
+			solver.oneclass_semigd2();
+			break;
 	}
 
 	delete [] QD;
@@ -7624,6 +7719,23 @@ static void train_one(const problem *prob, const parameter *param, double *w, do
 			solve_l2r_l1l2_svr(prob, w, param, L2R_L2LOSS_SVR_DUAL);
 			break;
 		case SVDD_L1_RD_1000:
+		case SVDD_L1_RD_SH:
+		case SVDD_L1_CY_1000:
+		case SVDD_L1_CY_SH:
+		case SVDD_L1_FIRST_1000:
+		case SVDD_L1_SECOND_1000:
+		case SVDD_L1_SEMIGD_1000:
+		case SVDD_L1_SEMIGD_SH:
+		case SVDD_L1_SEMIGD_RAND_1000:
+		case SVDD_L1_SEMIGD_RAND_SH:
+		case SVDD_L1_SEMIGD_CY_FIRST_1000:
+		case SVDD_L1_SEMIGD_CY_FIRST_SH:
+		case SVDD_L1_SEMIGD_RD_FIRST_1000:
+		case SVDD_L1_SEMIGD_RD_FIRST_SH:
+		case SVDD_L1_SEMIGD_CY_DUALOBJ_1000:
+		case SVDD_L1_SEMIGD_CY_DUALOBJ_SH:
+		case SVDD_L1_SEMIGD_RD_DUALOBJ_1000:
+		case SVDD_L1_SEMIGD_RD_DUALOBJ_SH:
 			svdd_update(prob, w, param);
 			break;
 		case ONECLASS_L1_RD_1000:
@@ -7804,6 +7916,23 @@ model* train(const problem *prob, const parameter *param)
 	|| param->solver_type == ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000
 	|| param->solver_type == ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH
 	|| param->solver_type == SVDD_L1_RD_1000
+	|| param->solver_type == SVDD_L1_RD_SH
+	|| param->solver_type == SVDD_L1_CY_1000
+	|| param->solver_type == SVDD_L1_CY_SH
+	|| param->solver_type == SVDD_L1_FIRST_1000
+	|| param->solver_type == SVDD_L1_SECOND_1000
+	|| param->solver_type == SVDD_L1_SEMIGD_1000
+	|| param->solver_type == SVDD_L1_SEMIGD_SH
+	|| param->solver_type == SVDD_L1_SEMIGD_RAND_1000
+	|| param->solver_type == SVDD_L1_SEMIGD_RAND_SH
+	|| param->solver_type == SVDD_L1_SEMIGD_CY_FIRST_1000
+	|| param->solver_type == SVDD_L1_SEMIGD_CY_FIRST_SH
+	|| param->solver_type == SVDD_L1_SEMIGD_RD_FIRST_1000
+	|| param->solver_type == SVDD_L1_SEMIGD_RD_FIRST_SH
+	|| param->solver_type == SVDD_L1_SEMIGD_CY_DUALOBJ_1000
+	|| param->solver_type == SVDD_L1_SEMIGD_CY_DUALOBJ_SH
+	|| param->solver_type == SVDD_L1_SEMIGD_RD_DUALOBJ_1000
+	|| param->solver_type == SVDD_L1_SEMIGD_RD_DUALOBJ_SH
 	)
 	{
 		if(param->solver_type == ONECLASS_L1_RD_1000
@@ -7825,6 +7954,23 @@ model* train(const problem *prob, const parameter *param)
 		|| param->solver_type == ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000
 		|| param->solver_type == ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH
 		|| param->solver_type == SVDD_L1_RD_1000
+		|| param->solver_type == SVDD_L1_RD_SH
+		|| param->solver_type == SVDD_L1_CY_1000
+		|| param->solver_type == SVDD_L1_CY_SH
+		|| param->solver_type == SVDD_L1_FIRST_1000
+		|| param->solver_type == SVDD_L1_SECOND_1000
+		|| param->solver_type == SVDD_L1_SEMIGD_1000
+		|| param->solver_type == SVDD_L1_SEMIGD_SH
+		|| param->solver_type == SVDD_L1_SEMIGD_RAND_1000
+		|| param->solver_type == SVDD_L1_SEMIGD_RAND_SH
+		|| param->solver_type == SVDD_L1_SEMIGD_CY_FIRST_1000
+		|| param->solver_type == SVDD_L1_SEMIGD_CY_FIRST_SH
+		|| param->solver_type == SVDD_L1_SEMIGD_RD_FIRST_1000
+		|| param->solver_type == SVDD_L1_SEMIGD_RD_FIRST_SH
+		|| param->solver_type == SVDD_L1_SEMIGD_CY_DUALOBJ_1000
+		|| param->solver_type == SVDD_L1_SEMIGD_CY_DUALOBJ_SH
+		|| param->solver_type == SVDD_L1_SEMIGD_RD_DUALOBJ_1000
+		|| param->solver_type == SVDD_L1_SEMIGD_RD_DUALOBJ_SH
 		)
 		{
 			w_size = w_size + 1;
@@ -8221,7 +8367,24 @@ double predict_values(const struct model *model_, const struct feature_node *x, 
 			||model_->param.solver_type != ONECLASS_L1_SEMIGD_CY_DUALOBJ_SH
 		 	||model_->param.solver_type != ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000
 		 	||model_->param.solver_type != ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH
-		 	||model_->param.solver_type != SVDD_L1_RD_1000
+			||model_->param.solver_type != SVDD_L1_RD_1000
+		 	||model_->param.solver_type != SVDD_L1_RD_SH
+			||model_->param.solver_type != SVDD_L1_CY_1000
+		 	||model_->param.solver_type != SVDD_L1_CY_SH
+			||model_->param.solver_type != SVDD_L1_FIRST_1000
+			||model_->param.solver_type != SVDD_L1_SECOND_1000
+		 	||model_->param.solver_type != SVDD_L1_SEMIGD_1000
+		 	||model_->param.solver_type != SVDD_L1_SEMIGD_SH
+		 	||model_->param.solver_type != SVDD_L1_SEMIGD_RAND_1000
+		 	||model_->param.solver_type != SVDD_L1_SEMIGD_RAND_SH
+			||model_->param.solver_type != SVDD_L1_SEMIGD_CY_FIRST_1000
+			||model_->param.solver_type != SVDD_L1_SEMIGD_CY_FIRST_SH
+			||model_->param.solver_type != SVDD_L1_SEMIGD_RD_FIRST_1000
+			||model_->param.solver_type != SVDD_L1_SEMIGD_RD_FIRST_SH
+			||model_->param.solver_type != SVDD_L1_SEMIGD_CY_DUALOBJ_1000
+			||model_->param.solver_type != SVDD_L1_SEMIGD_CY_DUALOBJ_SH
+		 	||model_->param.solver_type != SVDD_L1_SEMIGD_RD_DUALOBJ_1000
+		 	||model_->param.solver_type != SVDD_L1_SEMIGD_RD_DUALOBJ_SH
 			)
 			return (dec_values[0]>0)?1:-1;
 		else
@@ -8404,6 +8567,23 @@ class Solver_type_table
 		SAVE_NAME(ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH);
 		// for svdd
 		SAVE_NAME(SVDD_L1_RD_1000);
+		SAVE_NAME(SVDD_L1_RD_SH);
+		SAVE_NAME(SVDD_L1_CY_1000);
+		SAVE_NAME(SVDD_L1_CY_SH);
+		SAVE_NAME(SVDD_L1_FIRST_1000);
+		SAVE_NAME(SVDD_L1_SECOND_1000);
+		SAVE_NAME(SVDD_L1_SEMIGD_1000);
+		SAVE_NAME(SVDD_L1_SEMIGD_SH);
+		SAVE_NAME(SVDD_L1_SEMIGD_RAND_1000);
+		SAVE_NAME(SVDD_L1_SEMIGD_RAND_SH);
+		SAVE_NAME(SVDD_L1_SEMIGD_CY_FIRST_1000);
+		SAVE_NAME(SVDD_L1_SEMIGD_CY_FIRST_SH);
+		SAVE_NAME(SVDD_L1_SEMIGD_RD_FIRST_1000);
+		SAVE_NAME(SVDD_L1_SEMIGD_RD_FIRST_SH);
+		SAVE_NAME(SVDD_L1_SEMIGD_CY_DUALOBJ_1000);
+		SAVE_NAME(SVDD_L1_SEMIGD_CY_DUALOBJ_SH);
+		SAVE_NAME(SVDD_L1_SEMIGD_RD_DUALOBJ_1000);
+		SAVE_NAME(SVDD_L1_SEMIGD_RD_DUALOBJ_SH);
 #undef SAVE_NAME
 	}
 
@@ -8982,6 +9162,23 @@ const char *check_parameter(const problem *prob, const parameter *param)
 	 	&& param->solver_type != ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000
 	 	&& param->solver_type != ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH
 	 	&& param->solver_type != SVDD_L1_RD_1000
+	 	&& param->solver_type != SVDD_L1_RD_SH
+	 	&& param->solver_type != SVDD_L1_CY_1000
+	 	&& param->solver_type != SVDD_L1_CY_SH
+		&& param->solver_type != SVDD_L1_FIRST_1000
+		&& param->solver_type != SVDD_L1_SECOND_1000
+	 	&& param->solver_type != SVDD_L1_SEMIGD_1000
+	 	&& param->solver_type != SVDD_L1_SEMIGD_SH
+	 	&& param->solver_type != SVDD_L1_SEMIGD_RAND_1000
+	 	&& param->solver_type != SVDD_L1_SEMIGD_RAND_SH
+		&& param->solver_type != SVDD_L1_SEMIGD_CY_FIRST_1000
+		&& param->solver_type != SVDD_L1_SEMIGD_CY_FIRST_SH
+		&& param->solver_type != SVDD_L1_SEMIGD_RD_FIRST_1000
+		&& param->solver_type != SVDD_L1_SEMIGD_RD_FIRST_SH
+		&& param->solver_type != SVDD_L1_SEMIGD_CY_DUALOBJ_1000
+		&& param->solver_type != SVDD_L1_SEMIGD_CY_DUALOBJ_SH
+	 	&& param->solver_type != SVDD_L1_SEMIGD_RD_DUALOBJ_1000
+	 	&& param->solver_type != SVDD_L1_SEMIGD_RD_DUALOBJ_SH
 		)
 		return "unknown solver type";
 
