@@ -919,6 +919,7 @@ public:
 	schar *y;
 	double *w;
 	double *alpha;
+	double *linear_terms;
 	double eps;
 	int *alpha_status;
 	int max_set;
@@ -953,6 +954,8 @@ public:
 
 	// local variables
 	struct timeval start_tv;
+	struct timeval log_start_tv;
+	bool log_start_tv_is_set;
 	struct timeval now_tv;
 	FILE* log_fp;
 	struct resume* _resume;
@@ -977,7 +980,8 @@ public:
 		ONE_NOBIAS,
 		TWO_NOBIAS,
 		TWO_BIAS,
-		ONECLASS
+		ONECLASS,
+		SVDD
 	};
 	enum WssMode
 	{
@@ -1053,6 +1057,8 @@ public:
 	void oneclass_second_1000();
 	void oneclass_semigd();
 	void oneclass_semigd2();
+	//svdd_update
+	void svdd_random();
 };
 int Solver::non_static_rand()
 {
@@ -1094,6 +1100,7 @@ Solver::Solver(int _solver_type)
 	EPS_MIN = 1e-15;
 	EPS_DECR_RATE = 0.1;
 	gettimeofday(&start_tv, NULL);
+	log_start_tv_is_set = false;
 
 	switch(solver_type)
 	{
@@ -1203,6 +1210,9 @@ Solver::Solver(int _solver_type)
 		case ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH:
 			category = ONECLASS;
 			break;
+		case SVDD_L1_RD_1000:
+			category = SVDD;
+			break;
 	}
 #define SAVE_NAME(p) case(p): solver_name = #p; break;
 	switch(solver_type)
@@ -1305,6 +1315,7 @@ Solver::Solver(int _solver_type)
 		SAVE_NAME(ONECLASS_L1_SEMIGD_CY_DUALOBJ_SH);
 		SAVE_NAME(ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000);
 		SAVE_NAME(ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH);
+		SAVE_NAME(SVDD_L1_RD_1000);
 	}
 #undef SAVE_NAME
 }
@@ -1334,6 +1345,15 @@ double Solver::calculate_obj()
 			v /= 2;
 			break;
 		}
+		case SVDD:
+		{
+			for(i=0; i<prob->n; i++)
+				v += w[i] * w[i];
+			for(i=0; i<prob->l; i++)
+				v -= alpha[i]*QD[i];
+			v /= 2;
+			break;
+		}
 	}
 	return v;
 }
@@ -1348,10 +1368,13 @@ double Solver::calculate_rho()
 	double ub = INF;
 	for(int i = 0; i < prob->l; i++)
 	{
-		double yy = 0;
+		double yg = 0;
 		if(category == TWO_BIAS)
-			yy = y[i];
-		double yg =  sparse_operator::dot(w, prob->x[i]) - yy;
+			yg = y[i]* (y[i]*sparse_operator::dot(w, prob->x[i]) - 1); //Qalpha=ywx
+		else if(category == ONECLASS)
+			yg = sparse_operator::dot(w, prob->x[i]); 
+		else if(category == SVDD)
+			yg = sparse_operator::dot(w, prob->x[i]) - 0.5*QD[i]; 
 		if(alpha_status[i] == FREE)
 		{
 			n_free++;
@@ -1462,30 +1485,49 @@ void Solver:: countSVs()
 	}
 }
 //For skipping log_info in log_message
-#define SAMPLE_TIME 1 
+#define SAMPLE_TIME 60
 #define MAX_LOG 10000
+#define FIRST_ITER_MAX_LOG 100
 void Solver::log_message()
 {
 	double new_obj = calculate_obj();
 
-	if(success_size >= 0)
-		ttl_success_size += success_size;
-
 	countSVs();
 
-	if(timeout > 0 && SAMPLE_TIME > 0 && MAX_LOG > 0 && max_iter > MAX_LOG)
+	if(iter == 0)
 	{
-		if(log_skip <= 0) 
-		{
-			gettimeofday(&now_tv, NULL);
-			if(now_tv.tv_sec-start_tv.tv_sec > SAMPLE_TIME)
-			{
-				long usec = 1000000 * (now_tv.tv_sec-start_tv.tv_sec) + (now_tv.tv_usec-start_tv.tv_usec);
-				log_skip = (int) ((long)timeout*(long)iter*1000000/ (usec * MAX_LOG));
-			}
-		}
-		if(log_count <= 0)
+		int log_num_0iter = prob->l; // this is true for one-var as a cdstep (iteration) contains l updates
+		if(log_count <= 0) // first update needs to be logged
 			log_count = log_skip;
+		log_skip = log_num_0iter/FIRST_ITER_MAX_LOG;
+	}
+	else
+	{
+		if( ! log_start_tv_is_set)
+		{
+			// first time in logging iter>=1
+			gettimeofday(&log_start_tv, NULL);
+			log_skip = -1;
+			log_count = 0;
+		}
+
+		if(success_size >= 0)
+			ttl_success_size += success_size;
+
+		if(timeout > 0 && SAMPLE_TIME > 0 && MAX_LOG > 0 && max_iter > MAX_LOG)
+		{
+			if(log_skip <= 0) 
+			{
+				gettimeofday(&now_tv, NULL);
+				if(now_tv.tv_sec-log_start_tv.tv_sec > SAMPLE_TIME)
+				{
+					long usec = 1000000 * (now_tv.tv_sec-log_start_tv.tv_sec) + (now_tv.tv_usec-log_start_tv.tv_usec);
+					log_skip = (int) ((long)timeout*(long)iter*1000000/ (usec * MAX_LOG));
+				}
+			}
+			if(log_count <= 0)
+				log_count = log_skip;
+		}
 	}
 	if(--log_count <= 0)
 	{
@@ -2592,6 +2634,8 @@ void Solver::one_random()
 				axpy_n(d, xi, w);
 				success_size++;
 			}
+			if(iter == 0)
+				log_message();
 		}
 		iter++;
 		duration += clock()- start;
@@ -2740,6 +2784,8 @@ void Solver::one_semigd_1000()
 				axpy_n(alpha_diff*yi, xi, w);
 				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[GETI(i)]);
 			}
+			if(iter == 0)
+				log_message();
 		}
 		iter++;
 		duration += clock() - start;
@@ -2887,6 +2933,8 @@ void Solver::one_semigd_dualobj_1000()
 				axpy_n(alpha_diff*yi, xi, w);
 				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[GETI(i)]);
 			}
+			if(iter == 0)
+				log_message();
 		}
 		iter++;
 		duration += clock() - start;
@@ -4090,6 +4138,8 @@ void Solver::bias_semigd2()
 					alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[GETI(i)]);
 					alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[GETI(j)]);
 				}
+				if(iter == 0)
+					log_message();
 			}
 		}
 		iter++;
@@ -4313,6 +4363,8 @@ void Solver::bias_semigd()
 				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[GETI(i)]);
 				alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[GETI(j)]);
 			}
+			if(iter == 0)
+				log_message();
 		}
 		iter++;
 		duration += clock() - start;
@@ -4498,6 +4550,8 @@ void Solver::bias_random()
 				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[GETI(i)]);
 				alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[GETI(j)]);
 			}
+			if(iter == 0)
+				log_message();
 		}
 		iter++;
 		duration += clock() - start;
@@ -4699,6 +4753,8 @@ void Solver::oneclass_random()
 				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[2]);
 				alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[2]);
 			}
+			if(iter == 0)
+				log_message();
 		}
 		iter++;
 		duration += clock() - start;
@@ -5171,6 +5227,8 @@ void Solver::oneclass_semigd2()
 					alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[2]);
 					alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[2]);
 				}
+				if(iter == 0)
+					log_message();
 			}
 		}
 		iter++;
@@ -5377,6 +5435,8 @@ void Solver::oneclass_semigd()
 				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[2]);
 				alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[2]);
 			}
+			if(iter == 0)
+				log_message();
 		}
 
 		iter++;
@@ -5390,6 +5450,401 @@ void Solver::oneclass_semigd()
 	summary();
 	delete [] Max_order_index;
 	delete [] Min_order_index;
+}
+
+void Solver::svdd_random()
+{
+	clock_t start;
+	int l = prob->l;
+	int i, j;
+	double G_i, G_j;
+	std::pair<double,double> *newalpha_ij = new std::pair<double,double>;
+
+	if(isnan(Gmax_old))
+		Gmax_old = INF;
+	if(isnan(Gmin_old))
+		Gmin_old = -INF;
+
+	while(iter < max_iter)
+	{
+		start = clock();
+		success_size = 0;
+		n_exchange = 0;
+		update_size = 0;
+		Gmax = -INF;
+		Gmin = INF;
+
+		if(rand_mode == CYCLIC)
+		{
+			for (i=0; i<active_size; i++)
+			{
+				j = i+non_static_rand()%(active_size-i);
+				swap(index[i], index[j]);
+			}
+		}
+		for(int index_i = 0; index_i<active_size; index_i+=2)
+		{
+			update_size+=2;
+			++cdsteps;
+			int si;
+			int sj;
+			if(rand_mode == RANDOM)
+			{
+				si = non_static_rand()%active_size;
+				sj = non_static_rand()%active_size;
+				while(si==sj)
+				{
+					sj = non_static_rand()%active_size;
+				}
+			}
+			else if(rand_mode == CYCLIC)
+			{
+				si = index_i;
+				sj = (index_i+1)%active_size;
+			}
+			else
+			{
+				fprintf(stderr, "random mode not specified\n");
+				return;
+			}
+			if(si<sj)
+				swap(si, sj); //we shrink si first, so it should be larger
+
+			i = index[si];
+			j = index[sj];
+
+			if(sh_mode == SH_OFF)
+			{
+				// if both i,j are not Iup or not Ilow,
+				// then we don't need to calculate the gradient
+				// but if shrinking mode is on
+				// we still need calculate the gradient
+				if( !is_Ilow(alpha_status[i]) &&
+					!is_Ilow(alpha_status[j]))
+					continue;
+				if( !is_Iup(alpha_status[i]) &&
+					!is_Iup(alpha_status[j]))
+					continue; // both i,j are not Iup
+			}
+
+			feature_node const * xi = prob->x[i];
+			feature_node const * xj = prob->x[j];
+
+			G_i = dot_n(w, xi) - 0.5*QD[i];
+			G_j = dot_n(w, xj) - 0.5*QD[j];
+
+			if(sh_mode == SH_ON)
+			{
+				int alp_st_i = alpha_status[i];
+				int alp_st_j = alpha_status[j];
+				bool shrink = false;
+				if( !is_Ilow(alp_st_i) )
+				{
+					if(-G_i < Gmin_old)
+					{
+						active_size--;
+						swap(index[si], index[active_size]);
+						index_i--;
+						shrink = true;
+					}
+					else
+						Gmax = max(-G_i, Gmax);
+				}
+				else if ( !is_Iup(alp_st_i) )
+				{
+					if(-G_i > Gmax_old)
+					{
+						active_size--;
+						swap(index[si], index[active_size]);
+						index_i--;
+						shrink = true;
+					}
+					else
+						Gmin = min(-G_i, Gmin);
+				}
+				else
+				{
+					Gmax = max(-G_i, Gmax);
+					Gmin = min(-G_i, Gmin);
+				}
+
+				if( !is_Ilow(alp_st_j) )
+				{
+					if(-G_j < Gmin_old)
+					{
+						active_size--;
+						swap(index[sj], index[active_size]);
+						index_i--;
+						shrink = true;
+					}
+					Gmax = max(-G_j, Gmax);
+				}
+				else if ( !is_Iup(alp_st_j) )
+				{
+					if(-G_j > Gmax_old)
+					{
+						active_size--;
+						swap(index[sj], index[active_size]);
+						index_i--;
+						shrink = true;
+					}
+					Gmin = min(-G_j, Gmin);
+				}
+				else
+				{
+					Gmax = max(-G_j, Gmax);
+					Gmin = min(-G_j, Gmin);
+				}
+				if(shrink)
+					continue;
+			}
+			if(maxIup_le_minIlow(+1, alpha_status[i], G_i, 
+						+1, alpha_status[j], G_j))
+				continue;
+
+			double Q_ij = feature_dot_n(xi, xj);
+			calculate_bias_newalpha(newalpha_ij, QD[i],QD[j],Q_ij,
+					upper_bound[2],upper_bound[2],alpha[i],alpha[j],G_i,G_j,+1,+1);
+
+			// update alpha status and w
+			if(fabs(newalpha_ij->first-alpha[i]) > 1e-16)
+			{
+				success_size+=2;
+				if(fabs(newalpha_ij->first-alpha[i]) == upper_bound[2])
+					n_exchange++;
+				axpy_n(newalpha_ij->first-alpha[i], prob->x[i], w);
+				axpy_n(newalpha_ij->second-alpha[j], prob->x[j], w);
+				alpha[i] = newalpha_ij->first;
+				alpha[j] = newalpha_ij->second;
+				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[2]);
+				alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[2]);
+			}
+			if(iter == 0)
+				log_message();
+		}
+		iter++;
+		duration += clock() - start;
+		log_message();
+		if(sh_mode == SH_ON)
+		{
+			if(Gmax-Gmin< eps)
+			{
+				if(active_size == l && eps <= EPS_MIN)
+					break;
+				else
+				{
+					if(active_size == l)
+						eps *= EPS_DECR_RATE;
+					active_size = l;
+					Gmax_old = INF;
+					Gmin_old = -INF;
+				}
+			}
+			else
+			{
+				Gmax_old = Gmax;
+				Gmin_old = Gmin;
+			}
+		}
+		save_resume();
+		EXIT_IF_TIMEOUT();
+		EXIT_IF_OVER_CDSTEPS();
+		EXIT_IF_OPTIMAL(last_obj);
+	}
+	summary();
+}
+
+static inline void svdd_update(
+		const problem *prob, double *w,
+		const parameter *param)
+{
+	int solver_type = param->solver_type;
+	int l = prob->l;
+	int i;
+	double *QD = new double[l];
+	double *linear_terms = new double[l];
+	double *alpha =  new double[l];
+	double C = param->C;
+	int *alpha_status = new int[l];
+	int *index = new int[l];
+	double diag[3] = {1, 0, 1};//need to check
+	double upper_bound[3] = {INF, 0, INF};
+
+	if(param->solver_type == SVDD_L1_RD_1000
+//	|| param->solver_type == ONECLASS_L1_RD_SH
+//	|| param->solver_type == ONECLASS_L1_CY_1000
+//	|| param->solver_type == ONECLASS_L1_CY_SH
+//	|| param->solver_type == ONECLASS_L1_SEMIGD_1000
+//	|| param->solver_type == ONECLASS_L1_SEMIGD_SH
+//	|| param->solver_type == ONECLASS_L1_SEMIGD_RAND_1000
+//	|| param->solver_type == ONECLASS_L1_SEMIGD_RAND_SH
+//	|| param->solver_type == ONECLASS_L1_FIRST_1000
+//	|| param->solver_type == ONECLASS_L1_SECOND_1000
+//	|| param->solver_type == ONECLASS_L1_SEMIGD_CY_FIRST_1000
+//	|| param->solver_type == ONECLASS_L1_SEMIGD_CY_FIRST_SH
+//	|| param->solver_type == ONECLASS_L1_SEMIGD_RD_FIRST_1000
+//	|| param->solver_type == ONECLASS_L1_SEMIGD_RD_FIRST_SH
+//	|| param->solver_type == ONECLASS_L1_SEMIGD_CY_DUALOBJ_1000
+//	|| param->solver_type == ONECLASS_L1_SEMIGD_CY_DUALOBJ_SH
+//	|| param->solver_type == ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000
+//	|| param->solver_type == ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH
+	)
+	{
+		diag[0] = 0;
+		diag[2] = 0;
+		upper_bound[0] = C;
+		upper_bound[2] = C;
+	}
+	if(C > (double)1/l)
+	{
+		double sum_alpha = 1;
+		for(i=0; i<l; i++)
+		{
+			alpha[i] = min(C,sum_alpha);
+			sum_alpha -= alpha[i];
+		}
+	}
+	else
+	{
+		fprintf(stderr, "ERROR: not implement C <= 1/l yet\n");
+		return;
+	}
+
+	for(i=0; i<prob->n; i++)
+		w[i] = 0;
+
+	for(i=0; i<l; i++)
+	{
+		alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[2]);
+		feature_node * const xi = prob->x[i];
+		QD[i] = sparse_operator::nrm2_sq(xi);
+		linear_terms[i] = -0.5 * QD[i];
+		sparse_operator::axpy(alpha[i], xi, w);
+		index[i] = i;
+	}
+	Solver solver = Solver(solver_type);
+	solver.prob = prob;
+	solver.w = w;
+	solver.w_size = prob->n;
+	solver.alpha = alpha;
+	solver.eps = param->eps;
+	solver.QD = QD;
+	solver.linear_terms = linear_terms;
+	solver.alpha_status = alpha_status;
+	solver.index = index;
+	solver.diag = diag;
+	solver.upper_bound = upper_bound;
+	solver.ratio_update = param->r;
+	solver.max_iter = param->max_iter>0 ? param->max_iter : INT_MAX;
+	solver.timeout = param->timeout;
+	solver.max_cdstep = param->max_cdstep*prob->l;
+	solver.opt_val = param->opt_val;
+	solver.log_fp = param->log_fp;
+	solver.active_size = l;
+	solver._resume = param->_resume;
+	solver.use_resume();
+	switch(solver_type)
+	{
+		case SVDD_L1_RD_1000:
+			solver.rand_mode = Solver::RANDOM;
+			solver.sh_mode = Solver::SH_OFF;
+			solver.svdd_random();
+			break;
+//		case ONECLASS_L1_RD_SH:
+//			solver.rand_mode = Solver::RANDOM;
+//			solver.sh_mode = Solver::SH_ON;
+//			solver.oneclass_random();
+//			break;
+//		case ONECLASS_L1_CY_1000:
+//			solver.rand_mode = Solver::CYCLIC;
+//			solver.sh_mode = Solver::SH_OFF;
+//			solver.oneclass_random();
+//			break;
+//		case ONECLASS_L1_CY_SH:
+//			solver.rand_mode = Solver::CYCLIC;
+//			solver.sh_mode = Solver::SH_ON;
+//			solver.oneclass_random();
+//			break;
+//		case ONECLASS_L1_FIRST_1000:
+//			solver.oneclass_first_1000();
+//			break;
+//		case ONECLASS_L1_SECOND_1000:
+//			solver.oneclass_second_1000();
+//			break;
+//		case ONECLASS_L1_SEMIGD_1000:
+//			solver.wss_mode = Solver::SEMIGD_G;
+//			solver.sh_mode = Solver::SH_OFF;
+//			solver.oneclass_semigd();
+//			break;
+//		case ONECLASS_L1_SEMIGD_SH:
+//			solver.wss_mode = Solver::SEMIGD_G;
+//			solver.sh_mode = Solver::SH_ON;
+//			solver.oneclass_semigd();
+//			break;
+//		case ONECLASS_L1_SEMIGD_RAND_1000:
+//			solver.wss_mode = Solver::SEMIGD_G_RAND;
+//			solver.sh_mode = Solver::SH_OFF;
+//			solver.oneclass_semigd();
+//			break;
+//		case ONECLASS_L1_SEMIGD_RAND_SH:
+//			solver.wss_mode = Solver::SEMIGD_G_RAND;
+//			solver.sh_mode = Solver::SH_ON;
+//			solver.oneclass_semigd();
+//			break;
+//		case ONECLASS_L1_SEMIGD_CY_FIRST_1000:
+//			solver.wss_mode = Solver::SEMIGD_FIRST;
+//			solver.rand_mode = Solver::CYCLIC;
+//			solver.sh_mode = Solver::SH_OFF;
+//			solver.oneclass_semigd2();
+//			break;
+//		case ONECLASS_L1_SEMIGD_CY_FIRST_SH:
+//			solver.wss_mode = Solver::SEMIGD_FIRST;
+//			solver.rand_mode = Solver::CYCLIC;
+//			solver.sh_mode = Solver::SH_ON;
+//			solver.oneclass_semigd2();
+//			break;
+//		case ONECLASS_L1_SEMIGD_RD_FIRST_1000:
+//			solver.wss_mode = Solver::SEMIGD_FIRST;
+//			solver.rand_mode = Solver::RANDOM;
+//			solver.sh_mode = Solver::SH_OFF;
+//			solver.oneclass_semigd2();
+//			break;
+//		case ONECLASS_L1_SEMIGD_RD_FIRST_SH:
+//			solver.wss_mode = Solver::SEMIGD_FIRST;
+//			solver.rand_mode = Solver::RANDOM;
+//			solver.sh_mode = Solver::SH_ON;
+//			solver.oneclass_semigd2();
+//			break;
+//		case ONECLASS_L1_SEMIGD_CY_DUALOBJ_1000:
+//			solver.wss_mode = Solver::SEMIGD_DUALOBJ;
+//			solver.rand_mode = Solver::CYCLIC;
+//			solver.sh_mode = Solver::SH_OFF;
+//			solver.oneclass_semigd2();
+//			break;
+//		case ONECLASS_L1_SEMIGD_CY_DUALOBJ_SH:
+//			solver.wss_mode = Solver::SEMIGD_DUALOBJ;
+//			solver.rand_mode = Solver::CYCLIC;
+//			solver.sh_mode = Solver::SH_ON;
+//			solver.oneclass_semigd2();
+//			break;
+//		case ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000:
+//			solver.wss_mode = Solver::SEMIGD_DUALOBJ;
+//			solver.rand_mode = Solver::RANDOM;
+//			solver.sh_mode = Solver::SH_OFF;
+//			solver.oneclass_semigd2();
+//			break;
+//		case ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH:
+//			solver.wss_mode = Solver::SEMIGD_DUALOBJ;
+//			solver.rand_mode = Solver::RANDOM;
+//			solver.sh_mode = Solver::SH_ON;
+//			solver.oneclass_semigd2();
+//			break;
+	}
+
+	delete [] QD;
+	delete [] alpha;
+	delete [] alpha_status;
+	delete [] index;
 }
 
 static inline void oneclass_update(
@@ -7359,6 +7814,9 @@ static void train_one(const problem *prob, const parameter *param, double *w, do
 		case L2R_L2LOSS_SVR_DUAL:
 			solve_l2r_l1l2_svr(prob, w, param, L2R_L2LOSS_SVR_DUAL);
 			break;
+		case SVDD_L1_RD_1000:
+			svdd_update(prob, w, param);
+			break;
 		case ONECLASS_L1_RD_1000:
 		case ONECLASS_L1_RD_SH:
 		case ONECLASS_L1_CY_1000:
@@ -7536,6 +7994,7 @@ model* train(const problem *prob, const parameter *param)
 	|| param->solver_type == ONECLASS_L1_SEMIGD_CY_DUALOBJ_SH
 	|| param->solver_type == ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000
 	|| param->solver_type == ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH
+	|| param->solver_type == SVDD_L1_RD_1000
 	)
 	{
 		if(param->solver_type == ONECLASS_L1_RD_1000
@@ -7556,6 +8015,7 @@ model* train(const problem *prob, const parameter *param)
 		|| param->solver_type == ONECLASS_L1_SEMIGD_CY_DUALOBJ_SH
 		|| param->solver_type == ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000
 		|| param->solver_type == ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH
+		|| param->solver_type == SVDD_L1_RD_1000
 		)
 		{
 			w_size = w_size + 1;
@@ -7952,6 +8412,7 @@ double predict_values(const struct model *model_, const struct feature_node *x, 
 			||model_->param.solver_type != ONECLASS_L1_SEMIGD_CY_DUALOBJ_SH
 		 	||model_->param.solver_type != ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000
 		 	||model_->param.solver_type != ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH
+		 	||model_->param.solver_type != SVDD_L1_RD_1000
 			)
 			return (dec_values[0]>0)?1:-1;
 		else
@@ -8132,6 +8593,8 @@ class Solver_type_table
 		SAVE_NAME(ONECLASS_L1_SEMIGD_CY_DUALOBJ_SH);
 		SAVE_NAME(ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000);
 		SAVE_NAME(ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH);
+		// for svdd
+		SAVE_NAME(SVDD_L1_RD_1000);
 #undef SAVE_NAME
 	}
 
@@ -8709,6 +9172,7 @@ const char *check_parameter(const problem *prob, const parameter *param)
 		&& param->solver_type != ONECLASS_L1_SEMIGD_CY_DUALOBJ_SH
 	 	&& param->solver_type != ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000
 	 	&& param->solver_type != ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH
+	 	&& param->solver_type != SVDD_L1_RD_1000
 		)
 		return "unknown solver type";
 

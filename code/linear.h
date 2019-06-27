@@ -163,6 +163,9 @@ enum {
 
 	ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000 = 51011,
 	ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH = 51012,
+
+	//for svdd
+	SVDD_L1_RD_1000 = 60111,
 	}; /* solver_type */
 
 struct resume

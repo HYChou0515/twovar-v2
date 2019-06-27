@@ -172,6 +172,8 @@ void exit_with_help()
 	"ONECLASS_L1_SEMIGD_CY_DUALOBJ_SH = 50912,\n"
 	"ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000 = 51011,\n"
 	"ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH = 51012,\n"
+	"//for svdd\n"
+	"SVDD_L1_RD_1000,\n"
 	);
 	exit(1);
 }
@@ -608,6 +610,7 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 			case ONECLASS_L1_SEMIGD_CY_DUALOBJ_SH:
 			case ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000:
 			case ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH:
+			case SVDD_L1_RD_1000:
 				param.eps = 0.01;
 				break;
 		}

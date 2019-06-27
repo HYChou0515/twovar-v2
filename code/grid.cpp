@@ -173,6 +173,8 @@ void exit_with_help()
 	"ONECLASS_L1_SEMIGD_CY_DUALOBJ_SH = 50912,\n"
 	"ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000 = 51011,\n"
 	"ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH = 51012,\n"
+	"//for svdd\n"
+	"SVDD_L1_RD_1000,\n"
 	);
 	exit(1);
 }
