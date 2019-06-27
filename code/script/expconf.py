@@ -2,35 +2,35 @@ logfolder='log_notime'
 resumefolder='resume'
 
 runtype = [
-		# FOR EXP: 2-cd vs new-4 vs nobias
+		## FOR EXP: 2-cd vs new-4 vs nobias
 		##"ONE_L1_CY_1000", #do not need to run as change of cdstep do not affect this
 		##"BIAS_L1_CY_1000",
 		##"BIAS_L1_SEMIGD_CY_FIRST_1000", #r=4
 		"ONE_L1_CY_SH", #do not need to run as change of cdstep do not affect this
 		"BIAS_L1_CY_SH",
 		"BIAS_L1_SEMIGD_CY_FIRST_SH", #r=4
+		"STUB",
+		"STUB",
+
+		###"ONE_L2_CY_1000", #do not need to run as change of cdstep do not affect this
+		###"BIAS_L2_CY_1000",
+		###"BIAS_L2_SEMIGD_CY_FIRST_1000", #r=4
+		#"ONE_L2_CY_SH", #do not need to run as change of cdstep do not affect this
+		#"BIAS_L2_CY_SH",
+		#"BIAS_L2_SEMIGD_CY_FIRST_SH", #r=4
 		#"STUB",
 		#"STUB",
 
-		##"ONE_L2_CY_1000", #do not need to run as change of cdstep do not affect this
-		##"BIAS_L2_CY_1000",
-		##"BIAS_L2_SEMIGD_CY_FIRST_1000", #r=4
-		"ONE_L2_CY_SH", #do not need to run as change of cdstep do not affect this
-		"BIAS_L2_CY_SH",
-		"BIAS_L2_SEMIGD_CY_FIRST_SH", #r=4
+		## FOR EXP: 2-cd vs new-4 vs semigd vs semigd-rd
 		#"STUB",
-		#"STUB",
-
-		# FOR EXP: 2-cd vs new-4 vs semigd vs semigd-rd
-		#"STUB",
-		##"ONECLASS_L1_CY_1000",
-		##"ONECLASS_L1_SEMIGD_CY_FIRST_1000", #r=4
-		##"ONECLASS_L1_SEMIGD_1000", #r=0.1
-		##"ONECLASS_L1_SEMIGD_RAND_1000", #r=0.1
-		"ONECLASS_L1_CY_SH",
-		"ONECLASS_L1_SEMIGD_CY_FIRST_SH", #r=4
-		"ONECLASS_L1_SEMIGD_SH", #r=0.1
-		"ONECLASS_L1_SEMIGD_RAND_SH", #r=0.1
+		###"ONECLASS_L1_CY_1000",
+		###"ONECLASS_L1_SEMIGD_CY_FIRST_1000", #r=4
+		###"ONECLASS_L1_SEMIGD_1000", #r=0.1
+		###"ONECLASS_L1_SEMIGD_RAND_1000", #r=0.1
+		#"ONECLASS_L1_CY_SH",
+		#"ONECLASS_L1_SEMIGD_CY_FIRST_SH", #r=4
+		#"ONECLASS_L1_SEMIGD_SH", #r=0.1
+		#"ONECLASS_L1_SEMIGD_RAND_SH", #r=0.1
 ]
 nlist = [
 		0.1,
@@ -46,7 +46,7 @@ rlist = [
 	4, 0.1
 ]
 m = 100000
-timeout = 36000
+timeout = 50400
 tolerance = 1e-10
 dataset = [
 	"yahookr",
