@@ -145,16 +145,15 @@ class Plotter(object):
 			print('Using a token')
 			raise StubException
 		if is_semigd(tp):
-			if is_oneclass(tp):
+			if is_oneclass(tp) == 1:
 				logname = "%s_s%d_c1_e%g_n%g_r%g"% (self.dstr, tp, e, self.c, r)
 			else:
 				logname = "%s_s%d_c%g_e%g_r%g"% (self.dstr, tp, self.c, e, r)
 		else:
-			if is_oneclass(tp):
+			if is_oneclass(tp) == 1:
 				logname = "%s_s%d_c1_e%g_n%g"% (self.dstr, tp, e, self.c)
 			else:
 				logname = "%s_s%d_c%g_e%g"% (self.dstr, tp, self.c, e)
-		print(logname)
 		try:
 			return open(self.logpath+logname,"r")
 		except IOError:
@@ -164,8 +163,10 @@ class Plotter(object):
 	def get_minimal(self, tp):
 		if is_biasobj(tp):
 			dobj_key = "bias{}c{}".format(self.loss,self.c)
-		elif is_oneclass(tp):
+		elif is_oneclass(tp) == 1: # ocsvm
 			dobj_key = "one{}c{}".format(self.loss,self.c)
+		elif is_oneclass(tp) == 2: # svdd
+			dobj_key = "svdd{}c{}".format(self.loss,self.c)
 		else:
 			dobj_key = "{}c{}".format(self.loss,self.c)
 		try:
@@ -176,9 +177,12 @@ class Plotter(object):
 
 	def set_xy_lim(self, min_xs, max_xs, min_ys, max_ys):
 		# set xlim
+		print("minmax:%d maxmin:%d" % (min(max_xs), max(min_xs)))
 		if max(min_xs) > min(max_xs):
+			print(max(min_xs)+min(max_xs))
 			plt.xlim(0, min(max(max_xs), max(min_xs)+min(max_xs)))
 		else:
+			print(min(max_xs) / MIN_SQUASH, max(max_xs))
 			plt.xlim(0, min(min(max_xs) / MIN_SQUASH, max(max_xs)))
 		# set ylim
 		y_exponents = [1e1,1e3,1e7,1e12, float('Inf')]
@@ -376,7 +380,7 @@ class CdPlotter(Plotter):
 			if 'iter' in line and 'obj' in line:
 				val = float(line[line.index('obj')+1])
 				relval = calculate_relval(val, minimal)
-				CDsteps = (float(line[line.index('cdsteps')+1]))
+				CDsteps = (float(line[line.index('iter')+1]))
 				if relval > self.YLIM[1] or CDsteps < CdPlotter.XLIM[0]:
 					continue
 				if relval < self.YLIM[0] or CDsteps > CdPlotter.XLIM[1]:
@@ -396,12 +400,15 @@ class CdPlotter(Plotter):
 				max_y = max(relval,max_y)
 				#print('CDsteps: %.16g\t relval: %.16g' % (CDsteps, relval))
 		xy_range = (min_x, max_x, min_y, max_y)
-		if all(xy_range):
+		if all(xy_r is not None for xy_r in xy_range):
+			print("add xy_range={}".format(xy_range))
 			self.xy_range.append(xy_range)
-		print("xy_range={}".format(xy_range))
+		else:
+			print("discard xy_range={}".format(xy_range))
 		logfile.close()
 		return ys, xs
 	def setup_fig(self):
+		print("xy_range={}".format(self.xy_range))
 		min_xs, max_xs, min_ys, max_ys = zip(*self.xy_range) # list of tuples to tuple of lists
 		Plotter.set_xy_lim(self, min_xs, max_xs, min_ys, max_ys)
 		if(min(min_ys) > 1.0e-2):
@@ -599,22 +606,30 @@ def main():
 	svc_l2loss_stype = []
 	ocsvm_l1loss_stype = []
 	ocsvm_l2loss_stype = []
+	svdd_l1loss_stype = []
+	svdd_l2loss_stype = []
 	for st in stype:
 		if st is None:
 			# st is STUB
 			ocsvm_l1loss_stype.append(st)
+			svdd_l1loss_stype.append(st)
 			svc_l1loss_stype.append(st)
 			ocsvm_l2loss_stype.append(st)
+			svdd_l2loss_stype.append(st)
 			svc_l2loss_stype.append(st)
 		else:
 			if is_L1(st):
-				if is_oneclass(st):
+				if is_oneclass(st)==1:
 					ocsvm_l1loss_stype.append(st)
+				elif is_oneclass(st)==2:
+					svdd_l1loss_stype.append(st)
 				else:
 					svc_l1loss_stype.append(st)
 			else:
-				if is_oneclass(st):
+				if is_oneclass(st)==1:
 					ocsvm_l2loss_stype.append(st)
+				elif is_oneclass(st)==2:
+					svdd_l2loss_stype.append(st)
 				else:
 					svc_l2loss_stype.append(st)
 
@@ -623,6 +638,13 @@ def main():
 		for plotter_class in Plotter.__subclasses__():
 			if args.plottype == plotter_class.PLOTTYPE:
 				plotter = plotter_class(ocsvm_l1loss_stype, "L1", dataset, nlist, min(elist), args)
+		plotter.draw_all()
+
+	#L1 svdd
+	if len(filter(lambda s: s is not None, svdd_l1loss_stype)) != 0:
+		for plotter_class in Plotter.__subclasses__():
+			if args.plottype == plotter_class.PLOTTYPE:
+				plotter = plotter_class(svdd_l1loss_stype, "L1", dataset, clist, min(elist), args)
 		plotter.draw_all()
 
 	#L1 svc
@@ -637,6 +659,13 @@ def main():
 		for plotter_class in Plotter.__subclasses__():
 			if args.plottype == plotter_class.PLOTTYPE:
 				plotter = plotter_class(ocsvm_l2loss_stype, "L2", dataset, nlist, min(elist), args)
+		plotter.draw_all()
+
+	#L2 svdd
+	if len(filter(lambda s: s is not None, svdd_l2loss_stype)) != 0:
+		for plotter_class in Plotter.__subclasses__():
+			if args.plottype == plotter_class.PLOTTYPE:
+				plotter = plotter_class(svdd_l2loss_stype, "L2", dataset, clist, min(elist), args)
 		plotter.draw_all()
 
 	#L2 svc

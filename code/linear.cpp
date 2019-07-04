@@ -971,6 +971,7 @@ public:
 	double last_obj; //the obj calculated in the last log_message
 	int log_skip;
 	int log_count;
+	int need_logged_0iter;
 	
 	// some constant
 	double EPS_MIN;
@@ -1094,6 +1095,7 @@ Solver::Solver(int _solver_type)
 	nr_rand_calls = 0;
 	resume_count = 0;
 	log_skip = -1;
+	need_logged_0iter = 10;
 	log_count = 0;
 	EPS_MIN = 1e-15;
 	EPS_DECR_RATE = 0.1;
@@ -1522,7 +1524,10 @@ void Solver:: countSVs()
 #define FIRST_ITER_MAX_LOG 100
 void Solver::log_message()
 {
+	unsigned long long cur_nr_n_ops = nr_n_ops; // after this method, nr_n_ops may increased (if sparse_op used), so we save it before any operation
 	double new_obj = calculate_obj();
+
+	int cur_success_size = success_size;
 
 	countSVs();
 
@@ -1535,6 +1540,10 @@ void Solver::log_message()
 	}
 	else
 	{
+		ttl_success_size += success_size;
+		cur_success_size = success_size;
+		success_size = 0;
+
 		if( ! log_start_tv_is_set)
 		{
 			// first time in logging iter>=1
@@ -1542,9 +1551,6 @@ void Solver::log_message()
 			log_skip = -1;
 			log_count = 0;
 		}
-
-		if(success_size >= 0)
-			ttl_success_size += success_size;
 
 		if(timeout > 0 && SAMPLE_TIME > 0 && MAX_LOG > 0 && max_iter > MAX_LOG)
 		{
@@ -1561,7 +1567,7 @@ void Solver::log_message()
 				log_count = log_skip;
 		}
 	}
-	if(--log_count <= 0)
+	if(--log_count <= 0 || --need_logged_0iter >= 0)
 	{
 		log_info("iter %d ", iter);
 		log_info("t %f ", (double)(duration)/CLOCKS_PER_SEC);
@@ -1569,12 +1575,12 @@ void Solver::log_message()
 		log_info("obj %.16g ", new_obj);
 		log_info("decr_rate %.3e ", (last_obj-new_obj)/fabs(new_obj));
 		log_info("actsize %d ", active_size);
-		log_info("sucsize %d ", success_size);
+		log_info("sucsize %d ", cur_success_size);
 		log_info("ttl_sucsize %llu ", ttl_success_size);
-		log_info("nr_n_ops %llu ", nr_n_ops);
-		log_info("ops_per_sucs %.2f ", (double)(nr_n_ops-nr_n_ops_old)/success_size);
+		log_info("nr_n_ops %llu ", cur_nr_n_ops);
+		log_info("ops_per_sucs %.2f ", (double)(cur_nr_n_ops-nr_n_ops_old)/cur_success_size);
 		log_info("updsize %d ", update_size);
-		log_info("sucs_rate %.2f%% ", (double)success_size/update_size*100);
+		log_info("sucs_rate %.2f%% ", (double)cur_success_size/update_size*100);
 		log_info("cdsteps %llu ", cdsteps);
 
 		log_info("nSV %d ", sv);
@@ -1601,8 +1607,11 @@ void Solver::log_message()
 
 		log_info("\n");
 	}
-	last_obj = new_obj;
-	nr_n_ops_old = nr_n_ops;
+	if(iter > 0)
+	{
+		last_obj = new_obj;
+		nr_n_ops_old = cur_nr_n_ops;
+	}
 }
 void Solver::summary()
 {
@@ -1661,6 +1670,7 @@ void Solver::save_resume()
 	fprintf(fp, "cdsteps\n%llu\n", cdsteps);
 	fprintf(fp, "nr_n_ops\n%llu\n", nr_n_ops);
 	fprintf(fp, "nr_rand_calls\n%llu\n", nr_rand_calls);
+	fprintf(fp, "ttl_sucsize\n%llu\n", ttl_success_size);
 	fprintf(fp, "last_obj\n%.17g\n", last_obj);
 	fprintf(fp, "active_size\n%d\n", active_size);
 	fprintf(fp, "Gmax_old\n%.17g\n", Gmax_old);
@@ -2452,9 +2462,10 @@ void Solver::use_resume()
 	Gmin_old = _resume->Gmin_old;
 	PGmax_old = _resume->PGmax_old;
 	PGmin_old = _resume->PGmin_old;
+	ttl_success_size = _resume->ttl_success_size;
 	nr_rand_calls = 0;
 	for(unsigned long long i=0; i<_resume->nr_rand_calls; i++)
-		non_static_rand();
+		distribution(generator);
 	for(int i=0; i<w_size; i++)
 		w[i] = _resume->w[i];
 	for(int i=0; i<prob->l; i++)
@@ -2463,6 +2474,16 @@ void Solver::use_resume()
 		alpha[i] = _resume->alpha[i];
 		alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[2]);
 	}
+}
+
+#define LOG_0ITER()\
+{\
+	if(iter == 0)\
+	{\
+		duration += clock()- start;\
+		log_message();\
+		start = clock();\
+	}\
 }
 
 void Solver::one_liblinear()
@@ -2604,6 +2625,7 @@ void Solver::one_random()
 		}
 		for (s=0; s<active_size; s++)
 		{
+			LOG_0ITER()
 			++update_size;
 			++cdsteps;
 			if(rand_mode == CYCLIC)
@@ -2666,8 +2688,6 @@ void Solver::one_random()
 				axpy_n(d, xi, w);
 				success_size++;
 			}
-			if(iter == 0)
-				log_message();
 		}
 		iter++;
 		duration += clock()- start;
@@ -2796,6 +2816,7 @@ void Solver::one_semigd_1000()
 		update_size = 0;
 		for(s=0; s<smgd_size; s++)
 		{
+			LOG_0ITER()
 			++update_size;
 			++cdsteps;
 			i = workset[s];
@@ -2816,8 +2837,6 @@ void Solver::one_semigd_1000()
 				axpy_n(alpha_diff*yi, xi, w);
 				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[GETI(i)]);
 			}
-			if(iter == 0)
-				log_message();
 		}
 		iter++;
 		duration += clock() - start;
@@ -2945,6 +2964,7 @@ void Solver::one_semigd_dualobj_1000()
 		update_size = 0;
 		for(s=0; s<smgd_size; s++)
 		{
+			LOG_0ITER()
 			++update_size;
 			++cdsteps;
 			i = workset[s];
@@ -2965,8 +2985,6 @@ void Solver::one_semigd_dualobj_1000()
 				axpy_n(alpha_diff*yi, xi, w);
 				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[GETI(i)]);
 			}
-			if(iter == 0)
-				log_message();
 		}
 		iter++;
 		duration += clock() - start;
@@ -3966,6 +3984,7 @@ void Solver::bias_semigd2()
 			++cdsteps;
 			for(int inner_iter = 0; inner_iter < 1; inner_iter++)
 			{
+				LOG_0ITER()
 				if(sh_mode == SH_OFF)
 				{
 					// when don't shrinking, this can prevent gradient calculation
@@ -4170,8 +4189,6 @@ void Solver::bias_semigd2()
 					alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[GETI(i)]);
 					alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[GETI(j)]);
 				}
-				if(iter == 0)
-					log_message();
 			}
 		}
 		iter++;
@@ -4351,6 +4368,7 @@ void Solver::bias_semigd()
 		update_size = 0;
 		for(int s = 0; s < smgd_size; s++)
 		{
+			LOG_0ITER()
 			update_size+=2;
 			++cdsteps;
 			i = Iup_max[s];
@@ -4395,8 +4413,6 @@ void Solver::bias_semigd()
 				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[GETI(i)]);
 				alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[GETI(j)]);
 			}
-			if(iter == 0)
-				log_message();
 		}
 		iter++;
 		duration += clock() - start;
@@ -4442,6 +4458,7 @@ void Solver::bias_random()
 		}
 		for(int s = 0; s+1 < active_size; s+=2)
 		{
+			LOG_0ITER()
 			update_size+=2;
 			++cdsteps;
 			int si = -1;
@@ -4582,8 +4599,6 @@ void Solver::bias_random()
 				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[GETI(i)]);
 				alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[GETI(j)]);
 			}
-			if(iter == 0)
-				log_message();
 		}
 		iter++;
 		duration += clock() - start;
@@ -4650,6 +4665,7 @@ void Solver::oneclass_random()
 		}
 		for(int index_i = 0; index_i<active_size; index_i+=2)
 		{
+			LOG_0ITER()
 			update_size+=2;
 			++cdsteps;
 			int si;
@@ -4798,8 +4814,6 @@ void Solver::oneclass_random()
 				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[2]);
 				alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[2]);
 			}
-			if(iter == 0)
-				log_message();
 		}
 		iter++;
 		duration += clock() - start;
@@ -5079,6 +5093,8 @@ void Solver::oneclass_semigd2()
 		for(int cycle_i = 0; cycle_i < active_size; cycle_i+=smgd_size)
 		//Iup and Ilow should be redefined if inner_iter >= 2
 		{
+			LOG_0ITER()
+
 			if(rand_mode == CYCLIC)
 			{
 				for(int s = 0; s < smgd_size; s++)
@@ -5308,8 +5324,6 @@ void Solver::oneclass_semigd2()
 					alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[2]);
 					alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[2]);
 				}
-				if(iter == 0)
-					log_message();
 			}
 		}
 		iter++;
@@ -5490,6 +5504,8 @@ void Solver::oneclass_semigd()
 		update_size = 0;
 		for(int index_i = 0; index_i<smgd_size; index_i++)
 		{
+			LOG_0ITER()
+
 			update_size+=2;
 			++cdsteps;
 			i = Max_order_index[index_i];
@@ -5541,8 +5557,6 @@ void Solver::oneclass_semigd()
 				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[2]);
 				alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[2]);
 			}
-			if(iter == 0)
-				log_message();
 		}
 
 		iter++;
@@ -8836,7 +8850,7 @@ struct resume *load_resume(const char *resume_file_name)
 	}
 	setlocale(LC_ALL, "C");
 
-	int last_resume=0;
+	int skip_resume=0;
 	char cmd[81];
 	while((fscanf(fp, "%80s", cmd) != EOF))
 	{
@@ -8844,22 +8858,22 @@ struct resume *load_resume(const char *resume_file_name)
 		{
 			if(fscanf(fp, "%80s", cmd) == EOF)
 				break;
-			last_resume++;
+			skip_resume++;
 		}
 	}
 	fclose(fp);
-	if(last_resume == 0)
-		return _resume;
+//	if(skip_resume == 0)
+//		return _resume;
 	fp = fopen(_resume->fname, "r");
 	_resume->read_resume=true;
 
 	while(1)
 	{
 		FSCANF(fp, "%80s", cmd);
-		if(last_resume != 0)
+		if(skip_resume != 0)
 		{
 			if(strcmp(cmd, "=====")==0)
-				last_resume--;
+				skip_resume--;
 			continue;
 		}
 		if(strcmp(cmd, "iter")==0)
@@ -8881,6 +8895,10 @@ struct resume *load_resume(const char *resume_file_name)
 		else if(strcmp(cmd, "nr_rand_calls")==0)
 		{
 			FSCANF(fp, "%llu", &_resume->nr_rand_calls);
+		}
+		else if(strcmp(cmd, "ttl_sucsize")==0)
+		{
+			FSCANF(fp, "%llu", &_resume->ttl_success_size);
 		}
 		else if(strcmp(cmd, "last_obj")==0)
 		{

@@ -2,35 +2,12 @@ logfolder='log_notime'
 resumefolder='resume'
 
 runtype = [
-		## FOR EXP: 2-cd vs new-4 vs nobias
-		##"ONE_L1_CY_1000", #do not need to run as change of cdstep do not affect this
-		##"BIAS_L1_CY_1000",
-		##"BIAS_L1_SEMIGD_CY_FIRST_1000", #r=4
-		"ONE_L1_CY_SH", #do not need to run as change of cdstep do not affect this
-		"BIAS_L1_CY_SH",
-		"BIAS_L1_SEMIGD_CY_FIRST_SH", #r=4
-		"STUB",
-		"STUB",
-
-		###"ONE_L2_CY_1000", #do not need to run as change of cdstep do not affect this
-		###"BIAS_L2_CY_1000",
-		###"BIAS_L2_SEMIGD_CY_FIRST_1000", #r=4
-		#"ONE_L2_CY_SH", #do not need to run as change of cdstep do not affect this
-		#"BIAS_L2_CY_SH",
-		#"BIAS_L2_SEMIGD_CY_FIRST_SH", #r=4
-		#"STUB",
-		#"STUB",
-
 		## FOR EXP: 2-cd vs new-4 vs semigd vs semigd-rd
-		#"STUB",
-		###"ONECLASS_L1_CY_1000",
-		###"ONECLASS_L1_SEMIGD_CY_FIRST_1000", #r=4
-		###"ONECLASS_L1_SEMIGD_1000", #r=0.1
-		###"ONECLASS_L1_SEMIGD_RAND_1000", #r=0.1
-		#"ONECLASS_L1_CY_SH",
-		#"ONECLASS_L1_SEMIGD_CY_FIRST_SH", #r=4
-		#"ONECLASS_L1_SEMIGD_SH", #r=0.1
-		#"ONECLASS_L1_SEMIGD_RAND_SH", #r=0.1
+		"STUB",
+		"SVDD_L1_CY_1000",
+		"SVDD_L1_SEMIGD_CY_FIRST_1000", #r=4
+		"SVDD_L1_SEMIGD_1000", #r=0.1
+		"SVDD_L1_SEMIGD_RAND_1000", #r=0.1
 ]
 nlist = [
 		0.1,
@@ -43,7 +20,8 @@ clist = [1.0/32,
 		]
 elist = [1e-2]
 rlist = [
-	4, 0.1
+	4,
+	0.1
 ]
 m = 100000
 timeout = 50400
@@ -79,5 +57,9 @@ uselabel = {
 		50612: "perm-greedy-sh",
 		50212: "semi-greedy-sh",
 		50512: "semi-greedy-random-sh",
+		60811: "perm-cd",
+		60611: "perm-greedy",
+		60211: "semi-greedy",
+		60511: "semi-greedy-random",
 }
 

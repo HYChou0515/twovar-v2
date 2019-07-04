@@ -190,11 +190,20 @@ def is_shrink(code):
 		return str_code[4] != "1"
 
 def is_oneclass(code):
+	# 0: SVC
+	# 1: one-class
+	# 2: svdd
 	str_code = str(code)
 	if len(str_code) != 5:
-		return False
+		return 0
 	else:
-		return str_code[0] == "5"
+		label = str_code[0]
+		if label == "5":
+			return 1
+		elif label == "6":
+			return 2
+		else:
+			return 0
 
 def is_L1(code):
 	str_code = str(code)
