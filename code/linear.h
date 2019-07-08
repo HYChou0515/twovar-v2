@@ -202,6 +202,7 @@ struct resume
 	unsigned long long nr_n_ops;
 	clock_t duration;
 	unsigned long long nr_rand_calls;
+	unsigned long long ttl_success_size;
 	double last_obj;
 	int active_size;
 	double PGmax_old;

@@ -10,7 +10,7 @@ import traceback
 
 LOGDIR = '../log_notime/tmp/'
 TOLERANCE = 1e-9
-LINE_BUFFER = 10
+LINE_BUFFER = 1000000
 MAX_LINE = 10000
 LOG_SUMMARY_LINES = None # assigned by find_log_summary_lines()
 
@@ -311,4 +311,7 @@ def main():
 			traceback.print_tb(tb) # Fixed format
 
 if __name__ == '__main__':
-	main()
+	try:
+		main()
+	except e:
+		print(e)

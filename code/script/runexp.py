@@ -58,7 +58,7 @@ for data_count, data in enumerate(dataset):
 		else:
 			elist_real = [0.1]
 			need_e = False
-		if is_oneclass(runs[tp]):
+		if is_oneclass(runs[tp])==1:
 			need_n = True
 			nlist_real = nlist
 			clist_real = [1]
