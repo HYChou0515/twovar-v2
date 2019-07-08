@@ -5120,106 +5120,119 @@ void Solver::oneclass_semigd2()
 				fprintf(stderr, "random mode not specified\n");
 				return;
 			}
-			update_size+=2;
-			++cdsteps;
-			if(sh_mode == SH_OFF)
+			// inner CD
+			int inner_iter = -1; // inner_iter==1 if use first/second to try to update a pair ONCE, if never done it, inner_iter=0
+			bool subprob_solved = false;
+			while( !subprob_solved && inner_iter < l) // this is a while(1) loop and should be break properly
 			{
-				// when don't shrinking, this can prevent gradient calculation
-				// when shrinking, we must do gradient calculation to shrink
+				inner_iter++;
+				update_size+=2;
+				++cdsteps;
+				if(sh_mode == SH_OFF)
+				{
+					// when don't shrinking, this can prevent gradient calculation
+					// when shrinking, we must do gradient calculation to shrink
+					Iup_size = 0;
+					Ilow_size = 0;
+					for(auto it=workset_s.begin(); it!=workset_last; ++it)
+					{
+						int si = *it;
+						i = index[si];
+						if( is_Ilow(alpha_status[i]) )
+							++Ilow_size;
+						if( is_Iup(alpha_status[i]) )
+							++Iup_size;
+					}
+					if(Iup_size <= 0 || Ilow_size <= 0)
+					{
+						subprob_solved = true;
+						continue;
+					}
+				}
 				Iup_size = 0;
 				Ilow_size = 0;
+				nGmax = -INF;
+				nGmin = INF;
+				// as some variables may be shrunk, 
+				// we re-determine Iup and Ilow
+				// calculate G and Iup/Ilow
 				for(auto it=workset_s.begin(); it!=workset_last; ++it)
 				{
 					int si = *it;
 					i = index[si];
-					if( is_Ilow(alpha_status[i]) )
-						++Ilow_size;
-					if( is_Iup(alpha_status[i]) )
-						++Iup_size;
-				}
-				if(Iup_size <= 0 || Ilow_size <= 0)
-					continue;
-			}
-			Iup_size = 0;
-			Ilow_size = 0;
-			nGmax = -INF;
-			nGmin = INF;
-			// as some variables may be shrunk, 
-			// we re-determine Iup and Ilow
-			for(auto it=workset_s.begin(); it!=workset_last; ++it)
-			{
-				int si = *it;
-				i = index[si];
-				feature_node * const xi = prob->x[i];
-				if(category == ONECLASS)
-				{
-					G_i = dot_n(w, xi);
-				}
-				else if(category == SVDD)
-				{
-					G_i = dot_n(w, xi) - 0.5*QD[i];
-				}
-				else
-				{
-					fprintf(stderr, "not supported for this type\n");
-					return;
-				}
-				if( !is_Ilow(alpha_status[i]) )
-				{
-					if(-G_i < PGmin_old)
+					feature_node * const xi = prob->x[i];
+					if(category == ONECLASS)
 					{
-						active_size--;
-						swap(index[si], index[active_size]);
+						G_i = dot_n(w, xi);
+					}
+					else if(category == SVDD)
+					{
+						G_i = dot_n(w, xi) - 0.5*QD[i];
 					}
 					else
+					{
+						fprintf(stderr, "not supported for this type\n");
+						return;
+					}
+					if( !is_Ilow(alpha_status[i]) )
+					{
+						if(-G_i < PGmin_old)
+						{
+							active_size--;
+							swap(index[si], index[active_size]);
+						}
+						else
+						{
+							Iup[Iup_size] = si;
+							IupG[Iup_size] = G_i;
+							++Iup_size;
+							nGmax = max(nGmax, -G_i);
+						}
+						PGmax_new = max(PGmax_new, -G_i);
+					}
+					else if( !is_Iup(alpha_status[i]) )
+					{
+						if(-G_i > PGmax_old)
+						{
+							active_size--;
+							swap(index[si], index[active_size]);
+						}
+						else
+						{
+							Ilow[Ilow_size] = si;
+							IlowG[Ilow_size] = G_i;
+							++Ilow_size;
+							nGmin = min(nGmin, -G_i);
+						}
+						PGmin_new = min(PGmin_new, -G_i);
+					}
+					else //both Iup and Ilow
 					{
 						Iup[Iup_size] = si;
 						IupG[Iup_size] = G_i;
 						++Iup_size;
-						nGmax = max(nGmax, -G_i);
-					}
-					PGmax_new = max(PGmax_new, -G_i);
-				}
-				else if( !is_Iup(alpha_status[i]) )
-				{
-					if(-G_i > PGmax_old)
-					{
-						active_size--;
-						swap(index[si], index[active_size]);
-					}
-					else
-					{
 						Ilow[Ilow_size] = si;
 						IlowG[Ilow_size] = G_i;
 						++Ilow_size;
+						PGmax_new = max(PGmax_new, -G_i);
+						PGmin_new = min(PGmin_new, -G_i);
+						nGmax = max(nGmax, -G_i);
 						nGmin = min(nGmin, -G_i);
 					}
-					PGmin_new = min(PGmin_new, -G_i);
 				}
-				else //both Iup and Ilow
+				if(sh_mode == SH_ON)
 				{
-					Iup[Iup_size] = si;
-					IupG[Iup_size] = G_i;
-					++Iup_size;
-					Ilow[Ilow_size] = si;
-					IlowG[Ilow_size] = G_i;
-					++Ilow_size;
-					PGmax_new = max(PGmax_new, -G_i);
-					PGmin_new = min(PGmin_new, -G_i);
-					nGmax = max(nGmax, -G_i);
-					nGmin = min(nGmin, -G_i);
+					if(Iup_size <= 0 || Ilow_size <= 0)
+					{
+						subprob_solved = true;
+						continue;
+					}
 				}
-			}
-			if(sh_mode == SH_ON)
-			{
-				if(Iup_size <= 0 || Ilow_size <= 0)
+				if(nGmax-nGmin < eps)
+				{
+					subprob_solved = true;
 					continue;
-			}
-			if(nGmax <= nGmin)
-				continue;
-			// inner CD
-			for(int inner_iter = 0; inner_iter < 1; inner_iter++)
-			{
+				}
 				if(wss_mode == SEMIGD_FIRST)
 				{
 					// use first info to select inner workset
@@ -5250,7 +5263,11 @@ void Solver::oneclass_semigd2()
 						}
 					}
 					if(i==j)
+					{
+						subprob_solved = true;
 						continue;
+					}
+					
 					// i and j are indices to be updated
 					feature_node const * xi = prob->x[i];
 					feature_node const * xj = prob->x[j];
