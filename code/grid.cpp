@@ -54,6 +54,7 @@ void exit_with_help()
 	"-C : find parameter C (only for -s 0 and 2)\n"
 	"-q : quiet mode (no outputs)\n"
 	"-m : max iteration\n"
+	"-S : max order-n operations\n"
 	"-t : timeout (in second)\n"
 	"-o : minimum objective value\n"
 	"L2R_LR, \n"
@@ -469,6 +470,11 @@ void parse_stdin(char *input_file_name, GridItem* grid_item, char *param_str)
 			case 'u':
 				val_token = strtok(NULL, " ");
 				grid_item->param.max_cdstep = atoi(val_token);
+				break;
+
+			case 'S':
+				val_token = strtok(NULL, " ");
+				grid_item->param.max_nr_n_ops = atof(val_token);
 				break;
 
 			case 'r':

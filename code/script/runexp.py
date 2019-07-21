@@ -17,7 +17,7 @@ grid="grid"
 
 def exit_with_help():
 	print("USAGE: " + sys.argv[0] + " [option]")
-	print("option: [run,print,grid]")
+	print("option: [run,print,grid,time]")
 	exit(1)
 
 if len(sys.argv) != 2:
@@ -35,6 +35,10 @@ elif sys.argv[1] == "grid":
 	bashfile = open(bashfile_name, 'w')
 	gridjob_name_format="grid_%s.job.%d"
 	mode = 2
+elif sys.argv[1] == "time":
+	bashfile_name="out_run.bash"
+	bashfile = open(bashfile_name, 'w')
+	mode = 3
 else:
 	exit_with_help()
 
@@ -101,6 +105,10 @@ for data_count, data in enumerate(dataset):
 				cmd = cmd+ " > %s\n" % (filename)
 				ind += 1
 				bashfile.write(cmd)
+			elif mode == 3:
+				cmd = cmd+ " %s %s && echo \"job %d finished\"\n" % (filename, resumename, ind)
+				ind += 1
+				bashfile.write(cmd)
 			elif mode == 2:
 				grid_opt = ' '.join(cmd.split(' ')[1:-1]) + " %s %s\n" % (filename, resumename)
 				ind += 1
@@ -121,5 +129,5 @@ for data_count, data in enumerate(dataset):
 		for i in range(gridjob_count):
 			bashfile.write("%s%s %s < %s && echo \"job %d finished\"\n" % (ROOT_PATH, grid, datapath, gridjob_name_format % (data, i), data_count*gridjob_count+i))
 
-if mode == 1 or mode == 2:
+if mode == 1 or mode == 2 or mode == 3:
 	bashfile.close()

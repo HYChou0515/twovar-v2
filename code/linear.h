@@ -231,6 +231,7 @@ struct parameter
 	int max_iter;     
 	int timeout; // in second     
 	int max_cdstep; // this *= prob->l
+	double max_nr_n_ops; // this *= prob->l
 	double opt_val;
 	double nu;	/* for one-class formulation */
 
