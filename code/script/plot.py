@@ -161,7 +161,9 @@ class Plotter(object):
 			else:
 				logname = "%s_s%d_c%g_e%g"% (self.dstr, tp, self.c, e)
 		try:
-			return open(self.logpath+logname,"r")
+			f = open(self.logpath+logname,"r")
+			print("open file: "+self.logpath+logname)
+			return f
 		except IOError:
 			print("cannot find file: "+self.logpath+logname)
 			raise IOError
