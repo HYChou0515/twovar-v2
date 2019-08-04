@@ -1,4 +1,24 @@
 dobj = {
+	"svddL1c0.00195312":{
+		"a9a":-5.16069718543992,
+		"covtype.libsvm.binary.scale":-1.28292861688814,
+		"ijcnn1":-1.26985022998596,
+		"news20.binary":-0.49455571758736,
+		"rcv1_train.binary":-0.497611297506084,
+		"real-sim":-0.499456895154846,
+		"yahoojp":-0.499857353971473,
+		"yahookr":-0.499817159734989,
+	},
+	"svddL1c0.0078125":{
+		"a9a":-5.25973600890995,
+		"covtype.libsvm.binary.scale":-1.31930558894354,
+		"ijcnn1":-1.40746214532808,
+		"news20.binary":-0.495958064828098,
+		"rcv1_train.binary":-0.497615228005105,
+		"real-sim":-0.499456895154848,
+		"yahoojp":-0.499857353971474,
+		"yahookr":-0.499817159734991,
+	},
 	"svddL1c0.03125":{
 		"a9a":-5.30993135856559,
 		"covtype.libsvm.binary.scale":-1.35023629338567,
@@ -8,6 +28,29 @@ dobj = {
 		"real-sim":-0.499456895154847,
 		"yahoojp":-0.499857353971541,
 		"yahookr":-0.499817159734993,
+	},
+	"svddL1c0.0567527":{
+		"yahoojp":-0.499857353971476,
+	},
+	"svddL1c0.125":{
+		"a9a":-5.31801629573058,
+		"covtype.libsvm.binary.scale":-1.36603691102183,
+		"ijcnn1":-1.55212405814835,
+		"news20.binary":-0.495958431898529,
+		"rcv1_train.binary":-0.497615228006998,
+		"real-sim":-0.499456895154848,
+		"yahoojp":-0.499857353971476,
+		"yahookr":-0.499817159734991,
+	},
+	"svddL1c0.5":{
+		"a9a":-5.31801629573058,
+		"covtype.libsvm.binary.scale":-1.36624256129731,
+		"ijcnn1":-1.55608890388808,
+		"news20.binary":-0.49595843189853,
+		"rcv1_train.binary":-0.497615228006999,
+		"real-sim":-0.499456895154848,
+		"yahoojp":-0.499857353971477,
+		"yahookr":-0.49981715973499,
 	},
 	"svddL1c1":{
 		"a9a":-5.31801629573058,
@@ -51,6 +94,16 @@ dobj = {
 		"yahoojp": 197132.995628746,
 		"yahookr": 5086930.16632046,
 	},
+	"oneL1c0.05":{
+		"a9a": 5034719.71581417,
+		"covtype.libsvm.binary.scale": 894453749.782789,
+		"ijcnn1": 383958.021480978,
+		"news20.binary": 6862.25337266536,
+		"rcv1_train.binary": 2531.52238950248,
+		"real-sim": 8386.29231980948,
+		"yahoojp": 18169.3434340785,
+		"yahookr": 452308.421190699,
+	},
 	"oneL1c0.01":{
 		"a9a": 180123.032132615,
 		"covtype.libsvm.binary.scale": 32739180.6283296,
@@ -61,6 +114,36 @@ dobj = {
 		"real-sim": 205.475956164123,
 		"yahoojp": 442.799337672543,
 		"yahookr": 4224.80646945772,
+	},
+	"oneL1c0.005":{
+		"a9a": 43612.6558531973,
+		"covtype.libsvm.binary.scale": 7930678.76224419,
+		"ijcnn1": 3738.67102934501,
+		"news20.binary": 13.5865183155523,
+		"rcv1_train.binary": 24.4283262970075,
+		"real-sim": 34.9135313723688,
+		"yahoojp": 110.699834418172,
+		"yahookr": 969.518392729646,
+	},
+	"oneL1c0.001":{
+		"a9a": 1659.40791887508,
+		"covtype.libsvm.binary.scale": 297386.926480894,
+		"ijcnn1": 148.263220603184,
+		"news20.binary": 3.08799387516288e-31,
+		"rcv1_train.binary": 0.977133051880298,
+		"real-sim": 1.79335165421386e-30,
+		"yahoojp": 4.42799337672603,
+		"yahookr": 38.7807357091139,
+	},
+	"oneL1c0.0001":{
+		"a9a": 16.4557584663625,
+		"covtype.libsvm.binary.scale": 2735.65041202244,
+		"ijcnn1": 1.47716531544592,
+		"news20.binary": 2.11918709313417e-33,
+		"rcv1_train.binary": 0.00977133051880294,
+		"real-sim": 3.32334461702176e-30,
+		"yahoojp": 0.0442799337672822,
+		"yahookr": 0.3878073570918,
 	},
 	"oneL2c0.2":{
 		"a9a": 65823033.8654474,
@@ -733,10 +816,20 @@ legend = {
 	"ori": "LIBLINEAR"
 }
 
+datal = {
+	"a9a": 32561,
+	"covtype.libsvm.binary.scale": 581012,
+	"ijcnn1": 49990,
+	"news20.binary": 19996,
+	"rcv1_train.binary": 20242,
+	"real-sim": 72309,
+	"yahoojp": 176203,
+	"yahookr": 460554,
+}
+
 from subprocess import Popen, PIPE
 from liblrconf import *
 import sys, os
-LOG_SUMMARY_LINES = 13
 class LogInfo(object):
 	def __init__(self, filepath):
 		filename = os.path.basename(filepath)

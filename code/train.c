@@ -52,6 +52,7 @@ void exit_with_help()
 	"-C : find parameter C (only for -s 0 and 2)\n"
 	"-q : quiet mode (no outputs)\n"
 	"-m : max iteration\n"
+	"-S : max order-n operations\n"
 	"-t : timeout (in second)\n"
 	"-u : max cd steps (this *= prob->l)\n"
 	"-o : minimum objective value\n"
@@ -349,6 +350,7 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 	param.max_iter = 1000;
 	param.timeout = 0;
 	param.max_cdstep = -1;
+	param.max_nr_n_ops = -1;
 	param.opt_val = -INF;
 	param.nu = 0.1;
 	param.nr_weight = 0;
@@ -384,6 +386,10 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 
 			case 'u':
 				param.max_cdstep = atoi(argv[i]);
+				break;
+
+			case 'S':
+				param.max_nr_n_ops = atof(argv[i]);
 				break;
 
 			case 'r':

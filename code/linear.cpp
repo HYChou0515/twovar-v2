@@ -864,6 +864,13 @@ void Solver_MCSVM_CS::Solve(double *w)
 		break;\
 	}\
 }
+#define EXIT_IF_OVER_NRNOP()\
+{\
+	if (max_nr_n_ops > 0 && nr_n_ops > max_nr_n_ops)\
+	{\
+		break;\
+	}\
+}
 #define EXIT_IF_OPTIMAL(obj)\
 {\
 	if (obj < opt_val)\
@@ -884,6 +891,8 @@ struct mincomp
 {
 	bool operator()(const feature_node& left, const feature_node& right)
 	{
+		if(fabs(left.value - right.value) < 1e-15)
+			return left.index > right.index;
 		return left.value > right.value;
 	}
 };
@@ -891,6 +900,8 @@ struct maxcomp
 {
 	bool operator()(const feature_node& left, const feature_node& right)
 	{
+		if(fabs(left.value - right.value) < 1e-15)
+			return left.index < right.index;
 		return left.value < right.value;
 	}
 };
@@ -928,6 +939,7 @@ public:
 	int max_iter;
 	int timeout;
 	unsigned long long max_cdstep;
+	double max_nr_n_ops;
 	double opt_val;
 
 	// logged variables
@@ -1531,14 +1543,7 @@ void Solver::log_message()
 
 	countSVs();
 
-	if(iter == 0)
-	{
-		int log_num_0iter = prob->l; // this is true for one-var as a cdstep (iteration) contains l updates
-		if(log_count <= 0) // first update needs to be logged
-			log_count = log_skip;
-		log_skip = log_num_0iter/FIRST_ITER_MAX_LOG;
-	}
-	else
+	if(iter > 0)
 	{
 		ttl_success_size += success_size;
 		cur_success_size = success_size;
@@ -1567,7 +1572,7 @@ void Solver::log_message()
 				log_count = log_skip;
 		}
 	}
-	if(--log_count <= 0 || --need_logged_0iter >= 0)
+	if( (iter > 0 && --log_count <= 0) || (iter == 0 && --need_logged_0iter >= 0) )
 	{
 		log_info("iter %d ", iter);
 		log_info("t %f ", (double)(duration)/CLOCKS_PER_SEC);
@@ -1621,6 +1626,7 @@ void Solver::summary()
 	log_info("solver = %s\n", solver_name);
 	log_info("max_iter = %d\n", max_iter);
 	log_info("max_cdstep = %llu\n", max_cdstep);
+	log_info("max_nr_n_ops = %g\n", max_nr_n_ops);
 	log_info("timeout = %d\n", timeout);
 	log_info("opt_val = %g\n", opt_val);
 	log_info("obj = %.16g rho = %.16g\n", calculate_obj(), calculate_rho());
@@ -2588,6 +2594,7 @@ void Solver::one_liblinear()
 		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OVER_CDSTEPS();
+		EXIT_IF_OVER_NRNOP();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -2718,6 +2725,7 @@ void Solver::one_random()
 		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OVER_CDSTEPS();
+		EXIT_IF_OVER_NRNOP();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -2844,6 +2852,7 @@ void Solver::one_semigd_1000()
 		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OVER_CDSTEPS();
+		EXIT_IF_OVER_NRNOP();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -2992,6 +3001,7 @@ void Solver::one_semigd_dualobj_1000()
 		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OVER_CDSTEPS();
+		EXIT_IF_OVER_NRNOP();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 //	one_deltaF_of_indices();
@@ -3158,6 +3168,7 @@ void Solver::two_semicyclic_1000()
 		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OVER_CDSTEPS();
+		EXIT_IF_OVER_NRNOP();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -3308,6 +3319,7 @@ void Solver::two_random_shrink2()
 		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OVER_CDSTEPS();
+		EXIT_IF_OVER_NRNOP();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -3463,6 +3475,7 @@ void Solver::two_random_shrink()
 		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OVER_CDSTEPS();
+		EXIT_IF_OVER_NRNOP();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -3547,6 +3560,7 @@ void Solver::two_cyclic_1000()
 		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OVER_CDSTEPS();
+		EXIT_IF_OVER_NRNOP();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -3612,6 +3626,7 @@ void Solver::two_semirandom2_1000()
 		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OVER_CDSTEPS();
+		EXIT_IF_OVER_NRNOP();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -3677,6 +3692,7 @@ void Solver::two_semirandom1_1000()
 		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OVER_CDSTEPS();
+		EXIT_IF_OVER_NRNOP();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -3740,6 +3756,7 @@ void Solver::two_random_1000()
 		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OVER_CDSTEPS();
+		EXIT_IF_OVER_NRNOP();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -4218,6 +4235,7 @@ void Solver::bias_semigd2()
 		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OVER_CDSTEPS();
+		EXIT_IF_OVER_NRNOP();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -4420,6 +4438,7 @@ void Solver::bias_semigd()
 		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OVER_CDSTEPS();
+		EXIT_IF_OVER_NRNOP();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 //	bias_deltaF_of_indices();
@@ -4627,6 +4646,7 @@ void Solver::bias_random()
 		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OVER_CDSTEPS();
+		EXIT_IF_OVER_NRNOP();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -4842,6 +4862,7 @@ void Solver::oneclass_random()
 		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OVER_CDSTEPS();
+		EXIT_IF_OVER_NRNOP();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -4936,6 +4957,7 @@ void Solver::oneclass_first_1000()
 		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OVER_CDSTEPS();
+		EXIT_IF_OVER_NRNOP();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -5039,6 +5061,7 @@ void Solver::oneclass_second_1000()
 		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OVER_CDSTEPS();
+		EXIT_IF_OVER_NRNOP();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -5370,6 +5393,7 @@ void Solver::oneclass_semigd2()
 		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OVER_CDSTEPS();
+		EXIT_IF_OVER_NRNOP();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -5582,6 +5606,7 @@ void Solver::oneclass_semigd()
 		save_resume();
 		EXIT_IF_TIMEOUT();
 		EXIT_IF_OVER_CDSTEPS();
+		EXIT_IF_OVER_NRNOP();
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
@@ -5673,6 +5698,7 @@ static inline void svdd_update(
 	solver.max_iter = param->max_iter>0 ? param->max_iter : INT_MAX;
 	solver.timeout = param->timeout;
 	solver.max_cdstep = param->max_cdstep*prob->l;
+	solver.max_nr_n_ops = param->max_nr_n_ops;
 	solver.opt_val = param->opt_val;
 	solver.log_fp = param->log_fp;
 	solver.active_size = l;
@@ -5864,6 +5890,7 @@ static inline void oneclass_update(
 	solver.max_iter = param->max_iter>0 ? param->max_iter : INT_MAX;
 	solver.timeout = param->timeout;
 	solver.max_cdstep = param->max_cdstep*prob->l;
+	solver.max_nr_n_ops = param->max_nr_n_ops;
 	solver.opt_val = param->opt_val;
 	solver.log_fp = param->log_fp;
 	solver.active_size = l;
@@ -6056,6 +6083,7 @@ static inline void two_bias_update(
 	solver.max_iter = param->max_iter>0 ? param->max_iter : INT_MAX;
 	solver.timeout = param->timeout;
 	solver.max_cdstep = param->max_cdstep*prob->l;
+	solver.max_nr_n_ops = param->max_nr_n_ops;
 	solver.opt_val = param->opt_val;
 	solver.log_fp = param->log_fp;
 	solver.PGmax_old = INF;
@@ -6309,6 +6337,7 @@ static inline void onetwo_nobias_update(
 	solver.max_iter = param->max_iter>0 ? param->max_iter : INT_MAX;
 	solver.timeout = param->timeout;
 	solver.max_cdstep = param->max_cdstep*prob->l;
+	solver.max_nr_n_ops = param->max_nr_n_ops;
 	solver.opt_val = param->opt_val;
 	solver.log_fp = param->log_fp;
 	solver.PGmax_old = INF;

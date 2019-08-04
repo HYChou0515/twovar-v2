@@ -69,6 +69,8 @@ class Plotter(object):
 		matplotlib.rc('ytick', labelsize=20)
 
 		self.YLIM = YLIM # the range of Y (this value is set for relval)
+		self.X_LABEL=None
+		self.Y_LABEL=None
 
 	def draw_all(self):
 		for dstr,c in itertools.product(self.dataset, self.clist):
@@ -82,7 +84,7 @@ class Plotter(object):
 
 	def setup_color_marker(self):
 		self.fig = plt.figure()
-		cmap = plt.get_cmap('Paired')
+		cmap = plt.get_cmap('hsv')
 		totnum = 0
 		for tp in self.stype:
 			getrlist = self.get_rlist(tp)
@@ -119,12 +121,14 @@ class Plotter(object):
 					continue
 				lb = uselabel[tp]
 				if is_semigd(tp):
-					lb = "%s_%s" % (lb, r)
+					lb = lb % r
 				plt.plot(xs, ys, self.makr[clridx],
 						color=self.colors[clridx],
 						figure=self.fig, label=lb,
 						linewidth=3, markersize=6, markevery=0.1)
 				clridx += 1
+
+		plt.subplots_adjust(bottom=0.1,left=0.1,right=0.98,top=0.98)
 		self.setup_fig()
 		plt.close(self.fig)
 
@@ -160,17 +164,28 @@ class Plotter(object):
 			print("cannot find file: "+self.logpath+logname)
 			raise IOError
 
+	def scale_obj(self, obj, tp):
+		if is_oneclass(tp) == 1:# ocsvm
+			l = datal[self.dstr]
+			obj /= (l*self.c)**2 # ocsvm's optimal is 1/2 (nu*l*alpha)^T Q (nu*l*alpha), but should be scaled to 1/2 alpha^T Q alpha
+		if is_oneclass(tp) == 2:# svdd
+			obj += 0.5
+		return obj
+
+	def get_obj(self, line, tp):
+		return self.scale_obj(float(line[line.index('obj')+1]), tp)
+
 	def get_minimal(self, tp):
 		if is_biasobj(tp):
-			dobj_key = "bias{}c{}".format(self.loss,self.c)
+			dobj_key = "bias%sc%g" % (self.loss,self.c)
 		elif is_oneclass(tp) == 1: # ocsvm
-			dobj_key = "one{}c{}".format(self.loss,self.c)
+			dobj_key = "one%sc%g" % (self.loss,self.c)
 		elif is_oneclass(tp) == 2: # svdd
-			dobj_key = "svdd{}c{}".format(self.loss,self.c)
+			dobj_key = "svdd%sc%g" % (self.loss,self.c)
 		else:
-			dobj_key = "{}c{}".format(self.loss,self.c)
+			dobj_key = "%sc%g" % (self.loss,self.c)
 		try:
-			return dobj[dobj_key][self.dstr]
+			return self.scale_obj(dobj[dobj_key][self.dstr], tp)
 		except KeyError:
 			print("\"" + self.dstr + "\" is not in " + dobj_key)
 			raise KeyError
@@ -229,7 +244,7 @@ class OpPerSucs_ObjPlotter(Plotter):
 		for line in logfile:
 			line = line.split(' ')
 			if 'ops_per_sucs' in line and 'obj' in line:
-				val = float(line[line.index('obj')+1])
+				val = self.get_obj(line, tp)
 				relval = calculate_relval(val, minimal)
 				ops_per_sucs = 2*float(line[line.index('ops_per_sucs')+1])
 				if ops_per_sucs > self.YLIM[1] or relval < OpPerSucs_ObjPlotter.XLIM[0]:
@@ -268,7 +283,7 @@ class OpPerSucs_ObjPlotter(Plotter):
 
 class NrNOpPlotter(Plotter):
 	PLOTTYPE = "nrnop"
-	XLIM = (0, 1e12)
+	XLIM = (0, 4e7)
 	def init_new_fig(self):
 		self.xy_range = []
 	def get_xlim(self, tp):
@@ -302,18 +317,18 @@ class NrNOpPlotter(Plotter):
 			if stop:
 				break
 			if 'iter' in line and 'obj' in line:
-				val = float(line[line.index('obj')+1])
+				val = self.get_obj(line, tp)
 				relval = calculate_relval(val, minimal)
 				nr_n_ops = (float(line[line.index('nr_n_ops')+1]))
 				if relval > self.YLIM[1] or nr_n_ops < NrNOpPlotter.XLIM[0]:
 					continue
 				if relval < self.YLIM[0] or nr_n_ops > NrNOpPlotter.XLIM[1]:
-					if len(ys) == 0 or len(xs) == 0:
-						break
-					interpolate_rate = 1-max((nr_n_ops-NrNOpPlotter.XLIM[1])/(nr_n_ops-xs[-1]),
-							(math.log(relval)-math.log(self.YLIM[0]))/(math.log(relval)-math.log(ys[-1])))
-					relval = math.exp(math.log(ys[-1]) + (math.log(relval)-math.log(ys[-1]))*interpolate_rate)
-					nr_n_ops = xs[-1] + (nr_n_ops-xs[-1])*interpolate_rate
+					#if len(ys) == 0 or len(xs) == 0:
+					#	break
+					#interpolate_rate = 1-max((nr_n_ops-NrNOpPlotter.XLIM[1])/(nr_n_ops-xs[-1]),
+					#		(math.log(relval)-math.log(self.YLIM[0]))/(math.log(relval)-math.log(ys[-1])))
+					#relval = math.exp(math.log(ys[-1]) + (math.log(relval)-math.log(ys[-1]))*interpolate_rate)
+					#nr_n_ops = xs[-1] + (nr_n_ops-xs[-1])*interpolate_rate
 					stop = True
 				ys.append(relval)
 				xs.append(nr_n_ops)
@@ -340,6 +355,12 @@ class NrNOpPlotter(Plotter):
 		plt.gca().yaxis.set_major_locator(plt.LogLocator(numticks=7))
 		plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
 		plt.tick_params(axis='x', which='major', labelsize=20)
+
+		##add xy label and adjust the margin accordingly
+		#plt.xlabel('number of $O(n)$ operations', fontsize=20)
+		#plt.ylabel('$(f-f^*)/f*$', fontsize=20)
+		#plt.subplots_adjust(bottom=0.13,left=0.133)
+
 		Plotter.setup_fig(self)
 
 class CdPlotter(Plotter):
@@ -378,7 +399,7 @@ class CdPlotter(Plotter):
 			if stop:
 				break
 			if 'iter' in line and 'obj' in line:
-				val = float(line[line.index('obj')+1])
+				val = self.get_obj(line, tp)
 				relval = calculate_relval(val, minimal)
 				CDsteps = (float(line[line.index('iter')+1]))
 				if relval > self.YLIM[1] or CDsteps < CdPlotter.XLIM[0]:
@@ -454,7 +475,7 @@ class TimePlotter(Plotter):
 			if stop:
 				break
 			if 't' in line and'obj' in line:
-				val = float(line[line.index('obj')+1])
+				val = self.get_obj(line, tp)
 				relval = calculate_relval(val, minimal)
 				t =  float(line[line.index('t')+1])
 				if relval > self.YLIM[1] or t < TimePlotter.XLIM[0]:
@@ -546,7 +567,7 @@ class ObjSucPlotter(Plotter):
 		for line in logfile:
 			line = line.split(' ')
 			if 'iter' in line and 'obj' in line:
-				val = float(line[line.index('obj')+1])
+				val = self.get_obj(line, tp)
 				relval = calculate_relval(val, minimal)
 				sucpair = float(line[line.index('ttl_sucsize')+1])
 				if relval > self.YLIM[1]:
