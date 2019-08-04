@@ -45,16 +45,6 @@ def exponent_of(x):
 		flag=-1
 	return flag * 10**int(("%e"%x).split('e')[-1])
 
-def calculate_relval(measure_val, true_val):
-	diff = math.fabs(measure_val-true_val)
-	true_val_abs = math.fabs(true_val)
-	if true_val_abs < 1e-16:
-		return diff
-		#return math.fabs(2*math.atan(true_val/measure_val)-math.pi/2)
-	if diff < 1e-16:
-		return 1e-16
-	return diff/true_val_abs
-
 class Plotter(object):
 	def __init__(self, stype, loss, dataset, clist, eps, args):
 		self.dataset = dataset
@@ -64,6 +54,8 @@ class Plotter(object):
 		self.eps = eps
 		self.logpath = args.logpath+'/'
 		self.figpath = args.figpath+'/'
+		self.filesuffix = args.suffix
+		self.relobj_denom = args.relobj_denom
 
 		matplotlib.rc('xtick', labelsize=20)
 		matplotlib.rc('ytick', labelsize=20)
@@ -71,6 +63,16 @@ class Plotter(object):
 		self.YLIM = YLIM # the range of Y (this value is set for relval)
 		self.X_LABEL=None
 		self.Y_LABEL=None
+
+	def calculate_relval(self, measure_val, true_val):
+		diff = math.fabs(measure_val-true_val)
+		true_val_abs = math.fabs(true_val)
+		#if true_val_abs < 1e-16:
+		#	return diff
+		#	#return math.fabs(2*math.atan(true_val/measure_val)-math.pi/2)
+		#if diff < 1e-16:
+		#	return 1e-16
+		return diff/(self.relobj_denom+true_val_abs)
 
 	def draw_all(self):
 		for dstr,c in itertools.product(self.dataset, self.clist):
@@ -164,16 +166,8 @@ class Plotter(object):
 			print("cannot find file: "+self.logpath+logname)
 			raise IOError
 
-	def scale_obj(self, obj, tp):
-		if is_oneclass(tp) == 1:# ocsvm
-			l = datal[self.dstr]
-			obj /= (l*self.c)**2 # ocsvm's optimal is 1/2 (nu*l*alpha)^T Q (nu*l*alpha), but should be scaled to 1/2 alpha^T Q alpha
-		if is_oneclass(tp) == 2:# svdd
-			obj += 0.5
-		return obj
-
-	def get_obj(self, line, tp):
-		return self.scale_obj(float(line[line.index('obj')+1]), tp)
+	def get_obj(self, line):
+		return float(line[line.index('obj')+1])
 
 	def get_minimal(self, tp):
 		if is_biasobj(tp):
@@ -185,7 +179,7 @@ class Plotter(object):
 		else:
 			dobj_key = "%sc%g" % (self.loss,self.c)
 		try:
-			return self.scale_obj(dobj[dobj_key][self.dstr], tp)
+			return dobj[dobj_key][self.dstr]
 		except KeyError:
 			print("\"" + self.dstr + "\" is not in " + dobj_key)
 			raise KeyError
@@ -206,7 +200,7 @@ class Plotter(object):
 
 	def setup_fig(self):
 		plt.legend(loc=0)
-		self.fig.savefig(self.figpath+self.get_figname_fmt()%(self.dstr, self.c),format='png',dpi=100)
+		self.fig.savefig(self.figpath+self.get_figname_fmt()%(self.dstr, self.c)+'_'+self.filesuffix+'.png',format='png',dpi=100)
 
 class OpPerSucs_ObjPlotter(Plotter):
 	PLOTTYPE = "opspersucs_obj"
@@ -227,7 +221,7 @@ class OpPerSucs_ObjPlotter(Plotter):
 		sname = ''
 		for s in filter(lambda s: s is not None, self.stype):
 			sname += 's'+str(s)
-		return "%s_"+sname+"_c%g_opspersucsobj.png"
+		return "%s_"+sname+"_c%g_opspersucsobj"
 	def get_xy(self, tp, e, r):
 		logfile = self.get_logfile(tp, e, r)
 		ys = []
@@ -244,8 +238,8 @@ class OpPerSucs_ObjPlotter(Plotter):
 		for line in logfile:
 			line = line.split(' ')
 			if 'ops_per_sucs' in line and 'obj' in line:
-				val = self.get_obj(line, tp)
-				relval = calculate_relval(val, minimal)
+				val = self.get_obj(line)
+				relval = self.calculate_relval(val, minimal)
 				ops_per_sucs = 2*float(line[line.index('ops_per_sucs')+1])
 				if ops_per_sucs > self.YLIM[1] or relval < OpPerSucs_ObjPlotter.XLIM[0]:
 					continue
@@ -283,7 +277,7 @@ class OpPerSucs_ObjPlotter(Plotter):
 
 class NrNOpPlotter(Plotter):
 	PLOTTYPE = "nrnop"
-	XLIM = (0, 4e7)
+	XLIM = (0, 1e12)
 	def init_new_fig(self):
 		self.xy_range = []
 	def get_xlim(self, tp):
@@ -299,7 +293,7 @@ class NrNOpPlotter(Plotter):
 		sname = ''
 		for s in filter(lambda s: s is not None, self.stype):
 			sname += 's'+str(s)
-		return "%s_"+sname+"_c%g_nrnop.png"
+		return "%s_"+sname+"_c%g_nrnop"
 	def get_xy(self, tp, e, r):
 		logfile = self.get_logfile(tp, e, r)
 		ys = []
@@ -317,8 +311,8 @@ class NrNOpPlotter(Plotter):
 			if stop:
 				break
 			if 'iter' in line and 'obj' in line:
-				val = self.get_obj(line, tp)
-				relval = calculate_relval(val, minimal)
+				val = self.get_obj(line)
+				relval = self.calculate_relval(val, minimal)
 				nr_n_ops = (float(line[line.index('nr_n_ops')+1]))
 				if relval > self.YLIM[1] or nr_n_ops < NrNOpPlotter.XLIM[0]:
 					continue
@@ -381,7 +375,7 @@ class CdPlotter(Plotter):
 		sname = ''
 		for s in filter(lambda s: s is not None, self.stype):
 			sname += 's'+str(s)
-		return "%s_"+sname+"_c%g_cdsteps.png"
+		return "%s_"+sname+"_c%g_cdsteps"
 	def get_xy(self, tp, e, r):
 		logfile = self.get_logfile(tp, e, r)
 		ys = []
@@ -399,8 +393,8 @@ class CdPlotter(Plotter):
 			if stop:
 				break
 			if 'iter' in line and 'obj' in line:
-				val = self.get_obj(line, tp)
-				relval = calculate_relval(val, minimal)
+				val = self.get_obj(line)
+				relval = self.calculate_relval(val, minimal)
 				CDsteps = (float(line[line.index('iter')+1]))
 				if relval > self.YLIM[1] or CDsteps < CdPlotter.XLIM[0]:
 					continue
@@ -458,7 +452,7 @@ class TimePlotter(Plotter):
 		sname = ''
 		for s in filter(lambda s: s is not None, self.stype):
 			sname += 's'+str(s)
-		return "%s_"+sname+"_c%g_time.png"
+		return "%s_"+sname+"_c%g_time"
 	def get_xy(self, tp, e, r):
 		logfile = self.get_logfile(tp, e, r)
 		ys = []
@@ -475,8 +469,8 @@ class TimePlotter(Plotter):
 			if stop:
 				break
 			if 't' in line and'obj' in line:
-				val = self.get_obj(line, tp)
-				relval = calculate_relval(val, minimal)
+				val = self.get_obj(line)
+				relval = self.calculate_relval(val, minimal)
 				t =  float(line[line.index('t')+1])
 				if relval > self.YLIM[1] or t < TimePlotter.XLIM[0]:
 					continue
@@ -523,7 +517,7 @@ class SucrCdPlotter(Plotter):
 		sname = ''
 		for s in filter(lambda s: s is not None, self.stype):
 			sname += 's'+str(s)
-		return "%s_"+sname+"_c%g_sucrate.png"
+		return "%s_"+sname+"_c%g_sucrate"
 	def get_xy(self, tp, e, r):
 		logfile = self.get_logfile(tp, e, r)
 		ys = []
@@ -556,7 +550,7 @@ class ObjSucPlotter(Plotter):
 		sname = ''
 		for s in filter(lambda s: s is not None, self.stype):
 			sname += 's'+str(s)
-		return "%s_"+sname+"_c%g_sucupd.png"
+		return "%s_"+sname+"_c%g_sucupd"
 	def get_xy(self, tp, e, r):
 		logfile = self.get_logfile(tp, e, r)
 		ys = []
@@ -567,8 +561,8 @@ class ObjSucPlotter(Plotter):
 		for line in logfile:
 			line = line.split(' ')
 			if 'iter' in line and 'obj' in line:
-				val = self.get_obj(line, tp)
-				relval = calculate_relval(val, minimal)
+				val = self.get_obj(line)
+				relval = self.calculate_relval(val, minimal)
 				sucpair = float(line[line.index('ttl_sucsize')+1])
 				if relval > self.YLIM[1]:
 					continue
@@ -609,6 +603,14 @@ class Parser:
 				type=str, action='store',
 				default='../figure/',
 				help='path to save the figures')
+		self.parser.add_argument('--suffix', dest='suffix',
+				type=str, action='store',
+				default='',
+				help='output figure suffix (before format suffix)')
+		self.parser.add_argument('--relobj', dest='relobj_denom',
+				type=float, action='store',
+				default=0.0,
+				help='relobj=(f-f*)/([this]+f*)')
 		#positional arguments
 		self.parser.add_argument('plottype', type=str,
 				choices=[klass.PLOTTYPE for klass in Plotter.__subclasses__()],
