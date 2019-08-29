@@ -1,4 +1,4 @@
-# exp-2019-07-21
+# exp-2019-08-26
 # generate log
 
 ./runexp.py time 
@@ -13,9 +13,10 @@ sed -i 's/60511\(.*\)-r 4\(.*\)_r4\(.*\)_r4/60511\1-r 0.1\2_r0.1\3_r0.1/g' grid_
 sed -i 's/50211\(.*\)-r 4\(.*\)_r4\(.*\)_r4/50211\1-r 0.1\2_r0.1\3_r0.1/g' grid_*
 sed -i 's/50511\(.*\)-r 4\(.*\)_r4\(.*\)_r4/50511\1-r 0.1\2_r0.1\3_r0.1/g' grid_*
 
-96 log files
+216 log files
 
 # generate plot
 Uncomment all lines in runtype with only one #
 and run 
-./plot.py nrnop
+./plot.py --relobj 0 --suffix d0  nrnop
+./plot.py --relobj 1 --suffix d1  nrnop

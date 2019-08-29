@@ -7,46 +7,45 @@ runtype = [
 		"SVDD_L1_SEMIGD_CY_FIRST_1000", #r=4
 		"SVDD_L1_SEMIGD_1000", #r=0.1
 
-		#"ONECLASS_L1_CY_1000",
-		#"ONECLASS_L1_SEMIGD_CY_FIRST_1000", #r=4
-		#"ONECLASS_L1_SEMIGD_1000", #r=0.1
+		"ONECLASS_L1_CY_1000",
+		"ONECLASS_L1_SEMIGD_CY_FIRST_1000", #r=4
+		"ONECLASS_L1_SEMIGD_1000", #r=0.1
 ]
 nlist = [
-		#0.1,
-		#0.01,
-		#0.05,
-		#0.005,
-		#0.001,
+		0.2,
+		0.1,
+		0.01,
+		0.05,
+		0.005,
+		0.001,
 		0.0001,
-		#0.2
 		]
 clist = [
-		#1.0/512,
-		#1.0/128,
-		#0.5,
-		#0.125,
-		#1.0/32,
-		0.0567527227118721,
-		#1,
-		#32
+		1.0/1024,
+		1.0/512,
+		1.0/128,
+		1.0/32,
+		1.0/8,
+		1.0/2,
+		1,
 		]
 elist = [1e-2]
 rlist = [
 	4,
-	0.1
+	#0.1
 ]
 m = 300000
 timeout = 50400
 tolerance = 1e-10
 dataset = [
-	#"yahookr",
+	"yahookr",
 	"yahoojp",
-	#"covtype.libsvm.binary.scale",
-	#"a9a",
-	#"ijcnn1",
-	#"rcv1_train.binary",
-	#"real-sim",
-	#"news20.binary",
+	"covtype.libsvm.binary.scale",
+	"a9a",
+	"ijcnn1",
+	"rcv1_train.binary",
+	"real-sim",
+	"news20.binary",
 	]
 
 PROCESS_MAX = 1
@@ -56,7 +55,7 @@ PROCESS_MAX = 1
 MARKER = ["--",]
 Y_BUFFER = 2
 MIN_SQUASH = 0.2
-YLIM = (1e-9, 5)
+YLIM = (1e-9, 1000)
 
 uselabel = {
 		50811: "cyclic-2cd",
