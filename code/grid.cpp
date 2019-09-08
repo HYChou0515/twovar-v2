@@ -724,6 +724,24 @@ void parse_stdin(char *input_file_name, GridItem* grid_item, char *param_str)
 			case ONECLASS_L1_SEMIGD_CY_DUALOBJ_SH:
 			case ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000:
 			case ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH:
+			case SVDD_L1_RD_1000:
+			case SVDD_L1_RD_SH:
+			case SVDD_L1_CY_1000:
+			case SVDD_L1_CY_SH:
+			case SVDD_L1_SECOND_1000:
+			case SVDD_L1_FIRST_1000:
+			case SVDD_L1_SEMIGD_1000:
+			case SVDD_L1_SEMIGD_SH:
+			case SVDD_L1_SEMIGD_RAND_1000:
+			case SVDD_L1_SEMIGD_RAND_SH:
+			case SVDD_L1_SEMIGD_CY_FIRST_1000:
+			case SVDD_L1_SEMIGD_CY_FIRST_SH:
+			case SVDD_L1_SEMIGD_RD_FIRST_1000:
+			case SVDD_L1_SEMIGD_RD_FIRST_SH:
+			case SVDD_L1_SEMIGD_CY_DUALOBJ_1000:
+			case SVDD_L1_SEMIGD_CY_DUALOBJ_SH:
+			case SVDD_L1_SEMIGD_RD_DUALOBJ_1000:
+			case SVDD_L1_SEMIGD_RD_DUALOBJ_SH:
 				grid_item->param.eps = 0.01;
 				break;
 		}

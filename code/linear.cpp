@@ -5074,6 +5074,7 @@ void Solver::oneclass_semigd2()
 	int i, j;
 	double G_i, G_j;
 	double nGmax, nGmin;
+	double inner_eps = eps;
 	double Q_ij;
 	clock_t start;
 
@@ -5113,6 +5114,9 @@ void Solver::oneclass_semigd2()
 		update_size = 0;
 		success_size = 0;
 		n_exchange = 0;
+		int nr_skip_subprob = 0;
+		double nGmax_cycle = -INF;
+		double nGmin_cycle = INF;
 		for(int cycle_i = 0; cycle_i < active_size; cycle_i+=smgd_size)
 		//Iup and Ilow should be redefined if inner_iter >= 2
 		{
@@ -5243,6 +5247,8 @@ void Solver::oneclass_semigd2()
 						nGmin = min(nGmin, -G_i);
 					}
 				}
+				nGmax_cycle = max(nGmax_cycle, nGmax);
+				nGmin_cycle = min(nGmin_cycle, nGmin);
 				if(sh_mode == SH_ON)
 				{
 					if(Iup_size <= 0 || Ilow_size <= 0)
@@ -5251,9 +5257,10 @@ void Solver::oneclass_semigd2()
 						continue;
 					}
 				}
-				if(nGmax-nGmin < eps)
+				if(nGmax-nGmin < (nGmax_cycle-nGmin_cycle)/(1.0*active_size))
 				{
 					subprob_solved = true;
+					++nr_skip_subprob;
 					continue;
 				}
 				if(wss_mode == SEMIGD_FIRST)
@@ -5369,6 +5376,8 @@ void Solver::oneclass_semigd2()
 		iter++;
 		duration += clock() - start;
 		log_message();
+		//inner_eps = (adjust_smgd_size()-1)*(nGmax_cycle-nGmin_cycle)/(adjust_smgd_size()+1); // expected maxG and minG difference (if G is uniform distributed)
+		//inner_eps *= eps;
 		if(sh_mode == SH_ON)
 		{
 			if(PGmax_new - PGmin_new <= eps)
@@ -5378,7 +5387,10 @@ void Solver::oneclass_semigd2()
 				else
 				{
 					if(active_size == l)
+					{
 						eps *= EPS_DECR_RATE;
+						inner_eps = eps;
+					}
 					active_size = l;
 					PGmax_old = INF;
 					PGmin_old = -INF;
