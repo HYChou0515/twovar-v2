@@ -999,6 +999,7 @@ public:
 	enum WssMode
 	{
 		SEMIGD_G,
+		SEMIGD_G_CONV,
 		SEMIGD_G_RAND,
 		SEMIGD_PG,
 		SEMIGD_PG_RAND,
@@ -1220,6 +1221,7 @@ Solver::Solver(int _solver_type)
 		case ONECLASS_L1_SEMIGD_CY_DUALOBJ_SH:
 		case ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000:
 		case ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH:
+		case ONECLASS_L1_SEMIGD_CONV_1000:
 			category = ONECLASS;
 			break;
 		case SVDD_L1_RD_1000:
@@ -1240,6 +1242,7 @@ Solver::Solver(int _solver_type)
 		case SVDD_L1_SEMIGD_CY_DUALOBJ_SH:
 		case SVDD_L1_SEMIGD_RD_DUALOBJ_1000:
 		case SVDD_L1_SEMIGD_RD_DUALOBJ_SH:
+		case SVDD_L1_SEMIGD_CONV_1000:
 			category = SVDD;
 			break;
 	}
@@ -1344,6 +1347,7 @@ Solver::Solver(int _solver_type)
 		SAVE_NAME(ONECLASS_L1_SEMIGD_CY_DUALOBJ_SH);
 		SAVE_NAME(ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000);
 		SAVE_NAME(ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH);
+		SAVE_NAME(ONECLASS_L1_SEMIGD_CONV_1000);
 		SAVE_NAME(SVDD_L1_RD_1000);
 		SAVE_NAME(SVDD_L1_RD_SH);
 		SAVE_NAME(SVDD_L1_CY_1000);
@@ -1362,6 +1366,7 @@ Solver::Solver(int _solver_type)
 		SAVE_NAME(SVDD_L1_SEMIGD_CY_DUALOBJ_SH);
 		SAVE_NAME(SVDD_L1_SEMIGD_RD_DUALOBJ_1000);
 		SAVE_NAME(SVDD_L1_SEMIGD_RD_DUALOBJ_SH);
+		SAVE_NAME(SVDD_L1_SEMIGD_CONV_1000);
 	}
 #undef SAVE_NAME
 }
@@ -5610,6 +5615,12 @@ void Solver::oneclass_semigd()
 				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[2]);
 				alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[2]);
 			}
+			if(index_ii != 0 && wss_mode == SEMIGD_G_CONV) {
+				if(alpha[i] == 0 || alpha[i] == upper_bound[2]
+				|| alpha[j] == 0 || alpha[j] == upper_bound[2]) {
+					break;
+				}
+			}
 		}
 
 		iter++;
@@ -5660,6 +5671,7 @@ static inline void svdd_update(
 	|| param->solver_type == SVDD_L1_SEMIGD_CY_DUALOBJ_SH
 	|| param->solver_type == SVDD_L1_SEMIGD_RD_DUALOBJ_1000
 	|| param->solver_type == SVDD_L1_SEMIGD_RD_DUALOBJ_SH
+	|| param->solver_type == SVDD_L1_SEMIGD_CONV_1000
 	)
 	{
 		diag[0] = 0;
@@ -5812,6 +5824,11 @@ static inline void svdd_update(
 			solver.sh_mode = Solver::SH_ON;
 			solver.oneclass_semigd2();
 			break;
+		case SVDD_L1_SEMIGD_CONV_1000:
+			solver.wss_mode = Solver::SEMIGD_G_CONV;
+			solver.sh_mode = Solver::SH_OFF;
+			solver.oneclass_semigd();
+			break;
 	}
 
 	delete [] QD;
@@ -5854,6 +5871,7 @@ static inline void oneclass_update(
 	|| param->solver_type == ONECLASS_L1_SEMIGD_CY_DUALOBJ_SH
 	|| param->solver_type == ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000
 	|| param->solver_type == ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH
+	|| param->solver_type == ONECLASS_L1_SEMIGD_CONV_1000
 	)
 	{
 		diag[0] = 0;
@@ -6003,6 +6021,11 @@ static inline void oneclass_update(
 			solver.rand_mode = Solver::RANDOM;
 			solver.sh_mode = Solver::SH_ON;
 			solver.oneclass_semigd2();
+			break;
+		case ONECLASS_L1_SEMIGD_CONV_1000:
+			solver.wss_mode = Solver::SEMIGD_G_CONV;
+			solver.sh_mode = Solver::SH_OFF;
+			solver.oneclass_semigd();
 			break;
 	}
 
@@ -7808,6 +7831,7 @@ static void train_one(const problem *prob, const parameter *param, double *w, do
 		case SVDD_L1_SEMIGD_CY_DUALOBJ_SH:
 		case SVDD_L1_SEMIGD_RD_DUALOBJ_1000:
 		case SVDD_L1_SEMIGD_RD_DUALOBJ_SH:
+		case SVDD_L1_SEMIGD_CONV_1000:
 			svdd_update(prob, w, param);
 			break;
 		case ONECLASS_L1_RD_1000:
@@ -7828,6 +7852,7 @@ static void train_one(const problem *prob, const parameter *param, double *w, do
 		case ONECLASS_L1_SEMIGD_CY_DUALOBJ_SH:
 		case ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000:
 		case ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH:
+		case ONECLASS_L1_SEMIGD_CONV_1000:
 			oneclass_update(prob, w, param);
 			break;
 		case OLD_ONE_L1_CY_SH: // original algo
@@ -7987,6 +8012,7 @@ model* train(const problem *prob, const parameter *param)
 	|| param->solver_type == ONECLASS_L1_SEMIGD_CY_DUALOBJ_SH
 	|| param->solver_type == ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000
 	|| param->solver_type == ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH
+	|| param->solver_type == ONECLASS_L1_SEMIGD_CONV_1000
 	|| param->solver_type == SVDD_L1_RD_1000
 	|| param->solver_type == SVDD_L1_RD_SH
 	|| param->solver_type == SVDD_L1_CY_1000
@@ -8005,6 +8031,7 @@ model* train(const problem *prob, const parameter *param)
 	|| param->solver_type == SVDD_L1_SEMIGD_CY_DUALOBJ_SH
 	|| param->solver_type == SVDD_L1_SEMIGD_RD_DUALOBJ_1000
 	|| param->solver_type == SVDD_L1_SEMIGD_RD_DUALOBJ_SH
+	|| param->solver_type == SVDD_L1_SEMIGD_CONV_1000
 	)
 	{
 		if(param->solver_type == ONECLASS_L1_RD_1000
@@ -8025,6 +8052,7 @@ model* train(const problem *prob, const parameter *param)
 		|| param->solver_type == ONECLASS_L1_SEMIGD_CY_DUALOBJ_SH
 		|| param->solver_type == ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000
 		|| param->solver_type == ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH
+		|| param->solver_type == ONECLASS_L1_SEMIGD_CONV_1000
 		|| param->solver_type == SVDD_L1_RD_1000
 		|| param->solver_type == SVDD_L1_RD_SH
 		|| param->solver_type == SVDD_L1_CY_1000
@@ -8043,6 +8071,7 @@ model* train(const problem *prob, const parameter *param)
 		|| param->solver_type == SVDD_L1_SEMIGD_CY_DUALOBJ_SH
 		|| param->solver_type == SVDD_L1_SEMIGD_RD_DUALOBJ_1000
 		|| param->solver_type == SVDD_L1_SEMIGD_RD_DUALOBJ_SH
+		|| param->solver_type == SVDD_L1_SEMIGD_CONV_1000
 		)
 		{
 			w_size = w_size + 1;
@@ -8439,6 +8468,7 @@ double predict_values(const struct model *model_, const struct feature_node *x, 
 			||model_->param.solver_type != ONECLASS_L1_SEMIGD_CY_DUALOBJ_SH
 		 	||model_->param.solver_type != ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000
 		 	||model_->param.solver_type != ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH
+		 	||model_->param.solver_type != ONECLASS_L1_SEMIGD_CONV_1000
 			||model_->param.solver_type != SVDD_L1_RD_1000
 		 	||model_->param.solver_type != SVDD_L1_RD_SH
 			||model_->param.solver_type != SVDD_L1_CY_1000
@@ -8457,6 +8487,7 @@ double predict_values(const struct model *model_, const struct feature_node *x, 
 			||model_->param.solver_type != SVDD_L1_SEMIGD_CY_DUALOBJ_SH
 		 	||model_->param.solver_type != SVDD_L1_SEMIGD_RD_DUALOBJ_1000
 		 	||model_->param.solver_type != SVDD_L1_SEMIGD_RD_DUALOBJ_SH
+		 	||model_->param.solver_type != SVDD_L1_SEMIGD_CONV_1000
 			)
 			return (dec_values[0]>0)?1:-1;
 		else
@@ -8637,6 +8668,7 @@ class Solver_type_table
 		SAVE_NAME(ONECLASS_L1_SEMIGD_CY_DUALOBJ_SH);
 		SAVE_NAME(ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000);
 		SAVE_NAME(ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH);
+		SAVE_NAME(ONECLASS_L1_SEMIGD_CONV_1000);
 		// for svdd
 		SAVE_NAME(SVDD_L1_RD_1000);
 		SAVE_NAME(SVDD_L1_RD_SH);
@@ -8656,6 +8688,7 @@ class Solver_type_table
 		SAVE_NAME(SVDD_L1_SEMIGD_CY_DUALOBJ_SH);
 		SAVE_NAME(SVDD_L1_SEMIGD_RD_DUALOBJ_1000);
 		SAVE_NAME(SVDD_L1_SEMIGD_RD_DUALOBJ_SH);
+		SAVE_NAME(SVDD_L1_SEMIGD_CONV_1000);
 #undef SAVE_NAME
 	}
 
@@ -9237,6 +9270,7 @@ const char *check_parameter(const problem *prob, const parameter *param)
 		&& param->solver_type != ONECLASS_L1_SEMIGD_CY_DUALOBJ_SH
 	 	&& param->solver_type != ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000
 	 	&& param->solver_type != ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH
+	 	&& param->solver_type != ONECLASS_L1_SEMIGD_CONV_1000
 	 	&& param->solver_type != SVDD_L1_RD_1000
 	 	&& param->solver_type != SVDD_L1_RD_SH
 	 	&& param->solver_type != SVDD_L1_CY_1000
@@ -9255,6 +9289,7 @@ const char *check_parameter(const problem *prob, const parameter *param)
 		&& param->solver_type != SVDD_L1_SEMIGD_CY_DUALOBJ_SH
 	 	&& param->solver_type != SVDD_L1_SEMIGD_RD_DUALOBJ_1000
 	 	&& param->solver_type != SVDD_L1_SEMIGD_RD_DUALOBJ_SH
+	 	&& param->solver_type != SVDD_L1_SEMIGD_CONV_1000
 		)
 		return "unknown solver type";
 

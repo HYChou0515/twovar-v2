@@ -134,6 +134,8 @@ runs = {
 	"ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000" : 51011,
 	"ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH" : 51012,
 
+	"ONECLASS_L1_SEMIGD_CONV_1000" : 51211,
+
 	"SVDD_L1_RD_1000" : 60111,
 	"SVDD_L1_RD_SH" : 60112,
 
@@ -161,6 +163,8 @@ runs = {
 	"SVDD_L1_SEMIGD_RD_DUALOBJ_1000" : 61011,
 	"SVDD_L1_SEMIGD_RD_DUALOBJ_SH" : 61012,
 
+	"SVDD_L1_SEMIGD_CONV_1000" : 61211,
+
 	"STUB" : None,
 }
 alltype = runs.values()
@@ -178,8 +182,8 @@ def is_semigd(code):
 	else:
 		semigd_prefix = [203, 204, 205, 206, 207,
 				402, 403, 404, 405, 407, 408,
-				502, 505, 506, 507, 509, 510,
-				602, 605, 606, 607, 609, 610]
+				502, 505, 506, 507, 509, 510, 512,
+				602, 605, 606, 607, 609, 610, 612]
 		return str_code[:3] in map(str, semigd_prefix)
 
 def is_shrink(code):
