@@ -130,6 +130,10 @@ class Plotter(object):
 						linewidth=3, markersize=6, markevery=0.1)
 				clridx += 1
 
+		min_xs, max_xs, min_ys, max_ys = zip(*self.xy_range) # list of tuples to tuple of lists
+		plt.hlines(1e-1,0,max_xs,linestyles='-')
+		plt.hlines(1e-2,0,max_xs,linestyles='--')
+		plt.hlines(1e-3,0,max_xs,linestyles='-.')
 		plt.subplots_adjust(bottom=0.1,left=0.1,right=0.98,top=0.98)
 		self.setup_fig()
 		plt.close(self.fig)
@@ -198,7 +202,7 @@ class Plotter(object):
 		# set ylim
 		y_exponents = [1e1,1e3,1e7,1e12, float('Inf')]
 		y_max = y_exponents[bisect.bisect_right(y_exponents, exponent_of(max(max_ys)))]
-		plt.ylim(1e-9/2, y_max)
+		plt.ylim(self.YLIM[0]/2, y_max)
 
 	def setup_fig(self):
 		plt.legend(loc=0)
