@@ -5615,7 +5615,7 @@ void Solver::oneclass_semigd()
 				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[2]);
 				alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[2]);
 			}
-			if(index_ii != 0 && wss_mode == SEMIGD_G_CONV) {
+			if(index_i != 0 && wss_mode == SEMIGD_G_CONV) {
 				if(alpha[i] == 0 || alpha[i] == upper_bound[2]
 				|| alpha[j] == 0 || alpha[j] == upper_bound[2]) {
 					break;
