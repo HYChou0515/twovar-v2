@@ -11,15 +11,7 @@ runtype = [
 		"ONECLASS_L1_SEMIGD_CY_FIRST_1000", #r=4
 		"ONECLASS_L1_SEMIGD_1000", #r=0.1
 ]
-nlist = [
-		0.2,
-		0.1,
-		0.01,
-		0.05,
-		0.005,
-		0.001,
-		0.0001,
-		]
+#nlist = []
 clist = [
 		1.0/1024,
 		1.0/512,
@@ -32,7 +24,7 @@ clist = [
 elist = [1e-2]
 rlist = [
 	4,
-	0.1
+#	0.1
 ]
 m = 300000
 timeout = 50400
