@@ -1027,7 +1027,7 @@ public:
 	//other function
 	double calculate_obj();
 	double calculate_rho();
-	int adjust_smgd_size();
+	int adjust_smgd_size(int base_size);
 	void countSVs();
 	void log_message();
 	void summary();
@@ -1473,15 +1473,15 @@ void Solver::dot_three_n(double *xixj, double *xiw, double *xjw,
 	nr_n_ops+=3;
 	return sparse_operator::dot_three(xixj, xiw, xjw, xi, xj, w);
 }
-int Solver:: adjust_smgd_size()
+int Solver:: adjust_smgd_size(int base_size)
 {
 	int smgd_size = -1;
 	if(ratio_update < 1)
-		smgd_size = int(active_size*ratio_update);
+		smgd_size = int(base_size*ratio_update);
 	else if(ratio_update > std::numeric_limits<int>::max())
 		smgd_size = std::numeric_limits<int>::max();
 	else
-		smgd_size = min(int(ratio_update), active_size);
+		smgd_size = min(int(ratio_update), base_size);
 	if(smgd_size < 1)
 		smgd_size = 1;
 	return smgd_size;
@@ -1730,7 +1730,7 @@ void Solver::one_deltaF_of_indices()
 		G[i] = y[G_index]*sparse_operator::dot(w, xi) -1 +alpha[G_index]*diag[GETI(G_index)];
 	}
 
-	smgd_size = adjust_smgd_size();
+	smgd_size = adjust_smgd_size(active_size);
 
 	for(s=0; s<active_size; s++)
 	{
@@ -1899,7 +1899,7 @@ void Solver::bias_deltaF_of_indices()
 		G[i] = -y[G_index] * (y[G_index]*sparse_operator::dot(w, xi) -1 +alpha[G_index]*diag[GETI(G_index)]);
 	}
 
-	smgd_size = adjust_smgd_size();
+	smgd_size = adjust_smgd_size(active_size);
 
 	for(i=0; i<active_size; i++)
 	{
@@ -2780,7 +2780,7 @@ void Solver::one_semigd_1000()
 			feature_node * const xi = prob->x[G_index];
 			G[i] = y[G_index]*dot_n(w, xi) -1 +alpha[G_index]*diag[GETI(G_index)];
 		}
-		smgd_size = adjust_smgd_size();
+		smgd_size = adjust_smgd_size(active_size);
 
 		for(s=0; s<active_size; s++)
 		{
@@ -2906,7 +2906,7 @@ void Solver::one_semigd_dualobj_1000()
 			G[i] = y[G_index]*dot_n(w, xi) -1 +alpha[G_index]*diag[GETI(G_index)];
 		}
 
-		smgd_size = adjust_smgd_size();
+		smgd_size = adjust_smgd_size(active_size);
 
 		for(s=0; s<active_size; s++)
 		{
@@ -3942,7 +3942,7 @@ void Solver::bias_semigd2()
 	double Q_ij, C_i, C_j;
 	clock_t start;
 
-	int smgd_size = adjust_smgd_size();
+	int smgd_size = adjust_smgd_size(active_size);
 
 	int Iup_size = 0;
 	int Ilow_size = 0;
@@ -3966,7 +3966,7 @@ void Solver::bias_semigd2()
 		PGmax_new = -INF;
 		PGmin_new = INF;
 
-		smgd_size = adjust_smgd_size();
+		smgd_size = adjust_smgd_size(active_size);
 
 		if(rand_mode == CYCLIC)
 		{
@@ -4336,7 +4336,7 @@ void Solver::bias_semigd()
 			}
 		}
 
-		smgd_size = adjust_smgd_size();
+		smgd_size = adjust_smgd_size(active_size);
 		for(int s=0; s<active_size; s++)
 		{
 			struct feature_node comp;
@@ -5084,11 +5084,10 @@ void Solver::oneclass_semigd2()
 	int i, j;
 	double G_i, G_j;
 	double nGmax, nGmin;
-	double inner_eps = eps;
 	double Q_ij;
 	clock_t start;
 
-	int smgd_size = adjust_smgd_size();
+	int smgd_size = adjust_smgd_size(active_size);
 	int Iup_size = 0;
 	int Ilow_size = 0;
 	int *Iup = new int[smgd_size];
@@ -5112,7 +5111,7 @@ void Solver::oneclass_semigd2()
 		PGmax_new = -INF;
 		PGmin_new = INF;
 
-		smgd_size = adjust_smgd_size();
+		smgd_size = adjust_smgd_size(active_size);
 		if(rand_mode == CYCLIC)
 		{
 			for (i=0; i<active_size; i++)
@@ -5386,8 +5385,6 @@ void Solver::oneclass_semigd2()
 		iter++;
 		duration += clock() - start;
 		log_message();
-		//inner_eps = (adjust_smgd_size()-1)*(nGmax_cycle-nGmin_cycle)/(adjust_smgd_size()+1); // expected maxG and minG difference (if G is uniform distributed)
-		//inner_eps *= eps;
 		if(sh_mode == SH_ON)
 		{
 			if(PGmax_new - PGmin_new <= eps)
@@ -5399,7 +5396,6 @@ void Solver::oneclass_semigd2()
 					if(active_size == l)
 					{
 						eps *= EPS_DECR_RATE;
-						inner_eps = eps;
 					}
 					active_size = l;
 					PGmax_old = INF;
@@ -5428,6 +5424,9 @@ void Solver::oneclass_semigd_batch()
 	int i, j;
 	double G_i, G_j;
 	std::pair<double,double> *newalpha_ij = new std::pair<double,double>;
+	int batch_size = l/10; // TODO: 0.1 should be a hyper-parameter
+	std::vector<int> batch_s(batch_size);
+	std::vector<int>::iterator  batch_last;
 	Gmax = -INF;
 	Gmin = INF;
 
@@ -5446,188 +5445,173 @@ void Solver::oneclass_semigd_batch()
 		n_exchange = 0;
 		Gmax = -INF;
 		Gmin = INF;
-		for(i=0; i<active_size; i++)
+
+		int batch_size = l/10; // TODO: 0.1 should be a hyper-parameter
+		//random_mode == CYCLIC
 		{
-			int G_index = index[i];
-			feature_node * const xi = prob->x[G_index];
-			if(category == ONECLASS)
+			for (i=0; i<active_size; i++)
 			{
-				G[i] = -dot_n(w, xi);
-			}
-			else if(category == SVDD)
-			{
-				G[i] = -dot_n(w, xi) + 0.5*QD[i];
-			}
-			else
-			{
-				fprintf(stderr, "not supported for this type\n");
-				return;
-			}
-			if(sh_mode == SH_ON)
-			{
-				if( is_Iup(alpha_status[G_index]) )
-					Gmax = max(Gmax, G[i]);
-				if( is_Ilow(alpha_status[G_index]) )
-					Gmin = min(Gmin, G[i]);
+				j = i+non_static_rand()%(active_size-i);
+				swap(index[i], index[j]);
 			}
 		}
-		if(sh_mode == SH_ON)
+		for(int batch_i = 0; batch_i < active_size; batch_i+=batch_size)
 		{
-			if(Gmax - Gmin < eps)
+			//random_mode == CYCLIC
+			for(int s = 0; s < batch_size; s++)
 			{
-				if(active_size == l && eps <= EPS_MIN)
+				if(batch_i+s >= active_size)
+				{
+					batch_size = s;
 					break;
+				}
+				// batch_i=0,4,8
+				// s=0,1,2,3
+				// b[4-s-1]=b[3,2,1,0]=0,1,2,3/4,5,6,7/8,9,10,11
+				batch_s[batch_size-s-1] = batch_i+s;
+			}
+			batch_last = batch_s.begin()+batch_size;
+			// inside batch
+			// calculate gradient
+			for(auto it=batch_s.begin(); it!=batch_last; ++it)
+			{
+				int i = *it;
+				int G_index = index[i];
+				feature_node * const xi = prob->x[G_index];
+				if(category == ONECLASS)
+				{
+					G[i] = -dot_n(w, xi);
+				}
+				else if(category == SVDD)
+				{
+					G[i] = -dot_n(w, xi) + 0.5*QD[i];
+				}
 				else
 				{
-					if(active_size == l)
-						eps *= EPS_DECR_RATE;
-					active_size = l;
-					continue;
+					fprintf(stderr, "not supported for this type\n");
+					return;
 				}
 			}
-			else
+
+			smgd_size = adjust_smgd_size(batch_size);
+
+			// determine working set
+			for(auto it=batch_s.begin(); it!=batch_last; ++it)
 			{
-				for(i=active_size-1; i>=0; i--)
+				int i = *it;
+				struct feature_node comp;
+				comp.index = index[i];
+				comp.value = G[i];
+				if(is_Iup(alpha_status[comp.index]))
 				{
-					bool be_shunk = false;
-					int shrinking_index = index[i];
-					if(!is_Iup(alpha_status[shrinking_index]))
-					{
-						if(G[i] > Gmax)
-							be_shunk = true;
-					}
-					if(!is_Ilow(alpha_status[shrinking_index]))
-					{
-						if(G[i] < Gmin)
-							be_shunk = true;
-					}
-
-					if(be_shunk)
-					{
-						swap(index[i],index[--active_size]);
-						swap(G[i],G[active_size]);
-					}
-				}
-			}
-		}
-
-		smgd_size = adjust_smgd_size();
-
-		for(i=0; i<active_size; i++)
-		{
-			struct feature_node comp;
-			comp.index = index[i];
-			comp.value = G[i];
-			if(is_Iup(alpha_status[comp.index]))
-			{
-				if((int) min_heap.size() <  smgd_size)
-					min_heap.push(comp);
-				else
-				{
-					if(min_heap.top().value < comp.value)
-					{
-						min_heap.pop();
+					if((int) min_heap.size() <  smgd_size)
 						min_heap.push(comp);
+					else
+					{
+						if(min_heap.top().value < comp.value)
+						{
+							min_heap.pop();
+							min_heap.push(comp);
+						}
+					}
+				}
+				if(is_Ilow(alpha_status[comp.index]))
+				{
+					if((int) max_heap.size() < smgd_size)
+						max_heap.push(comp);
+					else
+					{
+						if(max_heap.top().value > comp.value)
+						{
+							max_heap.pop();
+							max_heap.push(comp);
+						}
 					}
 				}
 			}
-			if(is_Ilow(alpha_status[comp.index]))
+
+			smgd_size = min((int)min_heap.size(), (int)max_heap.size());
+			while((int)max_heap.size() > smgd_size)
+				max_heap.pop();
+			while((int)min_heap.size() > smgd_size)
+				min_heap.pop();
+
+			for(i=0; i<smgd_size; i++)
 			{
-				if((int) max_heap.size() < smgd_size)
-					max_heap.push(comp);
+				Max_order_index[smgd_size-1-i] = min_heap.top().index;
+				Min_order_index[smgd_size-1-i] = max_heap.top().index;
+				min_heap.pop();
+				max_heap.pop();
+			}
+			if(wss_mode == SEMIGD_G_RAND)
+			{
+				RAND_SHUFFLE(Max_order_index, smgd_size);
+				RAND_SHUFFLE(Min_order_index, smgd_size);
+			}
+			update_size = 0;
+			for(int index_i = 0; index_i<smgd_size; index_i++)
+			{
+				LOG_0ITER()
+
+				update_size+=2;
+				++cdsteps;
+				i = Max_order_index[index_i];
+				j = Min_order_index[index_i];
+
+				feature_node const * xi = prob->x[i];
+				feature_node const * xj = prob->x[j];
+
+				if( !is_Ilow(alpha_status[i]) &&
+					!is_Ilow(alpha_status[j]))
+					continue;
+				if( !is_Iup(alpha_status[i]) &&
+					!is_Iup(alpha_status[j]))
+					continue;
+
+				if(category == ONECLASS)
+				{
+					G_i = dot_n(w, xi);
+					G_j = dot_n(w, xj);
+				}
+				else if(category == SVDD)
+				{
+					G_i = dot_n(w, xi) - 0.5*QD[i];
+					G_j = dot_n(w, xj) - 0.5*QD[j];
+				}
 				else
 				{
-					if(max_heap.top().value > comp.value)
-					{
-						max_heap.pop();
-						max_heap.push(comp);
+					fprintf(stderr, "not supported for this type\n");
+					return;
+				}
+				if(maxIup_le_minIlow(+1, alpha_status[i], G_i, 
+							+1, alpha_status[j], G_j))
+					continue;
+
+				double Q_ij = feature_dot_n(xi, xj);
+				calculate_bias_newalpha(newalpha_ij, QD[i],QD[j],Q_ij,
+						upper_bound[2],upper_bound[2],alpha[i],alpha[j],G_i,G_j,+1,+1);
+
+				// update alpha status and w
+				if(fabs(newalpha_ij->first-alpha[i]) > 1e-16)
+				{
+					success_size+=2;
+					if(fabs(newalpha_ij->first-alpha[i]) == upper_bound[2])
+						n_exchange++;
+					axpy_n(newalpha_ij->first-alpha[i], prob->x[i], w);
+					axpy_n(newalpha_ij->second-alpha[j], prob->x[j], w);
+					alpha[i] = newalpha_ij->first;
+					alpha[j] = newalpha_ij->second;
+					alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[2]);
+					alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[2]);
+				}
+				if(index_i != 0 && wss_mode == SEMIGD_G_CONV) {
+					if(alpha[i] == 0 || alpha[i] == upper_bound[2]
+					|| alpha[j] == 0 || alpha[j] == upper_bound[2]) {
+						break;
 					}
 				}
 			}
 		}
-
-		smgd_size = min((int)min_heap.size(), (int)max_heap.size());
-		while((int)max_heap.size() > smgd_size)
-			max_heap.pop();
-		while((int)min_heap.size() > smgd_size)
-			min_heap.pop();
-
-		for(i=0; i<smgd_size; i++)
-		{
-			Max_order_index[smgd_size-1-i] = min_heap.top().index;
-			Min_order_index[smgd_size-1-i] = max_heap.top().index;
-			min_heap.pop();
-			max_heap.pop();
-		}
-		if(wss_mode == SEMIGD_G_RAND)
-		{
-			RAND_SHUFFLE(Max_order_index, smgd_size);
-			RAND_SHUFFLE(Min_order_index, smgd_size);
-		}
-		update_size = 0;
-		for(int index_i = 0; index_i<smgd_size; index_i++)
-		{
-			LOG_0ITER()
-
-			update_size+=2;
-			++cdsteps;
-			i = Max_order_index[index_i];
-			j = Min_order_index[index_i];
-
-			feature_node const * xi = prob->x[i];
-			feature_node const * xj = prob->x[j];
-
-			if( !is_Ilow(alpha_status[i]) &&
-				!is_Ilow(alpha_status[j]))
-				continue;
-			if( !is_Iup(alpha_status[i]) &&
-				!is_Iup(alpha_status[j]))
-				continue;
-
-			if(category == ONECLASS)
-			{
-				G_i = dot_n(w, xi);
-				G_j = dot_n(w, xj);
-			}
-			else if(category == SVDD)
-			{
-				G_i = dot_n(w, xi) - 0.5*QD[i];
-				G_j = dot_n(w, xj) - 0.5*QD[j];
-			}
-			else
-			{
-				fprintf(stderr, "not supported for this type\n");
-				return;
-			}
-			if(maxIup_le_minIlow(+1, alpha_status[i], G_i, 
-						+1, alpha_status[j], G_j))
-				continue;
-
-			double Q_ij = feature_dot_n(xi, xj);
-			calculate_bias_newalpha(newalpha_ij, QD[i],QD[j],Q_ij,
-					upper_bound[2],upper_bound[2],alpha[i],alpha[j],G_i,G_j,+1,+1);
-
-			// update alpha status and w
-			if(fabs(newalpha_ij->first-alpha[i]) > 1e-16)
-			{
-				success_size+=2;
-				if(fabs(newalpha_ij->first-alpha[i]) == upper_bound[2])
-					n_exchange++;
-				axpy_n(newalpha_ij->first-alpha[i], prob->x[i], w);
-				axpy_n(newalpha_ij->second-alpha[j], prob->x[j], w);
-				alpha[i] = newalpha_ij->first;
-				alpha[j] = newalpha_ij->second;
-				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[2]);
-				alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[2]);
-			}
-			if(index_i != 0 && wss_mode == SEMIGD_G_CONV) {
-				if(alpha[i] == 0 || alpha[i] == upper_bound[2]
-				|| alpha[j] == 0 || alpha[j] == upper_bound[2]) {
-					break;
-				}
-			}
-		}
-
 		iter++;
 		duration += clock() - start;
 		log_message();
@@ -5732,7 +5716,7 @@ void Solver::oneclass_semigd()
 			}
 		}
 
-		smgd_size = adjust_smgd_size();
+		smgd_size = adjust_smgd_size(active_size);
 
 		for(i=0; i<active_size; i++)
 		{
