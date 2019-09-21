@@ -5420,7 +5420,7 @@ void Solver::oneclass_semigd()
 {
 	clock_t start;
 	int l = prob->l;
-	int i, j;
+	int i, j, s;
 	double G_i, G_j;
 	std::pair<double,double> *newalpha_ij = new std::pair<double,double>;
 	Gmax = -INF;
@@ -5441,10 +5441,10 @@ void Solver::oneclass_semigd()
 		n_exchange = 0;
 		Gmax = -INF;
 		Gmin = INF;
-		for(i=0; i<active_size; i++)
+		for(s=0; s<active_size; s++)
 		{
-			int G_index = index[i];
-			feature_node * const xi = prob->x[G_index];
+			int i = index[s];
+			feature_node * const xi = prob->x[i];
 			if(category == ONECLASS)
 			{
 				G[i] = -dot_n(w, xi);
@@ -5460,9 +5460,9 @@ void Solver::oneclass_semigd()
 			}
 			if(sh_mode == SH_ON)
 			{
-				if( is_Iup(alpha_status[G_index]) )
+				if( is_Iup(alpha_status[i]) )
 					Gmax = max(Gmax, G[i]);
-				if( is_Ilow(alpha_status[G_index]) )
+				if( is_Ilow(alpha_status[i]) )
 					Gmin = min(Gmin, G[i]);
 			}
 		}
@@ -5470,49 +5470,41 @@ void Solver::oneclass_semigd()
 		{
 			if(Gmax - Gmin < eps)
 			{
-				if(active_size == l && eps <= EPS_MIN)
+				if(active_size == l) // && eps <= EPS_MIN)
 					break;
 				else
 				{
-					if(active_size == l)
-						eps *= EPS_DECR_RATE;
+					//if(active_size == l)
+					//	eps *= EPS_DECR_RATE;
 					active_size = l;
 					continue;
 				}
 			}
-			else
+			for(s=0; s<active_size; s++)
 			{
-				for(i=active_size-1; i>=0; i--)
+				int i = index[s];
+				if(!is_Iup(alpha_status[i]) && G[i] > Gmax)
 				{
-					bool be_shunk = false;
-					int shrinking_index = index[i];
-					if(!is_Iup(alpha_status[shrinking_index]))
-					{
-						if(G[i] > Gmax)
-							be_shunk = true;
-					}
-					if(!is_Ilow(alpha_status[shrinking_index]))
-					{
-						if(G[i] < Gmin)
-							be_shunk = true;
-					}
-
-					if(be_shunk)
-					{
-						swap(index[i],index[--active_size]);
-						swap(G[i],G[active_size]);
-					}
+					active_size--;
+					swap(index[i],index[active_size]);
+					s--;
+				}
+				else if(!is_Ilow(alpha_status[i]) && G[i] < Gmin)
+				{
+					active_size--;
+					swap(index[i],index[active_size]);
+					s--;
 				}
 			}
 		}
 
 		smgd_size = adjust_smgd_size();
 
-		for(i=0; i<active_size; i++)
+		for(s=0; s<active_size; s++)
 		{
 			struct feature_node comp;
-			comp.index = index[i];
-			comp.value = G[i];
+			comp.index = index[s];
+			comp.value = G[comp.index];
 			if(is_Iup(alpha_status[comp.index]))
 			{
 				if((int) min_heap.size() <  smgd_size)
