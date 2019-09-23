@@ -156,39 +156,24 @@ class Plotter(object):
 			raise StubException
 		if is_semigd(tp):
 			if is_oneclass(tp) == 1:
-				logname = "%s_s%d_c1_e%g_n%g_r%g"% (self.dstr, tp, e, self.c, r)
+				logname = "%s_s%d_c1_e%g_n%g_r%g"% (self.dstr, tp, e, 1.0/self.c/datal[self.dstr], r)
 			else:
 				logname = "%s_s%d_c%g_e%g_r%g"% (self.dstr, tp, self.c, e, r)
 		else:
 			if is_oneclass(tp) == 1:
-				logname = "%s_s%d_c1_e%g_n%g"% (self.dstr, tp, e, self.c)
+				logname = "%s_s%d_c1_e%g_n%g"% (self.dstr, tp, e, 1.0/self.c/datal[self.dstr])
 			else:
 				logname = "%s_s%d_c%g_e%g"% (self.dstr, tp, self.c, e)
 		try:
 			f = open(self.logpath+logname,"r")
 			print("open file: "+self.logpath+logname)
-			return f
+			return f, LogInfo(logname)
 		except IOError:
 			print("cannot find file: "+self.logpath+logname)
 			raise IOError
 
 	def get_obj(self, line):
 		return float(line[line.index('obj')+1])
-
-	def get_minimal(self, tp):
-		if is_biasobj(tp):
-			dobj_key = "bias%sc%g" % (self.loss,self.c)
-		elif is_oneclass(tp) == 1: # ocsvm
-			dobj_key = "one%sc%g" % (self.loss,self.c)
-		elif is_oneclass(tp) == 2: # svdd
-			dobj_key = "svdd%sc%g" % (self.loss,self.c)
-		else:
-			dobj_key = "%sc%g" % (self.loss,self.c)
-		try:
-			return dobj[dobj_key][self.dstr]
-		except KeyError:
-			print("\"" + self.dstr + "\" is not in " + dobj_key)
-			raise KeyError
 
 	def set_xy_lim(self, min_xs, max_xs, min_ys, max_ys):
 		# set xlim
@@ -229,10 +214,10 @@ class OpPerSucs_ObjPlotter(Plotter):
 			sname += 's'+str(s)
 		return "%s_"+sname+"_c%g_opspersucsobj"
 	def get_xy(self, tp, e, r):
-		logfile = self.get_logfile(tp, e, r)
+		logfile, logInfo = self.get_logfile(tp, e, r)
 		ys = []
 		xs = []
-		minimal = self.get_minimal(tp)
+		minimal = logInfo.get_obj_minimal()
 
 		min_x = 1e10
 		max_x = 0
@@ -283,7 +268,7 @@ class OpPerSucs_ObjPlotter(Plotter):
 
 class NrNOpPlotter(Plotter):
 	PLOTTYPE = "nrnop"
-	XLIM = (0, 1e12)
+	XLIM = (0, 1e5)
 	def init_new_fig(self):
 		self.xy_range = []
 	def get_xlim(self, tp):
@@ -301,11 +286,11 @@ class NrNOpPlotter(Plotter):
 			sname += 's'+str(s)
 		return "%s_"+sname+"_c%g_nrnop"
 	def get_xy(self, tp, e, r):
-		logfile = self.get_logfile(tp, e, r)
+		logfile, logInfo = self.get_logfile(tp, e, r)
 		ys = []
 		xs = []
 		nr_n_ops = 0
-		minimal = self.get_minimal(tp)
+		minimal = logInfo.get_obj_minimal()
 
 		min_x = None
 		max_x = None
@@ -383,11 +368,11 @@ class CdPlotter(Plotter):
 			sname += 's'+str(s)
 		return "%s_"+sname+"_c%g_cdsteps"
 	def get_xy(self, tp, e, r):
-		logfile = self.get_logfile(tp, e, r)
+		logfile, logInfo = self.get_logfile(tp, e, r)
 		ys = []
 		xs = []
 		CDsteps = 0
-		minimal = self.get_minimal(tp)
+		minimal = logInfo.get_obj_minimal()
 
 		min_x = None
 		max_x = None
@@ -460,10 +445,10 @@ class TimePlotter(Plotter):
 			sname += 's'+str(s)
 		return "%s_"+sname+"_c%g_time"
 	def get_xy(self, tp, e, r):
-		logfile = self.get_logfile(tp, e, r)
+		logfile, logInfo = self.get_logfile(tp, e, r)
 		ys = []
 		xs = []
-		minimal = self.get_minimal(tp)
+		minimal = logInfo.get_obj_minimal()
 
 		min_x = None
 		max_x = None
@@ -525,7 +510,7 @@ class SucrCdPlotter(Plotter):
 			sname += 's'+str(s)
 		return "%s_"+sname+"_c%g_sucrate"
 	def get_xy(self, tp, e, r):
-		logfile = self.get_logfile(tp, e, r)
+		logfile, logInfo = self.get_logfile(tp, e, r)
 		ys = []
 		xs = []
 		cdsteps = 0
@@ -558,11 +543,11 @@ class ObjSucPlotter(Plotter):
 			sname += 's'+str(s)
 		return "%s_"+sname+"_c%g_sucupd"
 	def get_xy(self, tp, e, r):
-		logfile = self.get_logfile(tp, e, r)
+		logfile, logInfo = self.get_logfile(tp, e, r)
 		ys = []
 		xs = []
 		sucpair = 0
-		minimal = self.get_minimal(tp)
+		minimal = logInfo.get_obj_minimal()
 
 		for line in logfile:
 			line = line.split(' ')
@@ -666,7 +651,7 @@ def main():
 	if len(filter(lambda s: s is not None, ocsvm_l1loss_stype)) != 0:
 		for plotter_class in Plotter.__subclasses__():
 			if args.plottype == plotter_class.PLOTTYPE:
-				plotter = plotter_class(ocsvm_l1loss_stype, "L1", dataset, nlist, min(elist), args)
+				plotter = plotter_class(ocsvm_l1loss_stype, "L1", dataset, clist, min(elist), args)
 		plotter.draw_all()
 
 	#L1 svdd
@@ -687,7 +672,7 @@ def main():
 	if len(filter(lambda s: s is not None, ocsvm_l2loss_stype)) != 0:
 		for plotter_class in Plotter.__subclasses__():
 			if args.plottype == plotter_class.PLOTTYPE:
-				plotter = plotter_class(ocsvm_l2loss_stype, "L2", dataset, nlist, min(elist), args)
+				plotter = plotter_class(ocsvm_l2loss_stype, "L2", dataset, clist, min(elist), args)
 		plotter.draw_all()
 
 	#L2 svdd

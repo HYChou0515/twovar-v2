@@ -64,7 +64,7 @@ for data_count, data in enumerate(dataset):
 			need_e = False
 		if is_oneclass(runs[tp])==1:
 			need_n = True
-			nlist_real = nlist
+			nlist_real = [1.0/c/datal[data] for c in clist]
 			clist_real = [1]
 		else:
 			need_n = False

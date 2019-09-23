@@ -129,7 +129,8 @@ def get_enough_optimal_line_number(log, filepath):
 	try:
 		minimal = log.get_obj_minimal()
 	except KeyError:
-		sys.stderr.write("create minimal: dobj[%s][%s]: %.15g," % (log.get_dobj_key(), log.data, min_obj) + os.linesep)
+		key, par = log.get_dobj_key()
+		sys.stderr.write("create minimal: dobj[%s][%g][%s]: %.15g," % (key, par, log.data, min_obj) + os.linesep)
 		return len(objs)
 	min_enough = minimal + math.fabs(minimal * TOLERANCE)
 
@@ -138,8 +139,9 @@ def get_enough_optimal_line_number(log, filepath):
 		sys.stderr.write("error: tolerance %g is too large for %s" % (TOLERANCE, os.path.basename(filepath)) + os.linesep)
 		return len(objs)
 	if float("%.15g"%minimal) > float("%.15g"%min_obj):
-		sys.stderr.write("update minimal: dobj[%s][%s]: %.15g, not %.15g"
-				% (log.get_dobj_key(), log.data, min_obj, minimal) + os.linesep)
+		key, par = log.get_dobj_key()
+		sys.stderr.write("update minimal: dobj[%s][%g][%s]: %.15g, not %.15g"
+				% (key, par, log.data, min_obj, minimal) + os.linesep)
 		return len(objs)
 
 	# normal procedure
@@ -160,10 +162,10 @@ def cut_key_column_to(filepath, outpath, key):
 	os.remove(tmp)
 
 def compress(filepath, filetmp, max_line):
-	cmpr_line = int(math.ceil((line_number(filepath)-LOG_SUMMARY_LINES)*1.0/max_line))
 	MAX_FILE_LINES = 4000000
 	BUFF_READ_LINE = 4000
 	MUST_PRINT = 1000
+	cmpr_line = int(math.ceil((line_number(filepath)-LOG_SUMMARY_LINES-MUST_PRINT)*1.0/(max_line-LOG_SUMMARY_LINES-MUST_PRINT)))
 	SUM='sum'
 	EXACT='exact'
 	DECR_RATE='DR'
