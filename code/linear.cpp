@@ -3024,7 +3024,7 @@ static inline void calculate_unbias_two_newalpha(
 		double alpha_i, double alpha_j, double G_i, double G_j)
 {
 	double base = QDi*QDj - Q_ij*Q_ij;
-	if(base == 0 && (fabs(-QDj*G_i + Q_ij * G_j) < 1.0e-12 || fabs(-QDi*G_j + Q_ij * G_i <1.0e-12)))
+	if(base == 0 && (fabs(-QDj*G_i + Q_ij * G_j) < 1.0e-12 || fabs(-QDi*G_j + Q_ij * G_i) < 1.0e-12))
 	{
 		double delta = QDi*alpha_i + Q_ij*alpha_j - G_i;
 		if(Q_ij < 0)
