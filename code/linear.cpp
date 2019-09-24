@@ -5080,6 +5080,7 @@ void Solver::oneclass_second_1000()
 
 void Solver::oneclass_semigd2()
 {
+	fprintf(stderr, "ERROR: TODO: need to debug (./train -s 50611 -n 0.000220305 -r 0.1 ../data/covtype.libsvm.binary.scale) not ends at iter 88\n");
 	int l = prob->l;
 	int i, j;
 	double G_i, G_j;
