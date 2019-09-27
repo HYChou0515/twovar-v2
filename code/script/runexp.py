@@ -64,12 +64,12 @@ for data_count, data in enumerate(dataset):
 			need_e = False
 		if is_oneclass(runs[tp])==1:
 			need_n = True
-			nlist_real = [1.0/c/datal[data] for c in clist]
+			nlist_real = nlist
 			clist_real = [1]
 		else:
 			need_n = False
 			nlist_real = [0.1]
-			clist_real = clist
+			clist_real = [1.0/n/datal[data] for n in nlist]
 		kk = itertools.product(clist_real, elist_real, nlist_real, rlist_real)
 		datapath = "%s%s" % (DATA_PATH, data)
 		for tc, e, n, r in kk:
