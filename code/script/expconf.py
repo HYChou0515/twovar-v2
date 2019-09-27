@@ -16,7 +16,7 @@ clist = []
 elist = [1e-2]
 rlist = [
 	4,
-#	0.1
+	0.1
 ]
 m = 300000
 timeout = 21600
