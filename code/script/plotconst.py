@@ -1,5 +1,16 @@
 dobj = \
 {
+	"svddL1n":
+	{
+		0.1:
+		{
+
+		},
+		0.01:
+		{
+
+		},
+	},
 	"svddL1c":
 	{
 		0.000976562:
@@ -93,86 +104,6 @@ dobj = \
 			"real-sim":-0.499456895154848,
 			"yahoojp":-0.499857353971535,
 			"yahookr":-0.499817159734992,
-		},
-	},
-	"oneL1c":
-	{
-		0.00097656:
-		{
-			"a9a": 1914188.1132497,
-			"covtype.libsvm.binary.scale": 943374.739580516,
-			"ijcnn1": 63500.7497191126,
-			"news20.binary": 7310.51675659334,
-			"rcv1_train.binary": 2594.47743240731,
-			"real-sim": 455.692068305313,
-			"yahoojp": 149.547947782374,
-			"yahookr": 191.714584666185,
-		},
-		0.00195312:
-		{
-			"a9a": 456639.336170431,
-			"covtype.libsvm.binary.scale": 229868.825742352,
-			"ijcnn1": 15766.2737347362,
-			"news20.binary": 1158.75260990045,
-			"rcv1_train.binary": 626.181849316384,
-			"real-sim": 88.6433049527644,
-			"yahoojp": 37.3869869455586,
-			"yahookr": 47.9282150401139,
-		},
-		0.00781249:
-		{
-			"a9a": 26713.7679111965,
-			"covtype.libsvm.binary.scale": 13664.7799324418,
-			"ijcnn1": 976.517847787171,
-			"news20.binary": 29.8915618203733,
-			"rcv1_train.binary": 39.0721559695991,
-			"real-sim": 0.217240756701806,
-			"yahoojp": 2.33668668409883,
-			"yahookr": 2.99553499632008,
-		},
-		0.03125:
-		{
-			"a9a": 1602.13517726032,
-			"covtype.libsvm.binary.scale": 811.672595001699,
-			"ijcnn1": 60.6668374247502,
-			"news20.binary": 6.34838344361904e-30,
-			"rcv1_train.binary": 2.44200202449218,
-			"real-sim": 4.41828915611237e-30,
-			"yahoojp": 0.146043319837418,
-			"yahookr": 0.187220937269973,
-		},
-		0.125:
-		{
-			"a9a": 99.3352686707371,
-			"covtype.libsvm.binary.scale": 49.0624456220082,
-			"ijcnn1": 3.78305597608635,
-			"news20.binary": 1.1745618316416e-30,
-			"rcv1_train.binary": 0.152625512711088,
-			"real-sim": 7.12244922224468e-30,
-			"yahoojp": 0.00912768738576127,
-			"yahookr": 0.0117013422611914,
-		},
-		0.5:
-		{
-			"a9a": 6.20844418426354,
-			"covtype.libsvm.binary.scale": 3.05361242373621,
-			"ijcnn1": 0.236440998505392,
-			"news20.binary": 9.86921954576869e-31,
-			"rcv1_train.binary": 0.00953909454444322,
-			"real-sim": 7.27979879391753e-30,
-			"yahoojp": 0.000570475435605528,
-			"yahookr": 0.000731333891324509,
-		},
-		1:
-		{
-			"a9a": 1.55211104606589,
-			"covtype.libsvm.binary.scale": 0.763398670477235,
-			"ijcnn1": 0.0591102496263483,
-			"news20.binary": 1.08906121587771e-30,
-			"rcv1_train.binary": 0.00238476880885605,
-			"real-sim": 7.40787042364042e-30,
-			"yahoojp": 0.000142619864101875,
-			"yahookr": 0.000182833472831113,
 		},
 	},
 	"oneL1n":
@@ -1019,18 +950,18 @@ class LogInfo(object):
 		self.e = None
 		self.r = None
 		self.n = None
-		self.C = None # c=1/(nu*l)
+		self.N = None # n=1/(c*l)
 		for i in range(1, len(tokens)):
 			token = tokens[i]
 			if token[0] == 'c':
 				self.c = float(token[1:])
+				self.N = 1.0/self.c/datal[self.data]
 			if token[0] == 'e':
 				self.e = float(token[1:])
 			if token[0] == 'r':
 				self.r = float(token[1:])
 			if token[0] == 'n':
 				self.n = float(token[1:])
-				self.C = 1.0/self.n/datal[self.data]
 
 		self.loss = "L1" if is_L1(self.stype) else "L2"
 		def true_and_notNone(a, b):
@@ -1047,24 +978,25 @@ class LogInfo(object):
 			dobj_key = "bias%sc" % (self.loss)
 			dobj_par = self.c
 		elif is_oneclass(self.stype)==1:
-			if self.C is None:
-				dobj_key = "one%sn" % (self.loss)
-				dobj_par = self.n
+			dobj_key = "one%sn" % (self.loss)
+			dobj_par = self.n
+		elif is_oneclass(self.stype)==2:
+			if self.N is None:
+				dobj_key = "svdd%sc" % (self.loss)
+				dobj_par = self.c
 			else:
-				dobj_key = "one%sc" % (self.loss)
+				dobj_key = "svdd%sn" % (self.loss)
 				min_rel_diff = float('inf')
-				best_C = self.C
-				for key_C in dobj[dobj_key].keys():
-					rel_diff = abs((key_C-self.C)/(key_C+1))
+				best_N = None
+				for key_N in dobj[dobj_key].keys():
+					rel_diff = abs((key_N-self.N)/(key_N+1))
 					if min_rel_diff > rel_diff:
 						min_rel_diff = rel_diff
-						best_C = key_C
+						best_N = key_N
 				if min_rel_diff > 1e-3:
-					print("The closest is %g but require %g" % (best_C, self.C))
-				dobj_par = best_C
-		elif is_oneclass(self.stype)==2:
-			dobj_key = "svdd%sc" % (self.loss)
-			dobj_par = self.c
+					print("The closest is %g but require %g" % (best_N, self.N))
+					best_N = self.N
+				dobj_par = best_N
 		else:
 			dobj_key = "%sc" % (self.loss)
 			dobj_par = self.c
