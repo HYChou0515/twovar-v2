@@ -67,8 +67,8 @@ class Plotter(object):
 
 	def draw_one_curve(self, idx, fname):
 		xs = self.get_column_of(fname, self.xaxis)
-		ys = [y/1024/1024-0.5 for y in self.get_column_of(fname, self.yaxis)]
-		#ys = self.get_column_of(fname, self.yaxis)
+		#ys = [y/1024/1024-0.5 for y in self.get_column_of(fname, self.yaxis)]
+		ys = self.get_column_of(fname, self.yaxis)
 		xs, ys = self.condition_on_xy(xs, ys)
 		plt.plot(xs, ys, self.makr[idx],
 				color=self.colors[idx],
