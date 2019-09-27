@@ -156,14 +156,14 @@ class Plotter(object):
 			raise StubException
 		if is_semigd(tp):
 			if is_oneclass(tp) == 1:
-				logname = "%s_s%d_c1_e%g_n%g_r%g"% (self.dstr, tp, e, 1.0/self.c/datal[self.dstr], r)
+				logname = "%s_s%d_c1_e%g_n%g_r%g"% (self.dstr, tp, e, self.c, r)
 			else:
-				logname = "%s_s%d_c%g_e%g_r%g"% (self.dstr, tp, self.c, e, r)
+				logname = "%s_s%d_c%g_e%g_r%g"% (self.dstr, tp, 1.0/self.c/datal[self.dstr], e, r)
 		else:
 			if is_oneclass(tp) == 1:
-				logname = "%s_s%d_c1_e%g_n%g"% (self.dstr, tp, e, 1.0/self.c/datal[self.dstr])
+				logname = "%s_s%d_c1_e%g_n%g"% (self.dstr, tp, e, self.c)
 			else:
-				logname = "%s_s%d_c%g_e%g"% (self.dstr, tp, self.c, e)
+				logname = "%s_s%d_c%g_e%g"% (self.dstr, tp, 1.0/self.c/datal[self.dstr], e)
 		try:
 			f = open(self.logpath+logname,"r")
 			print("open file: "+self.logpath+logname)
@@ -266,9 +266,92 @@ class OpPerSucs_ObjPlotter(Plotter):
 		plt.subplots_adjust(bottom=0.15)
 		Plotter.setup_fig(self)
 
+class ShrinkNrNOpPlotter(Plotter):
+	PLOTTYPE = "shrink-nrnop"
+	XLIM = (0, 1e5)
+	def init_new_fig(self):
+		self.xy_range = []
+	def get_xlim(self, tp):
+		key = "s%d_c%g_iter" % (tp, self.c)
+		if key in dlim.keys():
+			if self.dstr in dlim[key]:
+				return dlim[key][self.dstr]
+			else:
+				return 100
+		else:
+			return 100
+	def get_figname_fmt(self):
+		sname = ''
+		for s in filter(lambda s: s is not None, self.stype):
+			sname += 's'+str(s)
+		return "%s_"+sname+"_c%g_nrnop"
+	def get_xy(self, tp, e, r):
+		runeps = self.get_eps(tp, elist)
+		if not isinstance(runeps, list):
+			runeps = [runeps]
+		_, logInfo = self.get_logfile(tp, e, r)
+		ys = []
+		xs = []
+		nr_n_ops = 0
+		minimal = logInfo.get_obj_minimal()
+
+		min_x = None
+		max_x = None
+		max_y = 0
+		min_y = 1e10
+		stop = False
+		for e in runeps:
+			logfile, logInfo = self.get_logfile(tp, e, r)
+			for line in logfile:
+				line = line.split(' ')
+				if stop:
+					break
+				if 'iter' in line and 'obj' in line:
+					val = self.get_obj(line)
+					relval = self.calculate_relval(val, minimal)
+					nr_n_ops = (float(line[line.index('nr_n_ops')+1]))
+					if relval > self.YLIM[1] or nr_n_ops < NrNOpPlotter.XLIM[0]:
+						continue
+					if relval < self.YLIM[0]:# or nr_n_ops > NrNOpPlotter.XLIM[1]:
+						stop = True
+					if max_x > nr_n_ops:
+						continue
+					ys.append(relval)
+					xs.append(nr_n_ops)
+					if min_x is None:
+						min_x = nr_n_ops
+					max_x = nr_n_ops
+					min_y = min(relval,min_y)
+					max_y = max(relval,max_y)
+					#print('nr_n_ops: %.16g\t relval: %.16g' % (nr_n_ops, relval))
+		xy_range = (min_x, max_x, min_y, max_y)
+		if all(xy_range):
+			self.xy_range.append(xy_range)
+		print("xy_range={}".format(xy_range))
+		logfile.close()
+		return ys, xs
+	def setup_fig(self):
+		min_xs, max_xs, min_ys, max_ys = zip(*self.xy_range) # list of tuples to tuple of lists
+		Plotter.set_xy_lim(self, min_xs, max_xs, min_ys, max_ys)
+		if(min(min_ys) > 1.0e-2):
+			subsyy = [2,3,4,5,7]
+		else:
+			subsyy = []
+		plt.yscale('log', subsy=subsyy, figure=self.fig)
+		plt.gca().yaxis.set_major_locator(plt.LogLocator(numticks=7))
+		plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
+		plt.tick_params(axis='x', which='major', labelsize=20)
+
+		##add xy label and adjust the margin accordingly
+		#plt.xlabel('number of $O(n)$ operations', fontsize=20)
+		#plt.ylabel('$(f-f^*)/f*$', fontsize=20)
+		#plt.subplots_adjust(bottom=0.13,left=0.133)
+
+		Plotter.setup_fig(self)
+
 class NrNOpPlotter(Plotter):
 	PLOTTYPE = "nrnop"
-	XLIM = (0, 1e5)
+	XLIM = (0, 1e12)
 	def init_new_fig(self):
 		self.xy_range = []
 	def get_xlim(self, tp):
@@ -651,14 +734,14 @@ def main():
 	if len(filter(lambda s: s is not None, ocsvm_l1loss_stype)) != 0:
 		for plotter_class in Plotter.__subclasses__():
 			if args.plottype == plotter_class.PLOTTYPE:
-				plotter = plotter_class(ocsvm_l1loss_stype, "L1", dataset, clist, min(elist), args)
+				plotter = plotter_class(ocsvm_l1loss_stype, "L1", dataset, nlist, min(elist), args)
 		plotter.draw_all()
 
 	#L1 svdd
 	if len(filter(lambda s: s is not None, svdd_l1loss_stype)) != 0:
 		for plotter_class in Plotter.__subclasses__():
 			if args.plottype == plotter_class.PLOTTYPE:
-				plotter = plotter_class(svdd_l1loss_stype, "L1", dataset, clist, min(elist), args)
+				plotter = plotter_class(svdd_l1loss_stype, "L1", dataset, nlist, min(elist), args)
 		plotter.draw_all()
 
 	#L1 svc
@@ -672,14 +755,14 @@ def main():
 	if len(filter(lambda s: s is not None, ocsvm_l2loss_stype)) != 0:
 		for plotter_class in Plotter.__subclasses__():
 			if args.plottype == plotter_class.PLOTTYPE:
-				plotter = plotter_class(ocsvm_l2loss_stype, "L2", dataset, clist, min(elist), args)
+				plotter = plotter_class(ocsvm_l2loss_stype, "L2", dataset, nlist, min(elist), args)
 		plotter.draw_all()
 
 	#L2 svdd
 	if len(filter(lambda s: s is not None, svdd_l2loss_stype)) != 0:
 		for plotter_class in Plotter.__subclasses__():
 			if args.plottype == plotter_class.PLOTTYPE:
-				plotter = plotter_class(svdd_l2loss_stype, "L2", dataset, clist, min(elist), args)
+				plotter = plotter_class(svdd_l2loss_stype, "L2", dataset, nlist, min(elist), args)
 		plotter.draw_all()
 
 	#L2 svc

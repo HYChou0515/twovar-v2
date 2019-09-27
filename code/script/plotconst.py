@@ -41,7 +41,7 @@ dobj = \
 			"covtype.libsvm.binary.scale":-1.21350601646201,
 			"ijcnn1":-1.27263012166142,
 			"news20.binary":-0.495846168655837,
-			"rcv1_train.binary":-0.497615228004091,
+			"rcv1_train.binary":-0.4976152280069958,
 			"real-sim":-0.499456895154849,
 			"yahoojp":-0.499857353971464,
 			"yahookr":-0.49980077480508,
