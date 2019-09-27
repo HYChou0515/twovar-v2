@@ -3,40 +3,32 @@ resumefolder='resume'
 
 runtype = [
 		## FOR EXP: 2-cd vs new-4 vs semigd vs semigd-rd
-#		"SVDD_L1_CY_1000",
-#		"SVDD_L1_SEMIGD_CY_FIRST_1000", #r=4
-#		"SVDD_L1_SEMIGD_1000", #r=0.1
+		"SVDD_L1_CY_1000",
+		"SVDD_L1_SEMIGD_CY_FIRST_1000", #r=4
+		"SVDD_L1_SEMIGD_1000", #r=0.1
 
-		"ONECLASS_L1_CY_1000",
-		"ONECLASS_L1_SEMIGD_CY_FIRST_1000", #r=4
-		"ONECLASS_L1_SEMIGD_1000", #r=0.1
+#		"ONECLASS_L1_CY_1000",
+#		"ONECLASS_L1_SEMIGD_CY_FIRST_1000", #r=4
+#		"ONECLASS_L1_SEMIGD_1000", #r=0.1
 ]
-#nlist = []
-clist = [
-		1.0/1024,
-		1.0/512,
-		1.0/128,
-		1.0/32,
-		1.0/8,
-		1.0/2,
-		1,
-		]
+nlist = [0.2,0.1,0.05,0.01,0.005,0.001,0.0001]
+clist = []
 elist = [1e-2]
 rlist = [
 	4,
-	0.1
+#	0.1
 ]
 m = 300000
-timeout = 50400
+timeout = 21600
 tolerance = 1e-10
 dataset = [
-#	"yahookr",
-#	"yahoojp",
-#	"covtype.libsvm.binary.scale",
-#	"a9a",
-#	"ijcnn1",
-#	"rcv1_train.binary",
-#	"real-sim",
+	"yahookr",
+	"yahoojp",
+	"covtype.libsvm.binary.scale",
+	"a9a",
+	"ijcnn1",
+	"rcv1_train.binary",
+	"real-sim",
 	"news20.binary",
 	]
 
