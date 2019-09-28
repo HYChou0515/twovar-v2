@@ -8,7 +8,7 @@ from mail import Mail
 def main():
 	import sys
 	def exit_with_help():
-		print('Usage: %s mail_address pubkey_file content')
+		print('Usage: %s mail_address pubkey_file content' % argv[0])
 		sys.exit(1)
 	argv = sys.argv
 	if len(argv) < 3:
