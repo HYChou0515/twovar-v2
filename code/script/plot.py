@@ -195,9 +195,9 @@ class Plotter(object):
 			# should maximize X
 
 		# set ylim
-		y_exponents = [2e0,2e2,2e7,2e12, float('Inf')]
+		y_exponents = [1e0,1e2,1e7,1e12, float('Inf')]
 		y_max = y_exponents[bisect.bisect_right(y_exponents, exponent_of(max(max_ys)))]
-		plt.ylim(self.YLIM[0]/2, y_max)
+		plt.ylim(self.YLIM[0]/2, y_max*2)
 
 	def setup_fig(self):
 		plt.legend(loc=0)
