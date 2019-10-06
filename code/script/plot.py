@@ -131,9 +131,9 @@ class Plotter(object):
 				clridx += 1
 
 		min_xs, max_xs, min_ys, max_ys = zip(*self.xy_range) # list of tuples to tuple of lists
-		plt.hlines(1e-1,0,max_xs,linestyles='-')
-		plt.hlines(1e-2,0,max_xs,linestyles='--')
-		plt.hlines(1e-3,0,max_xs,linestyles='-.')
+		plt.hlines(1e-2,0,max(max_xs),linestyles='-')
+		plt.hlines(1e-3,0,max(max_xs),linestyles='--')
+		plt.hlines(1e-4,0,max(max_xs),linestyles='-.')
 		plt.subplots_adjust(bottom=0.1,left=0.1,right=0.98,top=0.98)
 		self.setup_fig()
 		plt.close(self.fig)
@@ -182,10 +182,20 @@ class Plotter(object):
 			print(max(min_xs)+min(max_xs))
 			plt.xlim(0, min(max(max_xs), max(min_xs)+min(max_xs)))
 		else:
-			print(min(max_xs) / MIN_SQUASH, max(max_xs))
-			plt.xlim(0, min(min(max_xs) / MIN_SQUASH, max(max_xs)))
+			print(max(max_xs), min([max_xs[i]-min_xs[i] for i in range(len(min_xs))])/MIN_SQUASH)
+			plt.xlim(0, min(max(max_xs), min([max_xs[i]-min_xs[i] for i in range(len(min_xs))])/MIN_SQUASH))
+			# X: xlim
+			# X-min_xs: final curve length
+			# should min(X,max_x_i)-min_x_i > X*0.2 all i
+			# if max_x_i > X:
+			#     X > min_x_i/(1-MIN_SQUASH)
+			# else:
+			#     X < (max_x_i-min_x_i)/MIN_SQUASH
+			# should X < max(max_xs)
+			# should maximize X
+
 		# set ylim
-		y_exponents = [1e1,1e3,1e7,1e12, float('Inf')]
+		y_exponents = [2e0,2e2,2e7,2e12, float('Inf')]
 		y_max = y_exponents[bisect.bisect_right(y_exponents, exponent_of(max(max_ys)))]
 		plt.ylim(self.YLIM[0]/2, y_max)
 
@@ -246,7 +256,7 @@ class OpPerSucs_ObjPlotter(Plotter):
 				min_y = min(ops_per_sucs,min_y)
 				max_y = max(ops_per_sucs,max_y)
 		xy_range = (min_x, max_x, min_y, max_y)
-		if all(xy_range):
+		if all(rng is not None for rng in xy_range):
 			self.xy_range.append(xy_range)
 		print("xy_range={}".format(xy_range))
 		self.summary.append("iter: %d op/suc: %g" % (iternum, float(nrnop)/sucsize))
@@ -325,7 +335,7 @@ class ShrinkNrNOpPlotter(Plotter):
 					max_y = max(relval,max_y)
 					#print('nr_n_ops: %.16g\t relval: %.16g' % (nr_n_ops, relval))
 		xy_range = (min_x, max_x, min_y, max_y)
-		if all(xy_range):
+		if all(rng is not None for rng in xy_range):
 			self.xy_range.append(xy_range)
 		print("xy_range={}".format(xy_range))
 		logfile.close()
@@ -407,7 +417,7 @@ class NrNOpPlotter(Plotter):
 				max_y = max(relval,max_y)
 				#print('nr_n_ops: %.16g\t relval: %.16g' % (nr_n_ops, relval))
 		xy_range = (min_x, max_x, min_y, max_y)
-		if all(xy_range):
+		if all(rng is not None for rng in xy_range):
 			self.xy_range.append(xy_range)
 		print("xy_range={}".format(xy_range))
 		logfile.close()
@@ -565,7 +575,7 @@ class TimePlotter(Plotter):
 				max_y = max(relval,max_y)
 				#print('t: %.16g\t relval: %.16g' % (t, relval))
 		xy_range = (min_x, max_x, min_y, max_y)
-		if all(xy_range):
+		if all(rng is not None for rng in xy_range):
 			self.xy_range.append(xy_range)
 		print("xy_range={}".format(xy_range))
 		logfile.close()

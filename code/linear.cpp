@@ -4894,55 +4894,76 @@ void Solver::oneclass_first_1000()
 	{
 		start = clock();
 		success_size = 0;
-		Gmax = -INF;
-		Gmin = INF;
+		Gmax = INF; // Gmax has maximum -yG
+		Gmin = -INF; // Gmin has minimum -yG
 		Gmax_index =-1;
 		Gmin_index =-1;
-		for(i=0; i<active_size; i++)
+		int Gmax2_index = -1;
+		int Gmin2_index = -1;
+		for(int s=0; s<active_size; s++)
 		{
-			int G_index = index[i];
-			feature_node * const xi = prob->x[G_index];
+			int i = index[s];
+			feature_node * const xi = prob->x[i];
 			if(category == ONECLASS)
 			{
-				G[i] = -dot_n(w, xi);
+				G[i] = dot_n(w, xi);
 			}
 			else if(category == SVDD)
 			{
-				G[i] = -dot_n(w, xi) + 0.5*QD[i];
+				G[i] = dot_n(w, xi) - 0.5*QD[i];
 			}
 			else
 			{
 				fprintf(stderr, "not supported for this type\n");
 				return;
 			}
-			if(is_Iup(alpha_status[G_index]))
+			if(is_Iup(alpha_status[i]))
 			{
-				if(Gmax <= G[i])
+				if(-Gmax <= -G[i])
 				{
 					Gmax = G[i];
-					Gmax_index = G_index;
+					Gmax2_index = Gmax_index;
+					Gmax_index = i;
 				}
 
 			}
-			if(is_Ilow(alpha_status[G_index]))
+			if(is_Ilow(alpha_status[i]))
 			{
-				if(Gmin >= G[i])
+				if(-Gmin >= -G[i])
 				{
 					Gmin = G[i];
-					Gmin_index = G_index;
+					Gmin2_index = Gmin_index;
+					Gmin_index = i;
 				}
 			}
 		}
 		update_size=2;
 		++cdsteps;
-		if(maxIup_le_minIlow(+1, alpha_status[Gmax_index], G[Gmax_index], 
-					+1, alpha_status[Gmin_index], G[Gmin_index]))
-			continue;
 
 		i = Gmax_index;
 		j = Gmin_index;
-		G_i = -G[Gmax_index];
-		G_j = -G[Gmin_index];
+		if(Gmax_index == Gmin_index)
+		{
+			if(Gmax2_index == -1 && Gmin2_index == -1)
+				continue;
+			if(Gmax2_index == -1) // && Gmin2_index != -1
+				j = Gmin2_index;
+			else if(Gmin2_index == -1)
+				i = Gmax2_index;
+			else // Gmax2 and Gmin2 != -1
+			{
+				if(Gmax - G[Gmax2_index] > G[Gmin2_index]-Gmin)
+					j = Gmin2_index;
+				else
+					i = Gmax2_index;
+			}
+		}
+		if(maxIup_le_minIlow(+1, alpha_status[i], G[i], 
+					+1, alpha_status[j], G[j]))
+			continue;
+
+		G_i = G[i];
+		G_j = G[j];
 		feature_node const * xi = prob->x[i];
 		feature_node const * xj = prob->x[j];
 		double Q_ij = feature_dot_n(xi, xj);
@@ -4976,6 +4997,7 @@ void Solver::oneclass_first_1000()
 
 void Solver::oneclass_second_1000()
 {
+	fprintf(stderr, "ERROR: TODO: need to be checked\n");
 	clock_t start;
 	int l = prob->l;
 	int i, j;
