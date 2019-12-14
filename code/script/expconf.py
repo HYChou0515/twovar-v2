@@ -11,7 +11,7 @@ runtype = [
 #		"ONECLASS_L1_CY_1000",
 #		"ONECLASS_L1_SEMIGD_CY_FIRST_1000", #r=4
 #		"ONECLASS_L1_SEMIGD_1000", #r=0.1
-		"ONECLASS_L1_SEMIGD_BATCH_1000", #r=0.1
+#		"ONECLASS_L1_SEMIGD_BATCH_1000", #r=0.1
 ]
 nlist = [0.2,
 		0.1,
@@ -24,8 +24,8 @@ nlist = [0.2,
 clist = []
 elist = [1e-2]
 rlist = [
-	4,
-#	0.1
+#	4,
+	0.1
 ]
 m = 300000
 timeout = 21600
@@ -54,8 +54,10 @@ uselabel = {
 		50811: "cyclic-2cd",
 		50611: "cyclic-%scd-greedy",
 		50211: "greedy-%s-cyclic",
+		51111: "block-greedy-%s-cyclic",
 		60811: "cyclic-2cd",
 		60611: "cyclic-%scd-greedy",
 		60211: "greedy-%s-cyclic",
+		61111: "block-greedy-%s-cyclic",
 }
 
