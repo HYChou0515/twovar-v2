@@ -7,6 +7,7 @@ runtype = [
 		"SVDD_L1_FIRST_1000",
 		"SVDD_L1_SEMIGD_CY_FIRST_1000", #r=4
 		"SVDD_L1_SEMIGD_1000", #r=0.1
+		"SVDD_L1_SEMIGD_BATCH_1000", #r=0.1
 
 		"ONECLASS_L1_CY_1000",
 		"ONECLASS_L1_FIRST_1000",
@@ -54,9 +55,11 @@ uselabel = {
 		50311: "greedy-2cd",
 		50611: "cyclic-%scd-greedy",
 		50211: "greedy-%s-cyclic",
+		51111: "block-greedy-%s-cyclic",
 		60811: "cyclic-2cd",
 		60311: "greedy-2cd",
 		60611: "cyclic-%scd-greedy",
 		60211: "greedy-%s-cyclic",
+		61111: "block-greedy-%s-cyclic",
 }
 
