@@ -192,7 +192,7 @@ dobj = \
 		0.1:
 		{
 			"a9a": 21622408.0228162,
-			"covtype.libsvm.binary.scale": 3759261358.04078,
+			"covtype.libsvm.binary.scale": 3759261358.04077,
 			"heart_scale": 70.8845085605534,
 			"ijcnn1": 1569167.16849229,
 			"news20.binary": 41283.881972766,
@@ -207,7 +207,7 @@ dobj = \
 			"covtype.libsvm.binary.scale": 894453749.782783,
 			"ijcnn1": 383958.021480978,
 			"news20.binary": 6862.25337220552,
-			"rcv1_train.binary": 2531.52238950235,
+			"rcv1_train.binary": 2531.52238950209,
 			"real-sim": 8386.29231980948,
 			"yahoojp": 18169.3434340785,
 			"yahookr": 452308.421190624,
@@ -226,7 +226,7 @@ dobj = \
 		},
 		0.005:
 		{
-			"a9a": 43612.6558531973,
+			"a9a": 43612.6558531972,
 			"covtype.libsvm.binary.scale": 7930678.76224419,
 			"ijcnn1": 3738.67102934494,
 			"news20.binary": 13.5865183153069,
@@ -238,7 +238,7 @@ dobj = \
 		0.001:
 			{
 			"a9a": 1659.40791887508,
-			"covtype.libsvm.binary.scale": 297386.926480893,
+			"covtype.libsvm.binary.scale": 297386.92648089,
 			"ijcnn1": 148.263220603184,
 			"news20.binary": 2.31233648233502e-31,
 			"rcv1_train.binary": 0.977133051880291,
@@ -252,9 +252,9 @@ dobj = \
 			"covtype.libsvm.binary.scale": 2735.65041202244,
 			"ijcnn1": 1.47716531544592,
 			"news20.binary": 2.11918709313417e-33,
-			"rcv1_train.binary": 0.00977133051880294,
+			"rcv1_train.binary": 0.0097713305188029,
 			"real-sim": 9.76317039834337e-32,
-			"yahoojp": 0.0442799337672822,
+			"yahoojp": 0.0442799337672794,
 			"yahookr": 0.387807357091539,
 		},
 	},
