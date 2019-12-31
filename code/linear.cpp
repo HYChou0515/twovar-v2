@@ -5507,7 +5507,7 @@ void Solver::oneclass_semigd_batch()
 				}
 				else if(category == SVDD)
 				{
-					G[i] = -dot_n(w, xi) + 0.5*QD[i];
+					G[i] = -dot_n(w, xi) + 0.5*QD[G_index];
 				}
 				else
 				{
