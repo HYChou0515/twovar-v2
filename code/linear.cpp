@@ -4728,8 +4728,8 @@ void Solver::oneclass_semigd_batch()
 	Gmax = -INF;
 	Gmin = INF;
 
-	int *Max_order_index = new int[l];
-	int *Min_order_index = new int[l];
+	int *Iup_max = new int[l];
+	int *Ilow_min = new int[l];
 
 	std::priority_queue<struct feature_node, std::vector<feature_node>, maxcomp> max_heap;
 	std::priority_queue<struct feature_node, std::vector<feature_node>, mincomp> min_heap;
@@ -4836,15 +4836,15 @@ void Solver::oneclass_semigd_batch()
 
 			for(i=0; i<smgd_size; i++)
 			{
-				Max_order_index[smgd_size-1-i] = min_heap.top().index;
-				Min_order_index[smgd_size-1-i] = max_heap.top().index;
+				Iup_max[smgd_size-1-i] = min_heap.top().index;
+				Ilow_min[smgd_size-1-i] = max_heap.top().index;
 				min_heap.pop();
 				max_heap.pop();
 			}
 			if(wss_mode == SEMIGD_G_RAND)
 			{
-				RAND_SHUFFLE(Max_order_index, smgd_size);
-				RAND_SHUFFLE(Min_order_index, smgd_size);
+				RAND_SHUFFLE(Iup_max, smgd_size);
+				RAND_SHUFFLE(Ilow_min, smgd_size);
 			}
 			update_size = 0;
 			for(int index_i = 0; index_i<smgd_size; index_i++)
@@ -4853,8 +4853,8 @@ void Solver::oneclass_semigd_batch()
 
 				update_size+=2;
 				++cdsteps;
-				i = Max_order_index[index_i];
-				j = Min_order_index[index_i];
+				i = Iup_max[index_i];
+				j = Ilow_min[index_i];
 
 				feature_node const * xi = prob->x[i];
 				feature_node const * xj = prob->x[j];
@@ -4920,8 +4920,8 @@ void Solver::oneclass_semigd_batch()
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
-	delete [] Max_order_index;
-	delete [] Min_order_index;
+	delete [] Iup_max;
+	delete [] Ilow_min;
 }
 
 void Solver::oneclass_semigd()
@@ -4931,8 +4931,8 @@ void Solver::oneclass_semigd()
 	int i, j, s;
 	int smgd_size;
 	double G_i, G_j;
-	int *Max_order_index = Malloc(int, l);
-	int *Min_order_index = Malloc(int, l);
+	int *Iup_max = Malloc(int, l);
+	int *Ilow_min = Malloc(int, l);
 	double *nyG = Malloc(double, l); // -yi*Gi, but in oneclass, y=1, so it's equivalent to -G
 	std::priority_queue<struct feature_node, std::vector<feature_node>, maxcomp> max_heap;
 	std::priority_queue<struct feature_node, std::vector<feature_node>, mincomp> min_heap;
@@ -5032,15 +5032,15 @@ void Solver::oneclass_semigd()
 
 		for(s=0; s<smgd_size; s++)
 		{
-			Max_order_index[smgd_size-1-s] = min_heap.top().index;
-			Min_order_index[smgd_size-1-s] = max_heap.top().index;
+			Iup_max[smgd_size-1-s] = min_heap.top().index;
+			Ilow_min[smgd_size-1-s] = max_heap.top().index;
 			min_heap.pop();
 			max_heap.pop();
 		}
 		if(wss_mode == SEMIGD_G_RAND)
 		{
-			RAND_SHUFFLE(Max_order_index, smgd_size);
-			RAND_SHUFFLE(Min_order_index, smgd_size);
+			RAND_SHUFFLE(Iup_max, smgd_size);
+			RAND_SHUFFLE(Ilow_min, smgd_size);
 		}
 		update_size = 0;
 		for(s = 0; s<smgd_size; s++)
@@ -5049,8 +5049,8 @@ void Solver::oneclass_semigd()
 
 			update_size+=2;
 			++cdsteps;
-			i = Max_order_index[s];
-			j = Min_order_index[s];
+			i = Iup_max[s];
+			j = Ilow_min[s];
 
 			feature_node const * xi = prob->x[i];
 			feature_node const * xj = prob->x[j];
@@ -5104,8 +5104,8 @@ void Solver::oneclass_semigd()
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
-	delete [] Max_order_index;
-	delete [] Min_order_index;
+	delete [] Iup_max;
+	delete [] Ilow_min;
 }
 
 static inline void svdd_update(
