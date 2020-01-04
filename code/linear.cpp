@@ -3216,6 +3216,66 @@ static inline bool is_violating_pair(
 				yj, alpha_status_j, G_j));
 }
 
+static inline void get_most_violating_pairs(
+		int *most_violating_i, int *most_violating_j, int *smgd_size_pt, 
+		std::priority_queue<struct feature_node, std::vector<feature_node>, maxcomp> max_heap,
+		std::priority_queue<struct feature_node, std::vector<feature_node>, mincomp> min_heap,
+		int active_size, int *index, 
+		double *nyG, int *alpha_status, schar *y=NULL)
+{
+	int smgd_size = *smgd_size_pt;
+	int s;
+	schar yc;
+	for(s=0; s<active_size; s++)
+	{
+		struct feature_node comp;
+		comp.index = index[s];
+		comp.value = nyG[comp.index];
+		yc = y==NULL ? +1 : y[comp.index];
+		if(is_Iup(alpha_status[comp.index], yc))
+		{
+			if((int) min_heap.size() <  smgd_size)
+				min_heap.push(comp);
+			else
+			{
+				if(min_heap.top().value < comp.value)
+				{
+					min_heap.pop();
+					min_heap.push(comp);
+				}
+			}
+		}
+		if(is_Ilow(alpha_status[comp.index], yc))
+		{
+			if((int) max_heap.size() < smgd_size)
+				max_heap.push(comp);
+			else
+			{
+				if(max_heap.top().value > comp.value)
+				{
+					max_heap.pop();
+					max_heap.push(comp);
+				}
+			}
+		}
+	}
+
+	smgd_size = min((int)min_heap.size(), (int)max_heap.size());
+	while((int)max_heap.size() > smgd_size)
+		max_heap.pop();
+	while((int)min_heap.size() > smgd_size)
+		min_heap.pop();
+
+	for(s=0; s<smgd_size; s++)
+	{
+		most_violating_i[smgd_size-1-s] = min_heap.top().index;
+		most_violating_j[smgd_size-1-s] = max_heap.top().index;
+		min_heap.pop();
+		max_heap.pop();
+	}
+	*smgd_size_pt = smgd_size;
+}
+
 void Solver::bias_semigd2()
 {
 	int l = prob->l;
@@ -3606,54 +3666,11 @@ void Solver::bias_semigd()
 		}
 
 		smgd_size = adjust_smgd_size(active_size);
+		get_most_violating_pairs(
+				most_violating_i, most_violating_j, &smgd_size,
+				max_heap, min_heap, active_size,
+				index, nyG, alpha_status, y);
 
-		for(s=0; s<active_size; s++)
-		{
-			struct feature_node comp;
-			comp.index = index[s];
-			comp.value = nyG[comp.index];
-			schar yc = y[comp.index];
-			if( is_Iup(alpha_status[comp.index], yc) )
-			{
-				if((int) min_heap.size() < smgd_size)
-					min_heap.push(comp);
-				else
-				{
-					if(min_heap.top().value < comp.value)
-					{
-						min_heap.pop();
-						min_heap.push(comp);
-					}
-				}
-			}
-			if( is_Ilow(alpha_status[comp.index], yc) )
-			{
-				if((int) max_heap.size() < smgd_size)
-					max_heap.push(comp);
-				else
-				{
-					if(max_heap.top().value > comp.value)
-					{
-						max_heap.pop();
-						max_heap.push(comp);
-					}
-				}
-			}
-		}
-		smgd_size = min((int)min_heap.size(), (int)max_heap.size());
-		while((int)max_heap.size() > smgd_size)
-			max_heap.pop();
-		while((int)min_heap.size() > smgd_size)
-			min_heap.pop();
-
-		for(s=0; s<smgd_size; s++)
-		{
-			most_violating_i[smgd_size-1-s] = min_heap.top().index;
-			min_heap.pop();
-
-			most_violating_j[smgd_size-1-s] = max_heap.top().index;
-			max_heap.pop();
-		}
 		if(wss_mode == SEMIGD_G_RAND)
 		{
 			RAND_SHUFFLE(most_violating_i, smgd_size);
@@ -4984,53 +5001,11 @@ void Solver::oneclass_semigd()
 		}
 
 		smgd_size = adjust_smgd_size(active_size);
+		get_most_violating_pairs(
+				most_violating_i, most_violating_j, &smgd_size,
+				max_heap, min_heap, active_size,
+				index, nyG, alpha_status);
 
-		for(s=0; s<active_size; s++)
-		{
-			struct feature_node comp;
-			comp.index = index[s];
-			comp.value = nyG[comp.index];
-			if(is_Iup(alpha_status[comp.index]))
-			{
-				if((int) min_heap.size() <  smgd_size)
-					min_heap.push(comp);
-				else
-				{
-					if(min_heap.top().value < comp.value)
-					{
-						min_heap.pop();
-						min_heap.push(comp);
-					}
-				}
-			}
-			if(is_Ilow(alpha_status[comp.index]))
-			{
-				if((int) max_heap.size() < smgd_size)
-					max_heap.push(comp);
-				else
-				{
-					if(max_heap.top().value > comp.value)
-					{
-						max_heap.pop();
-						max_heap.push(comp);
-					}
-				}
-			}
-		}
-
-		smgd_size = min((int)min_heap.size(), (int)max_heap.size());
-		while((int)max_heap.size() > smgd_size)
-			max_heap.pop();
-		while((int)min_heap.size() > smgd_size)
-			min_heap.pop();
-
-		for(s=0; s<smgd_size; s++)
-		{
-			most_violating_i[smgd_size-1-s] = min_heap.top().index;
-			most_violating_j[smgd_size-1-s] = max_heap.top().index;
-			min_heap.pop();
-			max_heap.pop();
-		}
 		if(wss_mode == SEMIGD_G_RAND)
 		{
 			RAND_SHUFFLE(most_violating_i, smgd_size);
