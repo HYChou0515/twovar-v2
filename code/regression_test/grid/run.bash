@@ -30,15 +30,16 @@ done < $TEST_OPTS
 parallel --jobs $CORES < $TRAINJOB 
 $GRID $DATA < $GRIDJOB
 
+# remove time section in log
 for log in *"${LOG}"; do
 	viewlog.bash -f 1,3- $log > $log.tmp
 	mv $log.tmp $log
 done
 
-DIFF=""
-ONLY_TRAIN=""
-ONLY_GRID=""
-PASS=""
+DIFF=()
+ONLY_TRAIN=()
+ONLY_GRID=()
+PASS=()
 for trainlog in *"${TRAIN_LOG}"; do
 	if [ ! -f $trainlog ]; then
 		continue
@@ -46,43 +47,45 @@ for trainlog in *"${TRAIN_LOG}"; do
 	base=${trainlog::-$(printf "$TRAIN_LOG" | wc -c)}
 	gridlog="$base$GRID_LOG"
 	if [ ! -f $gridlog ]; then
-		ONLY_TRAIN="$ONLY_TRAIN $trainlog"
+		ONLY_TRAIN+=("$trainlog")
 		continue
 	fi
 	if [ -n "$(diff $trainlog $gridlog)" ]; then
-		DIFF="$DIFF $base"
+		DIFF+=("$base")
 		continue
-	else
-		PASS="$PASS $base"
 	fi
-	rm $gridlog $trainlog
+	PASS+=("$base")
 done
 for gridlog in *"${GRID_LOG}"; do
-	if [ -f $gridlog ]; then
-		ONLY_GRID="$ONLY_GRID $gridlog"
+	if [ ! -f $gridlog ]; then
+		continue
+	fi
+	base=${gridlog::-$(printf "$GRID_LOG" | wc -c)}
+	trainlog="$base$TRAIN_LOG"
+	if [ ! -f $trainlog ]; then
+		ONLY_GRID+=("$gridlog")
+		continue
+	fi
+	if [ -n "$(diff $trainlog $gridlog)" ]; then
+		continue
 	fi
 done
 
-if [ -n "$PASS" ]; then
-	for base in $PASS; do
-		echo "[pass] $base"
-	done
-fi
+for base in ${PASS[@]}; do
+	echo "[pass] $base"
+	trainlog="$base$TRAIN_LOG"
+	gridlog="$base$GRID_LOG"
+	rm $gridlog $trainlog
+done
 
-if [ -n "$ONLY_TRAIN" ]; then
-	for log in $ONLY_TRAIN; do
-		>&2 echo "[only train] $log"
-	done
-fi
+for log in ${ONLY_TRAIN[@]}; do
+	>&2 echo "[only train] $log"
+done
 
-if [ -n "$ONLY_GRID" ]; then
-	for log in $ONLY_GRID; do
-		>&2 echo "[only grid] $log"
-	done
-fi
+for log in ${ONLY_GRID[@]}; do
+	>&2 echo "[only grid] $log"
+done
 
-if [ -n "$DIFF" ]; then
-	for base in $DIFF; do
-		>&2 echo "[diff] $base"
-	done
-fi
+for base in ${DIFF[@]}; do
+	>&2 echo "[diff] $base"
+done

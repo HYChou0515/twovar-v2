@@ -432,6 +432,8 @@ void parse_stdin(char *input_file_name, GridItem* grid_item, char *param_str)
 	grid_item->param.r = 1;
 	grid_item->param.max_iter = 1000;
 	grid_item->param.timeout = 0;
+	grid_item->param.max_cdstep = -1;
+	grid_item->param.max_nr_n_ops = -1;
 	grid_item->param.opt_val = -INF;
 	grid_item->param.nu = 0.1;
 	grid_item->param.nr_weight = 0;

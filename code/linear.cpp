@@ -8179,7 +8179,7 @@ static void train_one(const problem *prob, const parameter *param, double *w, do
 			two_bias_update(prob, w, eps, Cp, Cn, param);
 			break;
 		default:
-			fprintf(stderr, "ERROR: unknown solver_type\n");
+			fprintf(stderr, "ERROR: unknown solver_type %d\n", param->solver_type);
 			break;
 	}
 }
@@ -9540,7 +9540,11 @@ const char *check_parameter(const problem *prob, const parameter *param)
 	 	&& param->solver_type != SVDD_L1_SEMIGD_BATCH_1000
 	 	&& param->solver_type != SVDD_L1_SEMIGD_CONV_1000
 		)
-		return "unknown solver type";
+		{
+			char* buf = Malloc(char, 50);
+			sprintf(buf, "unknown solver type: %d", param->solver_type);
+			return buf;
+		}
 
 	if(param->init_sol != NULL 
 		&& param->solver_type != L2R_LR && param->solver_type != L2R_L2LOSS_SVC)
