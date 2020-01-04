@@ -1462,18 +1462,14 @@ double Solver::calculate_gradient(int i)
 	feature_node const * xi = prob->x[i];
 	switch(category)
 	{
+		case TWO_BIAS:
+			return y[i]*dot_n(w, xi) -1 +alpha[i]*diag[GETI(i)];
 		case ONECLASS:
-		{
 			return dot_n(w, xi);
-		}
 		case SVDD:
-		{
 			return dot_n(w, xi) - 0.5*QD[i];
-		}
 		default:
-		{
 			break;
-		}
 	}
 	info("calculate_gradient: Not implement for this category yet\n");
 	exit(1);
@@ -3190,11 +3186,12 @@ static inline bool is_Ilow(int alpha_status_i, schar yi=+1)
 	return true;
 }
 
-static inline bool maxIup_le_minIlow(schar yi, int alpha_status_i, double G_i, 
+static inline bool maxIup_le_minIlow(
+		schar yi, int alpha_status_i, double G_i, 
 		schar yj, int alpha_status_j, double G_j)
 {
 	// if true, then this ij cannot be moved
-	// i.e. (i,j) is not a violating point
+	// i.e. (i,j) is not a violating pair
 	if(-yi*G_i >= -yj*G_j && (
 		(!is_Iup(alpha_status_i, yi) && !is_Ilow(alpha_status_j, yj)) ||
 		(!is_Iup(alpha_status_i, yi) && is_Iup(alpha_status_j, yj) && is_Ilow(alpha_status_j, yj)) ||
@@ -3208,6 +3205,15 @@ static inline bool maxIup_le_minIlow(schar yi, int alpha_status_i, double G_i,
 	))
 		return true;
 	return false;
+}
+
+static inline bool is_violating_pair(
+		schar yi, int alpha_status_i, double G_i, 
+		schar yj, int alpha_status_j, double G_j)
+{
+	return ! (maxIup_le_minIlow(
+				yi, alpha_status_i, G_i, 
+				yj, alpha_status_j, G_j));
 }
 
 void Solver::bias_semigd2()
@@ -3559,15 +3565,14 @@ void Solver::bias_semigd()
 		for(s=0; s<active_size; s++)
 		{
 			i = index[s];
-			feature_node * const xi = prob->x[i];
-			nyG[s] = -y[i] * (y[i]*dot_n(w, xi) -1 +alpha[i]*diag[GETI(i)]);
+			nyG[i] = -y[i] * calculate_gradient(i);
 
 			if(sh_mode == SH_ON)
 			{
 				if( is_Iup(alpha_status[i], y[i]) )
-					Gmax = max(Gmax, nyG[s]);
+					Gmax = max(Gmax, nyG[i]);
 				if( is_Ilow(alpha_status[i], y[i]) )
-					Gmin = min(Gmin, nyG[s]);
+					Gmin = min(Gmin, nyG[i]);
 			}
 		}
 		if(sh_mode == SH_ON)
@@ -3589,41 +3594,29 @@ void Solver::bias_semigd()
 			{
 				for(s=active_size-1; s>=0; s--)
 				{
-					bool be_shunk = false;
 					i = index[s];
-					if(!is_Iup(alpha_status[i], y[i]))
-					{
-						if(nyG[s] > Gmax)
-							be_shunk = true;
-					}
-					if(!is_Ilow(alpha_status[i], y[i]))
-					{
-						if(nyG[s] < Gmin)
-							be_shunk = true;
-					}
-					if(be_shunk)
-					{
+					// i can never be not Iup and not Ilow
+					if(!is_Iup(alpha_status[i], y[i]) && nyG[i] > Gmax)
 						swap(index[s],index[--active_size]);
-						swap(nyG[s], nyG[active_size]);
-					}
+					if(!is_Ilow(alpha_status[i], y[i]) && nyG[i] < Gmin)
+						swap(index[s],index[--active_size]);
 				}
 				counter = min(l,1);
 			}
 		}
 
 		smgd_size = adjust_smgd_size(active_size);
+
 		for(s=0; s<active_size; s++)
 		{
 			struct feature_node comp;
 			comp.index = index[s];
-			comp.value = nyG[s];
+			comp.value = nyG[comp.index];
 			schar yc = y[comp.index];
 			if( is_Iup(alpha_status[comp.index], yc) )
 			{
 				if((int) min_heap.size() < smgd_size)
-				{
 					min_heap.push(comp);
-				}
 				else
 				{
 					if(min_heap.top().value < comp.value)
@@ -3636,9 +3629,7 @@ void Solver::bias_semigd()
 			if( is_Ilow(alpha_status[comp.index], yc) )
 			{
 				if((int) max_heap.size() < smgd_size)
-				{
 					max_heap.push(comp);
-				}
 				else
 				{
 					if(max_heap.top().value > comp.value)
@@ -3655,12 +3646,12 @@ void Solver::bias_semigd()
 		while((int)min_heap.size() > smgd_size)
 			min_heap.pop();
 
-		for(i=0; i<smgd_size; i++)
+		for(s=0; s<smgd_size; s++)
 		{
-			Iup_max[smgd_size-1-i] = min_heap.top().index;
+			Iup_max[smgd_size-1-s] = min_heap.top().index;
 			min_heap.pop();
 
-			Ilow_min[smgd_size-1-i] = max_heap.top().index;
+			Ilow_min[smgd_size-1-s] = max_heap.top().index;
 			max_heap.pop();
 		}
 		if(wss_mode == SEMIGD_G_RAND)
@@ -3669,9 +3660,10 @@ void Solver::bias_semigd()
 			RAND_SHUFFLE(Ilow_min, smgd_size);
 		}
 		update_size = 0;
-		for(int s = 0; s < smgd_size; s++)
+		for(s = 0; s < smgd_size; s++)
 		{
 			LOG_0ITER()
+
 			update_size+=2;
 			++cdsteps;
 			i = Iup_max[s];
@@ -3695,9 +3687,9 @@ void Solver::bias_semigd()
 			double C_i = upper_bound[GETI(i)];
 			double C_j = upper_bound[GETI(j)];
 
-			G_i = yi*dot_n(w, xi) -1 +alpha[i]*diag[GETI(i)];
-			G_j = yj*dot_n(w, xj) -1 +alpha[j]*diag[GETI(j)];
-			if(maxIup_le_minIlow(yi, alpha_status[i], G_i, 
+			G_i = calculate_gradient(i);
+			G_j = calculate_gradient(j);
+			if(!is_violating_pair(yi, alpha_status[i], G_i, 
 						yj, alpha_status[j], G_j))
 				continue;
 
@@ -3728,6 +3720,8 @@ void Solver::bias_semigd()
 	}
 	summary();
 	delete [] alpha_status;
+	delete [] Iup_max;
+	delete [] Ilow_min;
 }
 
 void Solver::bias_random()
@@ -3883,7 +3877,8 @@ void Solver::bias_random()
 				if(to_be_shrunk)
 					continue;
 			}
-			if(maxIup_le_minIlow(yi, alpha_status_i, G_i, 
+			if(!is_violating_pair(
+						yi, alpha_status_i, G_i, 		
 						yj, alpha_status_j, G_j))
 				continue;
 			
@@ -4097,7 +4092,7 @@ void Solver::oneclass_random()
 				if(shrink)
 					continue;
 			}
-			if(maxIup_le_minIlow(+1, alpha_status[i], G_i, 
+			if(!is_violating_pair(+1, alpha_status[i], G_i, 
 						+1, alpha_status[j], G_j))
 				continue;
 
@@ -4232,7 +4227,7 @@ void Solver::oneclass_first_1000()
 					i = Gmax2_index;
 			}
 		}
-		if(maxIup_le_minIlow(+1, alpha_status[i], G[i], 
+		if(!is_violating_pair(+1, alpha_status[i], G[i], 
 					+1, alpha_status[j], G[j]))
 			continue;
 
@@ -4880,7 +4875,7 @@ void Solver::oneclass_semigd_batch()
 					fprintf(stderr, "not supported for this type\n");
 					return;
 				}
-				if(maxIup_le_minIlow(+1, alpha_status[i], G_i, 
+				if(!is_violating_pair(+1, alpha_status[i], G_i, 
 							+1, alpha_status[j], G_j))
 					continue;
 
@@ -5064,7 +5059,7 @@ void Solver::oneclass_semigd()
 			G_i = calculate_gradient(i);
 			G_j = calculate_gradient(j);
 
-			if(maxIup_le_minIlow(+1, alpha_status[i], G_i, 
+			if(!is_violating_pair(+1, alpha_status[i], G_i, 
 						+1, alpha_status[j], G_j))
 				continue;
 
