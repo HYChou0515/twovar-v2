@@ -3330,25 +3330,22 @@ static inline void get_most_violating_pairs(
 
 void Solver::bias_random_greedy()
 {
+	clock_t start;
 	int l = prob->l;
-	int i, j;
+	int i, j, s, cycle_i;
+	int smgd_size = adjust_smgd_size(active_size);
 	double G_i, G_j;
 	double nyGmax, nyGmin;
 	double Q_ij, C_i, C_j;
-	clock_t start;
-
-	int smgd_size = adjust_smgd_size(active_size);
-
 	int Iup_size = 0;
 	int Ilow_size = 0;
-	int *Iup = new int[smgd_size];
-	int *Ilow = new int[smgd_size];
-
-	double *IupG = new double[smgd_size];
-	double *IlowG = new double[smgd_size];
-	std::pair<double,double> *newalpha_ij = new std::pair<double,double>;
+	int *Iup = Malloc(int, smgd_size);
+	int *Ilow = Malloc(int, smgd_size);
+	double *IupG = Malloc(double, smgd_size);
+	double *IlowG = Malloc(double, smgd_size);
 	std::vector<int> workset_s(smgd_size);
 	std::vector<int>::iterator workset_last;
+	std::pair<double,double> *newalpha_ij = new std::pair<double,double>;
 
 	if(isnan(PGmax_old))
 		PGmax_old = INF;
@@ -3376,11 +3373,11 @@ void Solver::bias_random_greedy()
 		n_exchange = 0;
 		nr_pos_y = 0;
 		nr_neg_y = 0;
-		for(int cycle_i = 0; cycle_i < active_size; cycle_i+=smgd_size)
+		for(cycle_i = 0; cycle_i < active_size; cycle_i+=smgd_size)
 		{
 			if(rand_mode == CYCLIC)
 			{
-				for(int s = 0; s < smgd_size; s++)
+				for(s = 0; s < smgd_size; s++)
 				{
 					if(cycle_i+s >= active_size)
 					{
@@ -3393,7 +3390,7 @@ void Solver::bias_random_greedy()
 			}
 			else if(rand_mode == RANDOM)
 			{
-				for(int s = 0; s < smgd_size; s++)
+				for(s = 0; s < smgd_size; s++)
 					workset_s[s] = non_static_rand()%active_size;
 				std::sort(workset_s.begin(), workset_s.begin()+smgd_size, std::greater<int>());
 				workset_last = std::unique(workset_s.begin(), workset_s.begin()+smgd_size);
@@ -3405,6 +3402,8 @@ void Solver::bias_random_greedy()
 			}
 			update_size+=2;
 			++cdsteps;
+			// how many inner iteration to solve a sub-sub-problem
+			// currently is set to be run only 1 inner iteration
 			for(int inner_iter = 0; inner_iter < 1; inner_iter++)
 			{
 				LOG_0ITER()
@@ -3440,11 +3439,11 @@ void Solver::bias_random_greedy()
 					i = index[si];
 					const schar yi = y[i];
 					feature_node * const xi = prob->x[i];
-					G_i = y[i]*dot_n(w, xi)-1+alpha[i]*diag[GETI(i)];
-					double yG_i = -y[i]*G_i;
+					G_i = calculate_gradient(i);
+					double nyG_i = -yi*G_i;
 					if( !is_Ilow(alpha_status[i], yi ) )
 					{
-						if(yG_i < PGmin_old) // if not shrink, PGmin_old=-INF
+						if(nyG_i < PGmin_old) // if not shrink, PGmin_old=-INF
 						{
 							active_size--;
 							swap(index[si], index[active_size]);
@@ -3454,14 +3453,14 @@ void Solver::bias_random_greedy()
 							Iup[Iup_size] = si;
 							IupG[Iup_size] = G_i;
 							++Iup_size;
-							nyGmax = max(nyGmax, yG_i);
+							nyGmax = max(nyGmax, nyG_i);
 							workset_s[workset_size++] = si;
 						}
-						PGmax_new = max(PGmax_new, yG_i);
+						PGmax_new = max(PGmax_new, nyG_i);
 					}
 					else if( !is_Iup(alpha_status[i], yi) )
 					{
-						if(yG_i > PGmax_old) // if not shrink, PGmax_old=INF
+						if(nyG_i > PGmax_old) // if not shrink, PGmax_old=INF
 						{
 							active_size--;
 							swap(index[si], index[active_size]);
@@ -3471,10 +3470,10 @@ void Solver::bias_random_greedy()
 							Ilow[Ilow_size] = si;
 							IlowG[Ilow_size] = G_i;
 							++Ilow_size;
-							nyGmin = min(nyGmin, yG_i);
+							nyGmin = min(nyGmin, nyG_i);
 							workset_s[workset_size++] = si;
 						}
-						PGmin_new = min(PGmin_new, yG_i);
+						PGmin_new = min(PGmin_new, nyG_i);
 					}
 					else //both Iup and Ilow
 					{
@@ -3485,10 +3484,10 @@ void Solver::bias_random_greedy()
 						IlowG[Ilow_size] = G_i;
 						++Ilow_size;
 						workset_s[workset_size++] = si;
-						PGmax_new = max(PGmax_new, yG_i);
-						PGmin_new = min(PGmin_new, yG_i);
-						nyGmax = max(nyGmax, yG_i);
-						nyGmin = min(nyGmin, yG_i);
+						PGmax_new = max(PGmax_new, nyG_i);
+						PGmin_new = min(PGmin_new, nyG_i);
+						nyGmax = max(nyGmax, nyG_i);
+						nyGmin = min(nyGmin, nyG_i);
 					}
 				}
 				workset_last = workset_s.begin()+workset_size;
@@ -3506,7 +3505,7 @@ void Solver::bias_random_greedy()
 					// i.e. maximal violating pair
 					i=-1;
 					double yGmax = -INF;
-					for(int s = 0; s < Iup_size; s++)
+					for(s = 0; s < Iup_size; s++)
 					{
 						int si = index[Iup[s]];
 						double G_si = IupG[s];
@@ -3520,7 +3519,7 @@ void Solver::bias_random_greedy()
 
 					j = -1;
 					double yGmin = INF;
-					for(int s = 0; s < Ilow_size; s++)
+					for(s = 0; s < Ilow_size; s++)
 					{
 						int sj = index[Ilow[s]];
 						double G_sj = IlowG[s];
@@ -3872,13 +3871,13 @@ void Solver::bias_random()
 
 			if(sh_mode == SH_ON)
 			{
-				double yG_i = -yi * G_i;
-				double yG_j = -yj * G_j;
+				double nyG_i = -yi * G_i;
+				double nyG_j = -yj * G_j;
 
 				bool to_be_shrunk = false;
 				if( !is_Iup(alpha_status_i, yi) )
 				{
-					if(yG_i > PGmax_old)
+					if(nyG_i > PGmax_old)
 					{
 						active_size--;
 						swap(index[si], index[active_size]);
@@ -3886,11 +3885,11 @@ void Solver::bias_random()
 						to_be_shrunk = true;
 					}
 					else
-						PGmin_new = min(PGmin_new, yG_i);
+						PGmin_new = min(PGmin_new, nyG_i);
 				}
 				else if( !is_Ilow(alpha_status_i, yi) )
 				{
-					if(yG_i < PGmin_old)
+					if(nyG_i < PGmin_old)
 					{
 						active_size--;
 						swap(index[si], index[active_size]);
@@ -3898,16 +3897,16 @@ void Solver::bias_random()
 						to_be_shrunk = true;
 					}
 					else
-						PGmax_new = max(PGmax_new, yG_i);
+						PGmax_new = max(PGmax_new, nyG_i);
 				}
 				else
 				{
-					PGmax_new = max(PGmax_new, yG_i);
-					PGmin_new = min(PGmin_new, yG_i);
+					PGmax_new = max(PGmax_new, nyG_i);
+					PGmin_new = min(PGmin_new, nyG_i);
 				}
 				if( !is_Iup(alpha_status_j, yj) )
 				{
-					if(yG_j > PGmax_old)
+					if(nyG_j > PGmax_old)
 					{
 						active_size--;
 						swap(index[sj], index[active_size]);
@@ -3915,11 +3914,11 @@ void Solver::bias_random()
 						to_be_shrunk = true;
 					}
 					else
-						PGmin_new = min(PGmin_new, yG_j);
+						PGmin_new = min(PGmin_new, nyG_j);
 				}
 				else if( !is_Ilow(alpha_status_j, yj) )
 				{
-					if(yG_j < PGmin_old)
+					if(nyG_j < PGmin_old)
 					{
 						active_size--;
 						swap(index[sj], index[active_size]);
@@ -3927,12 +3926,12 @@ void Solver::bias_random()
 						to_be_shrunk = true;
 					}
 					else
-						PGmax_new = max(PGmax_new, yG_j);
+						PGmax_new = max(PGmax_new, nyG_j);
 				}
 				else
 				{
-					PGmax_new = max(PGmax_new, yG_j);
-					PGmin_new = min(PGmin_new, yG_j);
+					PGmax_new = max(PGmax_new, nyG_j);
+					PGmin_new = min(PGmin_new, nyG_j);
 				}
 				if(to_be_shrunk)
 					continue;
@@ -4957,8 +4956,11 @@ void Solver::oneclass_greedy_random()
 		start = clock();
 		success_size = 0;
 		n_exchange = 0;
-		Gmax = -INF;
-		Gmin = INF;
+		if(sh_mode == SH_ON)
+		{
+			Gmax = -INF;
+			Gmin = INF;
+		}
 		for(s=0; s<active_size; s++)
 		{
 			i = index[s];
