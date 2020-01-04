@@ -3543,8 +3543,8 @@ void Solver::bias_semigd()
 	int smgd_size;
 	int counter = min(l,3);
 	double G_i, G_j;
-	int *Iup_max = Malloc(int, l);
-	int *Ilow_min = Malloc(int, l);
+	int *most_violating_i = Malloc(int, l);
+	int *most_violating_j = Malloc(int, l);
 	double *nyG = Malloc(double, l); // -yi*Gi, but in oneclass, y=1, so it's equivalent to -G
 	std::priority_queue<struct feature_node, std::vector<feature_node>, mincomp> min_heap;
 	std::priority_queue<struct feature_node, std::vector<feature_node>, maxcomp> max_heap;
@@ -3598,7 +3598,7 @@ void Solver::bias_semigd()
 					// i can never be not Iup and not Ilow
 					if(!is_Iup(alpha_status[i], y[i]) && nyG[i] > Gmax)
 						swap(index[s],index[--active_size]);
-					if(!is_Ilow(alpha_status[i], y[i]) && nyG[i] < Gmin)
+					else if(!is_Ilow(alpha_status[i], y[i]) && nyG[i] < Gmin)
 						swap(index[s],index[--active_size]);
 				}
 				counter = min(l,1);
@@ -3648,16 +3648,16 @@ void Solver::bias_semigd()
 
 		for(s=0; s<smgd_size; s++)
 		{
-			Iup_max[smgd_size-1-s] = min_heap.top().index;
+			most_violating_i[smgd_size-1-s] = min_heap.top().index;
 			min_heap.pop();
 
-			Ilow_min[smgd_size-1-s] = max_heap.top().index;
+			most_violating_j[smgd_size-1-s] = max_heap.top().index;
 			max_heap.pop();
 		}
 		if(wss_mode == SEMIGD_G_RAND)
 		{
-			RAND_SHUFFLE(Iup_max, smgd_size);
-			RAND_SHUFFLE(Ilow_min, smgd_size);
+			RAND_SHUFFLE(most_violating_i, smgd_size);
+			RAND_SHUFFLE(most_violating_j, smgd_size);
 		}
 		update_size = 0;
 		for(s = 0; s < smgd_size; s++)
@@ -3666,8 +3666,8 @@ void Solver::bias_semigd()
 
 			update_size+=2;
 			++cdsteps;
-			i = Iup_max[s];
-			j = Ilow_min[s];
+			i = most_violating_i[s];
+			j = most_violating_j[s];
 
 			feature_node const * xi = prob->x[i];
 			feature_node const * xj = prob->x[j];
@@ -3720,8 +3720,8 @@ void Solver::bias_semigd()
 	}
 	summary();
 	delete [] alpha_status;
-	delete [] Iup_max;
-	delete [] Ilow_min;
+	delete [] most_violating_i;
+	delete [] most_violating_j;
 }
 
 void Solver::bias_random()
@@ -4722,8 +4722,8 @@ void Solver::oneclass_semigd_batch()
 	Gmax = -INF;
 	Gmin = INF;
 
-	int *Iup_max = new int[l];
-	int *Ilow_min = new int[l];
+	int *most_violating_i = new int[l];
+	int *most_violating_j = new int[l];
 
 	std::priority_queue<struct feature_node, std::vector<feature_node>, maxcomp> max_heap;
 	std::priority_queue<struct feature_node, std::vector<feature_node>, mincomp> min_heap;
@@ -4830,15 +4830,15 @@ void Solver::oneclass_semigd_batch()
 
 			for(i=0; i<smgd_size; i++)
 			{
-				Iup_max[smgd_size-1-i] = min_heap.top().index;
-				Ilow_min[smgd_size-1-i] = max_heap.top().index;
+				most_violating_i[smgd_size-1-i] = min_heap.top().index;
+				most_violating_j[smgd_size-1-i] = max_heap.top().index;
 				min_heap.pop();
 				max_heap.pop();
 			}
 			if(wss_mode == SEMIGD_G_RAND)
 			{
-				RAND_SHUFFLE(Iup_max, smgd_size);
-				RAND_SHUFFLE(Ilow_min, smgd_size);
+				RAND_SHUFFLE(most_violating_i, smgd_size);
+				RAND_SHUFFLE(most_violating_j, smgd_size);
 			}
 			update_size = 0;
 			for(int index_i = 0; index_i<smgd_size; index_i++)
@@ -4847,8 +4847,8 @@ void Solver::oneclass_semigd_batch()
 
 				update_size+=2;
 				++cdsteps;
-				i = Iup_max[index_i];
-				j = Ilow_min[index_i];
+				i = most_violating_i[index_i];
+				j = most_violating_j[index_i];
 
 				feature_node const * xi = prob->x[i];
 				feature_node const * xj = prob->x[j];
@@ -4914,8 +4914,8 @@ void Solver::oneclass_semigd_batch()
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
-	delete [] Iup_max;
-	delete [] Ilow_min;
+	delete [] most_violating_i;
+	delete [] most_violating_j;
 }
 
 void Solver::oneclass_semigd()
@@ -4925,8 +4925,8 @@ void Solver::oneclass_semigd()
 	int i, j, s;
 	int smgd_size;
 	double G_i, G_j;
-	int *Iup_max = Malloc(int, l);
-	int *Ilow_min = Malloc(int, l);
+	int *most_violating_i = Malloc(int, l);
+	int *most_violating_j = Malloc(int, l);
 	double *nyG = Malloc(double, l); // -yi*Gi, but in oneclass, y=1, so it's equivalent to -G
 	std::priority_queue<struct feature_node, std::vector<feature_node>, maxcomp> max_heap;
 	std::priority_queue<struct feature_node, std::vector<feature_node>, mincomp> min_heap;
@@ -5026,15 +5026,15 @@ void Solver::oneclass_semigd()
 
 		for(s=0; s<smgd_size; s++)
 		{
-			Iup_max[smgd_size-1-s] = min_heap.top().index;
-			Ilow_min[smgd_size-1-s] = max_heap.top().index;
+			most_violating_i[smgd_size-1-s] = min_heap.top().index;
+			most_violating_j[smgd_size-1-s] = max_heap.top().index;
 			min_heap.pop();
 			max_heap.pop();
 		}
 		if(wss_mode == SEMIGD_G_RAND)
 		{
-			RAND_SHUFFLE(Iup_max, smgd_size);
-			RAND_SHUFFLE(Ilow_min, smgd_size);
+			RAND_SHUFFLE(most_violating_i, smgd_size);
+			RAND_SHUFFLE(most_violating_j, smgd_size);
 		}
 		update_size = 0;
 		for(s = 0; s<smgd_size; s++)
@@ -5043,8 +5043,8 @@ void Solver::oneclass_semigd()
 
 			update_size+=2;
 			++cdsteps;
-			i = Iup_max[s];
-			j = Ilow_min[s];
+			i = most_violating_i[s];
+			j = most_violating_j[s];
 
 			feature_node const * xi = prob->x[i];
 			feature_node const * xj = prob->x[j];
@@ -5098,8 +5098,8 @@ void Solver::oneclass_semigd()
 		EXIT_IF_OPTIMAL(last_obj);
 	}
 	summary();
-	delete [] Iup_max;
-	delete [] Ilow_min;
+	delete [] most_violating_i;
+	delete [] most_violating_j;
 }
 
 static inline void svdd_update(
