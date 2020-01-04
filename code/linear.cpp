@@ -3535,15 +3535,14 @@ void Solver::bias_semigd()
 	int l = prob->l;
 	int i, j, s;
 	int smgd_size;
-	double G_i, G_j;
 	int counter = min(l,3);
+	double G_i, G_j;
+	int *Iup_max = Malloc(int, l);
+	int *Ilow_min = Malloc(int, l);
+	double *nyG = Malloc(double, l); // -yi*Gi, but in oneclass, y=1, so it's equivalent to -G
 	std::priority_queue<struct feature_node, std::vector<feature_node>, mincomp> min_heap;
 	std::priority_queue<struct feature_node, std::vector<feature_node>, maxcomp> max_heap;
 	std::pair<double,double> *newalpha_ij = new std::pair<double,double>;
-
-	int *Iup_max = new int[l];
-	int *Ilow_min = new int[l];
-	double *G = new double[l];
 
 	while(iter < max_iter)
 	{
@@ -3557,18 +3556,18 @@ void Solver::bias_semigd()
 			Gmin = INF;
 		}
 
-		for(i=0; i<active_size; i++)
+		for(s=0; s<active_size; s++)
 		{
-			int G_index = index[i];
-			feature_node * const xi = prob->x[G_index];
-			G[i] = -y[G_index] * (y[G_index]*dot_n(w, xi) -1 +alpha[G_index]*diag[GETI(G_index)]);
+			i = index[s];
+			feature_node * const xi = prob->x[i];
+			nyG[s] = -y[i] * (y[i]*dot_n(w, xi) -1 +alpha[i]*diag[GETI(i)]);
 
 			if(sh_mode == SH_ON)
 			{
-				if( is_Iup(alpha_status[G_index], y[G_index]) )
-					Gmax = max(Gmax, G[i]);
-				if( is_Ilow(alpha_status[G_index], y[G_index]) )
-					Gmin = min(Gmin, G[i]);
+				if( is_Iup(alpha_status[i], y[i]) )
+					Gmax = max(Gmax, nyG[s]);
+				if( is_Ilow(alpha_status[i], y[i]) )
+					Gmin = min(Gmin, nyG[s]);
 			}
 		}
 		if(sh_mode == SH_ON)
@@ -3588,24 +3587,24 @@ void Solver::bias_semigd()
 			}
 			else if(counter-- == 0) //do shrinking
 			{
-				for(int s=active_size-1; s>=0; s--)
+				for(s=active_size-1; s>=0; s--)
 				{
 					bool be_shunk = false;
-					int i = index[s];
+					i = index[s];
 					if(!is_Iup(alpha_status[i], y[i]))
 					{
-						if(G[s] > Gmax)
+						if(nyG[s] > Gmax)
 							be_shunk = true;
 					}
 					if(!is_Ilow(alpha_status[i], y[i]))
 					{
-						if(G[s] < Gmin)
+						if(nyG[s] < Gmin)
 							be_shunk = true;
 					}
 					if(be_shunk)
 					{
 						swap(index[s],index[--active_size]);
-						swap(G[s], G[active_size]);
+						swap(nyG[s], nyG[active_size]);
 					}
 				}
 				counter = min(l,1);
@@ -3613,11 +3612,11 @@ void Solver::bias_semigd()
 		}
 
 		smgd_size = adjust_smgd_size(active_size);
-		for(int s=0; s<active_size; s++)
+		for(s=0; s<active_size; s++)
 		{
 			struct feature_node comp;
 			comp.index = index[s];
-			comp.value = G[s];
+			comp.value = nyG[s];
 			schar yc = y[comp.index];
 			if( is_Iup(alpha_status[comp.index], yc) )
 			{
