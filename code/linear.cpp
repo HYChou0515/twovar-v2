@@ -1478,6 +1478,9 @@ double Solver::calculate_gradient(int i)
 void Solver::update_two_alpha(std::pair<double,double> *newalpha_ij, int i, int j)
 {
 	success_size+=2;
+	if(fabs(newalpha_ij->first-alpha[i]) == upper_bound[2])
+		n_exchange++;
+
 	schar yi, yj;
 	switch(category)
 	{
@@ -1833,6 +1836,7 @@ void Solver::one_liblinear()
 		PGmin_new = INF;
 		start = clock();
 		success_size = 0;
+		n_exchange = 0;
 		update_size = 0;
 		for (i=0; i<active_size; i++)
 		{
@@ -1942,6 +1946,7 @@ void Solver::one_random()
 		nr_pos_y = 0;
 		nr_neg_y = 0;
 		success_size = 0;
+		n_exchange = 0;
 		update_size = 0;
 		if(rand_mode == CYCLIC)
 		{
@@ -2074,6 +2079,7 @@ void Solver::one_semigd_1000()
 	{
 		start = clock();
 		success_size = 0;
+		n_exchange = 0;
 		nr_pos_y = 0;
 		nr_neg_y = 0;
 		// TODO: shuffle should not be in semigd
@@ -2202,6 +2208,7 @@ void Solver::one_semigd_dualobj_1000()
 	{
 		start = clock();
 		success_size = 0;
+		n_exchange = 0;
 		nr_pos_y = 0;
 		nr_neg_y = 0;
 		for (i=0; i<active_size; i++)
@@ -2438,6 +2445,7 @@ void Solver::two_semicyclic_1000()
 	{
 		start = clock();
 		success_size = 0;
+		n_exchange = 0;
 		for (i=0; i<active_size; i++)
 		{
 			int j = i+non_static_rand()%(active_size-i);
@@ -2514,6 +2522,7 @@ void Solver::two_random_shrink2()
 		PGmax_new = -INF;
 		PGmin_new = INF;
 		success_size = 0;
+		n_exchange = 0;
 		update_size = 0;
 		for(s=0; s<active_size; s++)
 		{
@@ -2663,6 +2672,7 @@ void Solver::two_random_shrink()
 	{
 		start = clock();
 		success_size = 0;
+		n_exchange = 0;
 		update_size = 0;
 		PGmax_new = -INF;
 		PGmin_new = INF;
@@ -2833,6 +2843,7 @@ void Solver::two_cyclic_1000()
 	{
 		start = clock();
 		success_size = 0;
+		n_exchange = 0;
 		update_size = 0;
 		for(si=0; si<active_size; si++)
 		{
@@ -2897,6 +2908,7 @@ void Solver::two_semirandom2_1000()
 	{
 		start = clock();
 		success_size = 0;
+		n_exchange = 0;
 		update_size = 0;
 		for (i=0; i<max_set; i++)
 		{
@@ -2963,6 +2975,7 @@ void Solver::two_semirandom1_1000()
 	{
 		start = clock();
 		success_size = 0;
+		n_exchange = 0;
 		update_size = 0;
 		for (i=0; i<active_size; i++)
 		{
@@ -3030,6 +3043,7 @@ void Solver::two_random_1000()
 	{
 		start = clock();
 		success_size = 0;
+		n_exchange = 0;
 		update_size = 0;
 		for(si=0; si<active_size; si++)
 		{
@@ -3359,6 +3373,7 @@ void Solver::bias_semigd2()
 		}
 		update_size = 0;
 		success_size = 0;
+		n_exchange = 0;
 		nr_pos_y = 0;
 		nr_neg_y = 0;
 		for(int cycle_i = 0; cycle_i < active_size; cycle_i+=smgd_size)
@@ -3646,6 +3661,7 @@ void Solver::bias_semigd()
 	{
 		start = clock();
 		success_size = 0;
+		n_exchange = 0;
 		nr_pos_y = 0;
 		nr_neg_y = 0;
 		if(sh_mode == SH_ON)
@@ -3784,6 +3800,7 @@ void Solver::bias_random()
 	{
 		start = clock();
 		success_size = 0;
+		n_exchange = 0;
 		update_size = 0;
 		PGmax_new = -INF;
 		PGmin_new = INF;
@@ -4140,8 +4157,6 @@ void Solver::oneclass_random()
 			// update alpha status and w
 			if(fabs(newalpha_ij->first-alpha[i]) > 1e-16)
 			{
-				if(fabs(newalpha_ij->first-alpha[i]) == upper_bound[2])
-					n_exchange++;
 				update_two_alpha(newalpha_ij, i, j);
 			}
 		}
@@ -4194,6 +4209,7 @@ void Solver::oneclass_first_1000()
 	{
 		start = clock();
 		success_size = 0;
+		n_exchange = 0;
 		Gmax = INF; // Gmax has maximum -yG
 		Gmin = -INF; // Gmin has minimum -yG
 		Gmax_index =-1;
@@ -4308,6 +4324,7 @@ void Solver::oneclass_second_1000()
 		++cdsteps;
 		start = clock();
 		success_size = 0;
+		n_exchange = 0;
 		Gmax = -INF;
 		for(i=0; i<active_size; i++)
 		{
@@ -4681,8 +4698,6 @@ void Solver::oneclass_semigd2()
 				// update alpha status and w
 				if(fabs(newalpha_ij->first-alpha[i]) > 1e-16)
 				{
-					if(fabs(newalpha_ij->first-alpha[i]) == upper_bound[2])
-						n_exchange++;
 					update_two_alpha(newalpha_ij, i, j);
 				}
 			}
@@ -4899,8 +4914,6 @@ void Solver::oneclass_semigd_batch()
 				// update alpha status and w
 				if(fabs(newalpha_ij->first-alpha[i]) > 1e-16)
 				{
-					if(fabs(newalpha_ij->first-alpha[i]) == upper_bound[2])
-						n_exchange++;
 					update_two_alpha(newalpha_ij, i, j);
 				}
 				if(index_i != 0 && wss_mode == SEMIGD_G_CONV) {
@@ -5035,8 +5048,6 @@ void Solver::oneclass_semigd()
 			// update alpha status and w
 			if(fabs(newalpha_ij->first-alpha[i]) > 1e-16)
 			{
-				if(fabs(newalpha_ij->first-alpha[i]) == upper_bound[2])
-					n_exchange++;
 				update_two_alpha(newalpha_ij, i, j);
 			}
 			if(s != 0 && wss_mode == SEMIGD_G_CONV) {
