@@ -1033,6 +1033,7 @@ public:
 	double calculate_obj();
 	double calculate_rho();
 	double calculate_gradient(int i);
+	void update_two_alpha(std::pair<double,double> *newalpha_ij, int i, int j);
 	int adjust_smgd_size(int base_size);
 	void countSVs();
 	void log_message();
@@ -1473,6 +1474,43 @@ double Solver::calculate_gradient(int i)
 	}
 	info("calculate_gradient: Not implement for this category yet\n");
 	exit(1);
+}
+void Solver::update_two_alpha(std::pair<double,double> *newalpha_ij, int i, int j)
+{
+	success_size+=2;
+	schar yi, yj;
+	switch(category)
+	{
+		case ONE_NOBIAS:
+		case TWO_NOBIAS:
+		case TWO_BIAS:
+		{
+			yi = y[i];
+			yj = y[j];
+			break;
+		}
+		case ONECLASS:
+		case SVDD:
+		{
+			yi = +1;
+			yj = +1;
+			break;
+		}
+		default:
+		{
+			info("update_two_alpha: Not implement for this category yet\n");
+			exit(1);
+		}
+	}
+	// update w
+	axpy_n(yi*(newalpha_ij->first-alpha[i]), prob->x[i], w);
+	axpy_n(yj*(newalpha_ij->second-alpha[j]), prob->x[j], w);
+	// update alpha
+	alpha[i] = newalpha_ij->first;
+	alpha[j] = newalpha_ij->second;
+	// update alpha_status
+	alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[2]);
+	alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[2]);
 }
 double Solver::dot_n(const double *s, const feature_node *x)
 {
@@ -3551,13 +3589,7 @@ void Solver::bias_semigd2()
 				// update alpha status and w
 				if(fabs(newalpha_ij->first-alpha[i]) > 1e-16)
 				{
-					success_size+=2;
-					axpy_n(y[i]*(newalpha_ij->first-alpha[i]), prob->x[i], w);
-					axpy_n(y[j]*(newalpha_ij->second-alpha[j]), prob->x[j], w);
-					alpha[i] = newalpha_ij->first;
-					alpha[j] = newalpha_ij->second;
-					alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[GETI(i)]);
-					alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[GETI(j)]);
+					update_two_alpha(newalpha_ij, i, j);
 				}
 			}
 		}
@@ -3717,13 +3749,7 @@ void Solver::bias_semigd()
 			// update alpha status and w
 			if(fabs(newalpha_ij->first-alpha[i]) > 1e-16)
 			{
-				success_size+=2;
-				axpy_n(y[i]*(newalpha_ij->first-alpha[i]), prob->x[i], w);
-				axpy_n(y[j]*(newalpha_ij->second-alpha[j]), prob->x[j], w);
-				alpha[i] = newalpha_ij->first;
-				alpha[j] = newalpha_ij->second;
-				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[GETI(i)]);
-				alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[GETI(j)]);
+				update_two_alpha(newalpha_ij, i, j);
 			}
 		}
 		iter++;
@@ -3906,13 +3932,7 @@ void Solver::bias_random()
 			// update alpha status and w
 			if(fabs(newalpha_ij->first-alpha[i]) > 1e-16)
 			{
-				success_size+=2;
-				axpy_n(y[i]*(newalpha_ij->first-alpha[i]), prob->x[i], w);
-				axpy_n(y[j]*(newalpha_ij->second-alpha[j]), prob->x[j], w);
-				alpha[i] = newalpha_ij->first;
-				alpha[j] = newalpha_ij->second;
-				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[GETI(i)]);
-				alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[GETI(j)]);
+				update_two_alpha(newalpha_ij, i, j);
 			}
 		}
 		iter++;
@@ -4120,15 +4140,9 @@ void Solver::oneclass_random()
 			// update alpha status and w
 			if(fabs(newalpha_ij->first-alpha[i]) > 1e-16)
 			{
-				success_size+=2;
 				if(fabs(newalpha_ij->first-alpha[i]) == upper_bound[2])
 					n_exchange++;
-				axpy_n(newalpha_ij->first-alpha[i], prob->x[i], w);
-				axpy_n(newalpha_ij->second-alpha[j], prob->x[j], w);
-				alpha[i] = newalpha_ij->first;
-				alpha[j] = newalpha_ij->second;
-				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[2]);
-				alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[2]);
+				update_two_alpha(newalpha_ij, i, j);
 			}
 		}
 		iter++;
@@ -4260,13 +4274,7 @@ void Solver::oneclass_first_1000()
 		// update alpha status and w
 		if(fabs(newalpha_ij->first-alpha[i]) > 1e-16)
 		{
-			success_size+=2;
-			axpy_n(newalpha_ij->first-alpha[i], prob->x[i], w);
-			axpy_n(newalpha_ij->second-alpha[j], prob->x[j], w);
-			alpha[i] = newalpha_ij->first;
-			alpha[j] = newalpha_ij->second;
-			alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[2]);
-			alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[2]);
+			update_two_alpha(newalpha_ij, i, j);
 		}
 		iter++;
 		duration += clock() - start;
@@ -4364,13 +4372,7 @@ void Solver::oneclass_second_1000()
 		// update alpha status and w
 		if(fabs(newalpha_ij->first-alpha[i]) > 1e-16)
 		{
-			success_size+=2;
-			axpy_n(newalpha_ij->first-alpha[i], prob->x[i], w);
-			axpy_n(newalpha_ij->second-alpha[j], prob->x[j], w);
-			alpha[i] = newalpha_ij->first;
-			alpha[j] = newalpha_ij->second;
-			alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[2]);
-			alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[2]);
+			update_two_alpha(newalpha_ij, i, j);
 		}
 
 		iter++;
@@ -4679,15 +4681,9 @@ void Solver::oneclass_semigd2()
 				// update alpha status and w
 				if(fabs(newalpha_ij->first-alpha[i]) > 1e-16)
 				{
-					success_size+=2;
 					if(fabs(newalpha_ij->first-alpha[i]) == upper_bound[2])
 						n_exchange++;
-					axpy_n(newalpha_ij->first-alpha[i], prob->x[i], w);
-					axpy_n(newalpha_ij->second-alpha[j], prob->x[j], w);
-					alpha[i] = newalpha_ij->first;
-					alpha[j] = newalpha_ij->second;
-					alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[2]);
-					alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[2]);
+					update_two_alpha(newalpha_ij, i, j);
 				}
 			}
 		}
@@ -4903,15 +4899,9 @@ void Solver::oneclass_semigd_batch()
 				// update alpha status and w
 				if(fabs(newalpha_ij->first-alpha[i]) > 1e-16)
 				{
-					success_size+=2;
 					if(fabs(newalpha_ij->first-alpha[i]) == upper_bound[2])
 						n_exchange++;
-					axpy_n(newalpha_ij->first-alpha[i], prob->x[i], w);
-					axpy_n(newalpha_ij->second-alpha[j], prob->x[j], w);
-					alpha[i] = newalpha_ij->first;
-					alpha[j] = newalpha_ij->second;
-					alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[2]);
-					alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[2]);
+					update_two_alpha(newalpha_ij, i, j);
 				}
 				if(index_i != 0 && wss_mode == SEMIGD_G_CONV) {
 					if(alpha[i] == 0 || alpha[i] == upper_bound[2]
@@ -5045,15 +5035,9 @@ void Solver::oneclass_semigd()
 			// update alpha status and w
 			if(fabs(newalpha_ij->first-alpha[i]) > 1e-16)
 			{
-				success_size+=2;
 				if(fabs(newalpha_ij->first-alpha[i]) == upper_bound[2])
 					n_exchange++;
-				axpy_n(newalpha_ij->first-alpha[i], prob->x[i], w);
-				axpy_n(newalpha_ij->second-alpha[j], prob->x[j], w);
-				alpha[i] = newalpha_ij->first;
-				alpha[j] = newalpha_ij->second;
-				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[2]);
-				alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[2]);
+				update_two_alpha(newalpha_ij, i, j);
 			}
 			if(s != 0 && wss_mode == SEMIGD_G_CONV) {
 				if(alpha[i] == 0 || alpha[i] == upper_bound[2]
