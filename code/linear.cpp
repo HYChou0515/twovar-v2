@@ -1067,16 +1067,16 @@ public:
 	void two_semigd_1000();
 	void two_semigd_shrink();
 	//two_bias_update
-	void bias_semigd();
-	void bias_semigd2();
+	void bias_greedy_random();
+	void bias_random_greedy();
 	void bias_random();
 	//oneclass_update and svdd_update
 	void oneclass_random();
 	void oneclass_first_1000();
 	void oneclass_second_1000();
-	void oneclass_semigd();
-	void oneclass_semigd2();
-	void oneclass_semigd_batch();
+	void oneclass_greedy_random();
+	void oneclass_random_greedy();
+	void oneclass_random_greedy_random();
 };
 int Solver::non_static_rand()
 {
@@ -3328,7 +3328,7 @@ static inline void get_most_violating_pairs(
 	*smgd_size_pt = smgd_size;
 }
 
-void Solver::bias_semigd2()
+void Solver::bias_random_greedy()
 {
 	int l = prob->l;
 	int i, j;
@@ -3642,7 +3642,7 @@ void Solver::bias_semigd2()
 	delete [] alpha_status;
 }
 
-void Solver::bias_semigd()
+void Solver::bias_greedy_random()
 {
 	clock_t start;
 	int l = prob->l;
@@ -4405,7 +4405,7 @@ void Solver::oneclass_second_1000()
 	delete [] G;
 }
 
-void Solver::oneclass_semigd2()
+void Solver::oneclass_random_greedy()
 {
 	fprintf(stderr, "ERROR: TODO: need to debug (./train -s 50611 -n 0.000220305 -r 0.1 ../data/covtype.libsvm.binary.scale) not ends at iter 88\n");
 	int l = prob->l;
@@ -4737,7 +4737,7 @@ void Solver::oneclass_semigd2()
 	summary();
 }
 
-void Solver::oneclass_semigd_batch()
+void Solver::oneclass_random_greedy_random()
 {
 	clock_t start;
 	int l = prob->l;
@@ -4938,7 +4938,7 @@ void Solver::oneclass_semigd_batch()
 	delete [] most_violating_j;
 }
 
-void Solver::oneclass_semigd()
+void Solver::oneclass_greedy_random()
 {
 	clock_t start;
 	int l = prob->l;
@@ -5195,80 +5195,80 @@ static inline void svdd_update(
 		case SVDD_L1_SEMIGD_1000:
 			solver.wss_mode = Solver::SEMIGD_G;
 			solver.sh_mode = Solver::SH_OFF;
-			solver.oneclass_semigd();
+			solver.oneclass_greedy_random();
 			break;
 		case SVDD_L1_SEMIGD_SH:
 			solver.wss_mode = Solver::SEMIGD_G;
 			solver.sh_mode = Solver::SH_ON;
-			solver.oneclass_semigd();
+			solver.oneclass_greedy_random();
 			break;
 		case SVDD_L1_SEMIGD_RAND_1000:
 			solver.wss_mode = Solver::SEMIGD_G_RAND;
 			solver.sh_mode = Solver::SH_OFF;
-			solver.oneclass_semigd();
+			solver.oneclass_greedy_random();
 			break;
 		case SVDD_L1_SEMIGD_RAND_SH:
 			solver.wss_mode = Solver::SEMIGD_G_RAND;
 			solver.sh_mode = Solver::SH_ON;
-			solver.oneclass_semigd();
+			solver.oneclass_greedy_random();
 			break;
 		case SVDD_L1_SEMIGD_CY_FIRST_1000:
 			solver.wss_mode = Solver::SEMIGD_FIRST;
 			solver.rand_mode = Solver::CYCLIC;
 			solver.sh_mode = Solver::SH_OFF;
-			solver.oneclass_semigd2();
+			solver.oneclass_random_greedy();
 			break;
 		case SVDD_L1_SEMIGD_CY_FIRST_SH:
 			solver.wss_mode = Solver::SEMIGD_FIRST;
 			solver.rand_mode = Solver::CYCLIC;
 			solver.sh_mode = Solver::SH_ON;
-			solver.oneclass_semigd2();
+			solver.oneclass_random_greedy();
 			break;
 		case SVDD_L1_SEMIGD_RD_FIRST_1000:
 			solver.wss_mode = Solver::SEMIGD_FIRST;
 			solver.rand_mode = Solver::RANDOM;
 			solver.sh_mode = Solver::SH_OFF;
-			solver.oneclass_semigd2();
+			solver.oneclass_random_greedy();
 			break;
 		case SVDD_L1_SEMIGD_RD_FIRST_SH:
 			solver.wss_mode = Solver::SEMIGD_FIRST;
 			solver.rand_mode = Solver::RANDOM;
 			solver.sh_mode = Solver::SH_ON;
-			solver.oneclass_semigd2();
+			solver.oneclass_random_greedy();
 			break;
 		case SVDD_L1_SEMIGD_CY_DUALOBJ_1000:
 			solver.wss_mode = Solver::SEMIGD_DUALOBJ;
 			solver.rand_mode = Solver::CYCLIC;
 			solver.sh_mode = Solver::SH_OFF;
-			solver.oneclass_semigd2();
+			solver.oneclass_random_greedy();
 			break;
 		case SVDD_L1_SEMIGD_CY_DUALOBJ_SH:
 			solver.wss_mode = Solver::SEMIGD_DUALOBJ;
 			solver.rand_mode = Solver::CYCLIC;
 			solver.sh_mode = Solver::SH_ON;
-			solver.oneclass_semigd2();
+			solver.oneclass_random_greedy();
 			break;
 		case SVDD_L1_SEMIGD_RD_DUALOBJ_1000:
 			solver.wss_mode = Solver::SEMIGD_DUALOBJ;
 			solver.rand_mode = Solver::RANDOM;
 			solver.sh_mode = Solver::SH_OFF;
-			solver.oneclass_semigd2();
+			solver.oneclass_random_greedy();
 			break;
 		case SVDD_L1_SEMIGD_RD_DUALOBJ_SH:
 			solver.wss_mode = Solver::SEMIGD_DUALOBJ;
 			solver.rand_mode = Solver::RANDOM;
 			solver.sh_mode = Solver::SH_ON;
-			solver.oneclass_semigd2();
+			solver.oneclass_random_greedy();
 			break;
 		case SVDD_L1_SEMIGD_BATCH_1000:
 			solver.wss_mode = Solver::SEMIGD_G;
 			solver.sh_mode = Solver::SH_OFF;
-			solver.oneclass_semigd_batch();
+			solver.oneclass_random_greedy_random();
 			break;
 		case SVDD_L1_SEMIGD_CONV_1000:
 			solver.wss_mode = Solver::SEMIGD_G_CONV;
 			solver.sh_mode = Solver::SH_OFF;
-			solver.oneclass_semigd();
+			solver.oneclass_greedy_random();
 			break;
 	}
 
@@ -5399,80 +5399,80 @@ static inline void oneclass_update(
 		case ONECLASS_L1_SEMIGD_1000:
 			solver.wss_mode = Solver::SEMIGD_G;
 			solver.sh_mode = Solver::SH_OFF;
-			solver.oneclass_semigd();
+			solver.oneclass_greedy_random();
 			break;
 		case ONECLASS_L1_SEMIGD_SH:
 			solver.wss_mode = Solver::SEMIGD_G;
 			solver.sh_mode = Solver::SH_ON;
-			solver.oneclass_semigd();
+			solver.oneclass_greedy_random();
 			break;
 		case ONECLASS_L1_SEMIGD_RAND_1000:
 			solver.wss_mode = Solver::SEMIGD_G_RAND;
 			solver.sh_mode = Solver::SH_OFF;
-			solver.oneclass_semigd();
+			solver.oneclass_greedy_random();
 			break;
 		case ONECLASS_L1_SEMIGD_RAND_SH:
 			solver.wss_mode = Solver::SEMIGD_G_RAND;
 			solver.sh_mode = Solver::SH_ON;
-			solver.oneclass_semigd();
+			solver.oneclass_greedy_random();
 			break;
 		case ONECLASS_L1_SEMIGD_CY_FIRST_1000:
 			solver.wss_mode = Solver::SEMIGD_FIRST;
 			solver.rand_mode = Solver::CYCLIC;
 			solver.sh_mode = Solver::SH_OFF;
-			solver.oneclass_semigd2();
+			solver.oneclass_random_greedy();
 			break;
 		case ONECLASS_L1_SEMIGD_CY_FIRST_SH:
 			solver.wss_mode = Solver::SEMIGD_FIRST;
 			solver.rand_mode = Solver::CYCLIC;
 			solver.sh_mode = Solver::SH_ON;
-			solver.oneclass_semigd2();
+			solver.oneclass_random_greedy();
 			break;
 		case ONECLASS_L1_SEMIGD_RD_FIRST_1000:
 			solver.wss_mode = Solver::SEMIGD_FIRST;
 			solver.rand_mode = Solver::RANDOM;
 			solver.sh_mode = Solver::SH_OFF;
-			solver.oneclass_semigd2();
+			solver.oneclass_random_greedy();
 			break;
 		case ONECLASS_L1_SEMIGD_RD_FIRST_SH:
 			solver.wss_mode = Solver::SEMIGD_FIRST;
 			solver.rand_mode = Solver::RANDOM;
 			solver.sh_mode = Solver::SH_ON;
-			solver.oneclass_semigd2();
+			solver.oneclass_random_greedy();
 			break;
 		case ONECLASS_L1_SEMIGD_CY_DUALOBJ_1000:
 			solver.wss_mode = Solver::SEMIGD_DUALOBJ;
 			solver.rand_mode = Solver::CYCLIC;
 			solver.sh_mode = Solver::SH_OFF;
-			solver.oneclass_semigd2();
+			solver.oneclass_random_greedy();
 			break;
 		case ONECLASS_L1_SEMIGD_CY_DUALOBJ_SH:
 			solver.wss_mode = Solver::SEMIGD_DUALOBJ;
 			solver.rand_mode = Solver::CYCLIC;
 			solver.sh_mode = Solver::SH_ON;
-			solver.oneclass_semigd2();
+			solver.oneclass_random_greedy();
 			break;
 		case ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000:
 			solver.wss_mode = Solver::SEMIGD_DUALOBJ;
 			solver.rand_mode = Solver::RANDOM;
 			solver.sh_mode = Solver::SH_OFF;
-			solver.oneclass_semigd2();
+			solver.oneclass_random_greedy();
 			break;
 		case ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH:
 			solver.wss_mode = Solver::SEMIGD_DUALOBJ;
 			solver.rand_mode = Solver::RANDOM;
 			solver.sh_mode = Solver::SH_ON;
-			solver.oneclass_semigd2();
+			solver.oneclass_random_greedy();
 			break;
 		case ONECLASS_L1_SEMIGD_BATCH_1000:
 			solver.wss_mode = Solver::SEMIGD_G;
 			solver.sh_mode = Solver::SH_OFF;
-			solver.oneclass_semigd_batch();
+			solver.oneclass_random_greedy_random();
 			break;
 		case ONECLASS_L1_SEMIGD_CONV_1000:
 			solver.wss_mode = Solver::SEMIGD_G_CONV;
 			solver.sh_mode = Solver::SH_OFF;
-			solver.oneclass_semigd();
+			solver.oneclass_greedy_random();
 			break;
 	}
 
@@ -5612,7 +5612,7 @@ static inline void two_bias_update(
 		{
 			solver.wss_mode = Solver::SEMIGD_G;
 			solver.sh_mode = Solver::SH_OFF;
-			solver.bias_semigd();
+			solver.bias_greedy_random();
 			break;
 		}
 		case BIAS_L1_SEMIGD_SH:
@@ -5620,7 +5620,7 @@ static inline void two_bias_update(
 		{
 			solver.wss_mode = Solver::SEMIGD_G;
 			solver.sh_mode = Solver::SH_ON;
-			solver.bias_semigd();
+			solver.bias_greedy_random();
 			break;
 		}
 		case BIAS_L1_SEMIGD_RAND_1000:
@@ -5628,7 +5628,7 @@ static inline void two_bias_update(
 		{
 			solver.wss_mode = Solver::SEMIGD_G_RAND;
 			solver.sh_mode = Solver::SH_OFF;
-			solver.bias_semigd();
+			solver.bias_greedy_random();
 			break;
 		}
 		case BIAS_L1_SEMIGD_RAND_SH:
@@ -5636,7 +5636,7 @@ static inline void two_bias_update(
 		{
 			solver.wss_mode = Solver::SEMIGD_G_RAND;
 			solver.sh_mode = Solver::SH_ON;
-			solver.bias_semigd();
+			solver.bias_greedy_random();
 			break;
 		}
 		case BIAS_L1_SEMIGD_CY_FIRST_1000:
@@ -5645,7 +5645,7 @@ static inline void two_bias_update(
 			solver.wss_mode = Solver::SEMIGD_FIRST;
 			solver.rand_mode = Solver::CYCLIC;
 			solver.sh_mode = Solver::SH_OFF;
-			solver.bias_semigd2();
+			solver.bias_random_greedy();
 			break;
 		}
 		case BIAS_L1_SEMIGD_CY_FIRST_SH:
@@ -5654,7 +5654,7 @@ static inline void two_bias_update(
 			solver.wss_mode = Solver::SEMIGD_FIRST;
 			solver.rand_mode = Solver::CYCLIC;
 			solver.sh_mode = Solver::SH_ON;
-			solver.bias_semigd2();
+			solver.bias_random_greedy();
 			break;
 		}
 		case BIAS_L1_SEMIGD_RD_FIRST_1000:
@@ -5663,7 +5663,7 @@ static inline void two_bias_update(
 			solver.wss_mode = Solver::SEMIGD_FIRST;
 			solver.rand_mode = Solver::RANDOM;
 			solver.sh_mode = Solver::SH_OFF;
-			solver.bias_semigd2();
+			solver.bias_random_greedy();
 			break;
 		}
 		case BIAS_L1_SEMIGD_RD_FIRST_SH:
@@ -5672,7 +5672,7 @@ static inline void two_bias_update(
 			solver.wss_mode = Solver::SEMIGD_FIRST;
 			solver.rand_mode = Solver::RANDOM;
 			solver.sh_mode = Solver::SH_ON;
-			solver.bias_semigd2();
+			solver.bias_random_greedy();
 			break;
 		}
 		case BIAS_L1_SEMIGD_CY_DUALOBJ_1000:
@@ -5681,7 +5681,7 @@ static inline void two_bias_update(
 			solver.wss_mode = Solver::SEMIGD_DUALOBJ;
 			solver.rand_mode = Solver::CYCLIC;
 			solver.sh_mode = Solver::SH_OFF;
-			solver.bias_semigd2();
+			solver.bias_random_greedy();
 			break;
 		}
 		case BIAS_L1_SEMIGD_CY_DUALOBJ_SH:
@@ -5690,7 +5690,7 @@ static inline void two_bias_update(
 			solver.wss_mode = Solver::SEMIGD_DUALOBJ;
 			solver.rand_mode = Solver::CYCLIC;
 			solver.sh_mode = Solver::SH_ON;
-			solver.bias_semigd2();
+			solver.bias_random_greedy();
 			break;
 		}
 		case BIAS_L1_SEMIGD_RD_DUALOBJ_1000:
@@ -5699,7 +5699,7 @@ static inline void two_bias_update(
 			solver.wss_mode = Solver::SEMIGD_DUALOBJ;
 			solver.rand_mode = Solver::RANDOM;
 			solver.sh_mode = Solver::SH_OFF;
-			solver.bias_semigd2();
+			solver.bias_random_greedy();
 			break;
 		}
 		case BIAS_L1_SEMIGD_RD_DUALOBJ_SH:
@@ -5708,7 +5708,7 @@ static inline void two_bias_update(
 			solver.wss_mode = Solver::SEMIGD_DUALOBJ;
 			solver.rand_mode = Solver::RANDOM;
 			solver.sh_mode = Solver::SH_ON;
-			solver.bias_semigd2();
+			solver.bias_random_greedy();
 			break;
 		}
 	}
