@@ -920,19 +920,24 @@ class Solver
 public:
 	Solver(int _solver_type);
 
-	//arguments and options
+	// problem related
 	const problem *prob;
-	int solver_type;
 	double *QD;
 	double *diag;
 	double *upper_bound;
-	double ratio_update;
 	schar *y;
 	double *w;
 	double *alpha;
 	double *linear_terms;
-	double eps;
 	int *alpha_status;
+
+	// arguments and options
+	int solver_type;
+	// pairs selected to be updated
+	// (0,1): ratio_update*l pairs are selected
+	// [1, inf): min(int(ratio_update), l) pairs are selected
+	double ratio_update;
+	double eps;
 	int max_set;
 	int w_size;
 	int *index;
@@ -1027,6 +1032,7 @@ public:
 	//other function
 	double calculate_obj();
 	double calculate_rho();
+	double calculate_gradient(int i);
 	int adjust_smgd_size(int base_size);
 	void countSVs();
 	void log_message();
@@ -1452,6 +1458,27 @@ double Solver::calculate_rho()
 	else
 		r = (lb + ub)/2;
 	return r;
+}
+double Solver::calculate_gradient(int i)
+{
+	feature_node const * xi = prob->x[i];
+	switch(category)
+	{
+		case ONECLASS:
+		{
+			return dot_n(w, xi);
+		}
+		case SVDD:
+		{
+			return dot_n(w, xi) - 0.5*QD[i];
+		}
+		default:
+		{
+			break;
+		}
+	}
+	info("calculate_gradient: Not implement for this category yet\n");
+	exit(1);
 }
 double Solver::dot_n(const double *s, const feature_node *x)
 {
@@ -3918,6 +3945,7 @@ static inline bool maxIup_le_minIlow(schar yi, int alpha_status_i, double G_i,
 		schar yj, int alpha_status_j, double G_j)
 {
 	// if true, then this ij cannot be moved
+	// i.e. (i,j) is not a violating point
 	if(-yi*G_i >= -yj*G_j && (
 		(!is_Iup(alpha_status_i, yi) && !is_Ilow(alpha_status_j, yj)) ||
 		(!is_Iup(alpha_status_i, yi) && is_Iup(alpha_status_j, yj) && is_Ilow(alpha_status_j, yj)) ||
@@ -5654,19 +5682,15 @@ void Solver::oneclass_semigd()
 	clock_t start;
 	int l = prob->l;
 	int i, j, s;
+	int smgd_size;
 	double G_i, G_j;
-	std::pair<double,double> *newalpha_ij = new std::pair<double,double>;
-	Gmax = -INF;
-	Gmin = INF;
-
-	int *Max_order_index = new int[l];
-	int *Min_order_index = new int[l];
-
+	int *Max_order_index = Malloc(int, l);
+	int *Min_order_index = Malloc(int, l);
+	double *nyG = Malloc(double, l); // -yi*Gi, but in oneclass, y=1, so it's equivalent to -G
 	std::priority_queue<struct feature_node, std::vector<feature_node>, maxcomp> max_heap;
 	std::priority_queue<struct feature_node, std::vector<feature_node>, mincomp> min_heap;
-	int smgd_size;
+	std::pair<double,double> *newalpha_ij = new std::pair<double,double>;
 
-	double *G = new double[l];
 	while(iter < max_iter)
 	{
 		start = clock();
@@ -5676,27 +5700,14 @@ void Solver::oneclass_semigd()
 		Gmin = INF;
 		for(s=0; s<active_size; s++)
 		{
-			int i = index[s];
-			feature_node * const xi = prob->x[i];
-			if(category == ONECLASS)
-			{
-				G[i] = -dot_n(w, xi);
-			}
-			else if(category == SVDD)
-			{
-				G[i] = -dot_n(w, xi) + 0.5*QD[i];
-			}
-			else
-			{
-				fprintf(stderr, "not supported for this type\n");
-				return;
-			}
+			i = index[s];
+			nyG[i] = -calculate_gradient(i);
 			if(sh_mode == SH_ON)
 			{
 				if( is_Iup(alpha_status[i]) )
-					Gmax = max(Gmax, G[i]);
+					Gmax = max(Gmax, nyG[i]);
 				if( is_Ilow(alpha_status[i]) )
-					Gmin = min(Gmin, G[i]);
+					Gmin = min(Gmin, nyG[i]);
 			}
 		}
 		if(sh_mode == SH_ON)
@@ -5715,14 +5726,14 @@ void Solver::oneclass_semigd()
 			}
 			for(s=0; s<active_size; s++)
 			{
-				int i = index[s];
-				if(!is_Iup(alpha_status[i]) && G[i] > Gmax)
+				i = index[s];
+				if(!is_Iup(alpha_status[i]) && nyG[i] > Gmax)
 				{
 					active_size--;
 					swap(index[i],index[active_size]);
 					s--;
 				}
-				else if(!is_Ilow(alpha_status[i]) && G[i] < Gmin)
+				else if(!is_Ilow(alpha_status[i]) && nyG[i] < Gmin)
 				{
 					active_size--;
 					swap(index[i],index[active_size]);
@@ -5737,7 +5748,7 @@ void Solver::oneclass_semigd()
 		{
 			struct feature_node comp;
 			comp.index = index[s];
-			comp.value = G[comp.index];
+			comp.value = nyG[comp.index];
 			if(is_Iup(alpha_status[comp.index]))
 			{
 				if((int) min_heap.size() <  smgd_size)
@@ -5772,10 +5783,10 @@ void Solver::oneclass_semigd()
 		while((int)min_heap.size() > smgd_size)
 			min_heap.pop();
 
-		for(i=0; i<smgd_size; i++)
+		for(s=0; s<smgd_size; s++)
 		{
-			Max_order_index[smgd_size-1-i] = min_heap.top().index;
-			Min_order_index[smgd_size-1-i] = max_heap.top().index;
+			Max_order_index[smgd_size-1-s] = min_heap.top().index;
+			Min_order_index[smgd_size-1-s] = max_heap.top().index;
 			min_heap.pop();
 			max_heap.pop();
 		}
@@ -5785,14 +5796,14 @@ void Solver::oneclass_semigd()
 			RAND_SHUFFLE(Min_order_index, smgd_size);
 		}
 		update_size = 0;
-		for(int index_i = 0; index_i<smgd_size; index_i++)
+		for(s = 0; s<smgd_size; s++)
 		{
 			LOG_0ITER()
 
 			update_size+=2;
 			++cdsteps;
-			i = Max_order_index[index_i];
-			j = Min_order_index[index_i];
+			i = Max_order_index[s];
+			j = Min_order_index[s];
 
 			feature_node const * xi = prob->x[i];
 			feature_node const * xj = prob->x[j];
@@ -5804,21 +5815,9 @@ void Solver::oneclass_semigd()
 				!is_Iup(alpha_status[j]))
 				continue;
 
-			if(category == ONECLASS)
-			{
-				G_i = dot_n(w, xi);
-				G_j = dot_n(w, xj);
-			}
-			else if(category == SVDD)
-			{
-				G_i = dot_n(w, xi) - 0.5*QD[i];
-				G_j = dot_n(w, xj) - 0.5*QD[j];
-			}
-			else
-			{
-				fprintf(stderr, "not supported for this type\n");
-				return;
-			}
+			G_i = calculate_gradient(i);
+			G_j = calculate_gradient(j);
+
 			if(maxIup_le_minIlow(+1, alpha_status[i], G_i, 
 						+1, alpha_status[j], G_j))
 				continue;
@@ -5840,7 +5839,7 @@ void Solver::oneclass_semigd()
 				alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[2]);
 				alpha_status[j] = updateAlphaStatus(alpha[j],upper_bound[2]);
 			}
-			if(index_i != 0 && wss_mode == SEMIGD_G_CONV) {
+			if(s != 0 && wss_mode == SEMIGD_G_CONV) {
 				if(alpha[i] == 0 || alpha[i] == upper_bound[2]
 				|| alpha[j] == 0 || alpha[j] == upper_bound[2]) {
 					break;
