@@ -97,6 +97,8 @@ for data_count, data in enumerate(dataset):
 				cmd = cmd + " -n %g" % (n)
 			if need_r:
 				cmd = cmd + " -r %g" % (r)
+			if 'S' in locals():
+				cmd = cmd + " -S %g" % (S)
 			cmd = cmd+ " %s" % datapath
 			print(str(ind) + ': ' + cmd)
 			if mode == 0:

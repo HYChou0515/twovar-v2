@@ -278,7 +278,7 @@ class OpPerSucs_ObjPlotter(Plotter):
 
 class ShrinkNrNOpPlotter(Plotter):
 	PLOTTYPE = "shrink-nrnop"
-	XLIM = (0, 1e5)
+	XLIM = (0, 1e12)
 	def init_new_fig(self):
 		self.xy_range = []
 	def get_xlim(self, tp):
@@ -320,10 +320,10 @@ class ShrinkNrNOpPlotter(Plotter):
 					val = self.get_obj(line)
 					relval = self.calculate_relval(val, minimal)
 					nr_n_ops = (float(line[line.index('nr_n_ops')+1]))
-					if relval > self.YLIM[1] or nr_n_ops < NrNOpPlotter.XLIM[0]:
-						continue
-					if relval < self.YLIM[0]:# or nr_n_ops > NrNOpPlotter.XLIM[1]:
+					if relval < self.YLIM[0] or nr_n_ops > self.XLIM[1]:
 						stop = True
+					if relval > self.YLIM[1] or nr_n_ops < self.XLIM[0]:
+						continue
 					if max_x > nr_n_ops:
 						continue
 					ys.append(relval)

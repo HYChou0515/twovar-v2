@@ -175,6 +175,7 @@ void exit_with_help()
 	"ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH = 51012,\n"
 	"ONECLASS_L1_SEMIGD_BATCH_1000 = 51111,\n"
 	"ONECLASS_L1_SEMIGD_CONV_1000 = 51211,\n"
+	"ONECLASS_L1_SEMIGD_SORT_1000 = 51211,\n"
 	"//for svdd\n"
 	"SVDD_L1_RD_1000 = 60111,\n"
 	"SVDD_L1_RD_SH = 60112,\n"
@@ -196,6 +197,7 @@ void exit_with_help()
 	"SVDD_L1_SEMIGD_RD_DUALOBJ_SH = 61012,\n"
 	"SVDD_L1_SEMIGD_BATCH_1000 = 61111,\n"
 	"SVDD_L1_SEMIGD_CONV_1000 = 61211,\n"
+	"SVDD_L1_SEMIGD_SORT_1000 = 61311,\n"
 	);
 	exit(1);
 }
@@ -639,6 +641,7 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 			case ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH:
 			case ONECLASS_L1_SEMIGD_BATCH_1000:
 			case ONECLASS_L1_SEMIGD_CONV_1000:
+			case ONECLASS_L1_SEMIGD_SORT_1000:
 			case SVDD_L1_RD_1000:
 			case SVDD_L1_RD_SH:
 			case SVDD_L1_CY_1000:
@@ -659,6 +662,7 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 			case SVDD_L1_SEMIGD_RD_DUALOBJ_SH:
 			case SVDD_L1_SEMIGD_BATCH_1000:
 			case SVDD_L1_SEMIGD_CONV_1000:
+			case SVDD_L1_SEMIGD_SORT_1000:
 				param.eps = 0.01;
 				break;
 		}

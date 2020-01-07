@@ -1004,6 +1004,7 @@ datal = {
 	"real-sim": 72309,
 	"yahoojp": 176203,
 	"yahookr": 460554,
+	"avazu-app": 14596137,
 }
 
 from liblrconf import *
