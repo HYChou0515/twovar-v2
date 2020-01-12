@@ -2509,7 +2509,7 @@ void Solver::use_resume()
 
 #define LOG_0ITER()\
 {\
-	if(iter == 0)\
+	if(iter == 0 && need_logged_0iter)\
 	{\
 		duration += clock()- start;\
 		log_message();\
