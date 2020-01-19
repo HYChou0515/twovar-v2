@@ -16,7 +16,7 @@ dobj = \
 		0.1:
 		{
 			"a9a":-4.86717186982926,
-			"covtype.libsvm.binary.scale":-1.11739483657064,
+			"covtype.libsvm.binary.scale":-1.11739483657068,
 			"ijcnn1":-0.986318105112334,
 			"news20.binary":-0.489118280141929,
 			"rcv1_train.binary":-0.497234506933092,
@@ -38,7 +38,7 @@ dobj = \
 		0.01:
 		{
 			"a9a":-5.20087237213456,
-			"covtype.libsvm.binary.scale":-1.21350649598211,
+			"covtype.libsvm.binary.scale":-1.21350649598212,
 			"ijcnn1":-1.27263012166142,
 			"news20.binary":-0.49584616865586,
 			"rcv1_train.binary":-0.4976152280069958,
