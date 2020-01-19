@@ -3438,7 +3438,6 @@ void Solver::bias_random_greedy()
 					int si = *it;
 					i = index[si];
 					const schar yi = y[i];
-					feature_node * const xi = prob->x[i];
 					G_i = calculate_gradient(i);
 					double nyG_i = -yi*G_i;
 					if( !is_Ilow(alpha_status[i], yi ) )
@@ -4406,7 +4405,6 @@ void Solver::oneclass_second_1000()
 
 void Solver::oneclass_random_greedy()
 {
-	fprintf(stderr, "ERROR: TODO: need to debug (./train -s 50611 -n 0.000220305 -r 0.1 ../data/covtype.libsvm.binary.scale) not ends at iter 88\n");
 	int l = prob->l;
 	int i, j;
 	double G_i, G_j;
@@ -4792,7 +4790,6 @@ void Solver::oneclass_random_greedy_random()
 			{
 				s = *it;
 				i = index[s];
-				feature_node * const xi = prob->x[i];
 				nyG[i] = -calculate_gradient(i);
 			}
 
