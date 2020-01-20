@@ -4736,15 +4736,14 @@ void Solver::oneclass_random_greedy_random()
 {
 	clock_t start;
 	int l = prob->l;
-	int i, j, s, batch_i;
+	int i, j, s, si, batch_i;
 	int smgd_size;
 	double G_i, G_j;
 	int batch_size = l/10; // TODO: 0.1 should be a hyper-parameter
 	int *most_violating_i = Malloc(int, l);
 	int *most_violating_j = Malloc(int, l);
 	double *nyG = Malloc(double, l); // -yi*Gi, but in oneclass, y=1, so it's equivalent to -G
-	std::vector<int> batch_s(batch_size);
-	std::vector<int>::iterator  batch_last;
+	int *batch_s = Malloc(int, batch_size);
 	std::priority_queue<struct feature_node, std::vector<feature_node>, maxcomp> max_heap;
 	std::priority_queue<struct feature_node, std::vector<feature_node>, mincomp> min_heap;
 	std::pair<double,double> *newalpha_ij = new std::pair<double,double>;
@@ -4781,28 +4780,27 @@ void Solver::oneclass_random_greedy_random()
 				// b[4-s-1]=b[3,2,1,0]=0,1,2,3/4,5,6,7/8,9,10,11
 				batch_s[batch_size-s-1] = batch_i+s;
 			}
-			batch_last = batch_s.begin()+batch_size;
 			// inside batch
 			// calculate gradient
-			for(auto it=batch_s.begin(); it!=batch_last; ++it)
+			for(s=0; s<batch_size; s++)
 			{
-				s = *it;
-				i = index[s];
+				si = batch_s[s];
+				i = index[si];
 				nyG[i] = -calculate_gradient(i);
 			}
 
 			smgd_size = adjust_smgd_size(batch_size);
 
 			// determine working set
-			for(auto it=batch_s.begin(); it!=batch_last; ++it)
+			for(s=0; s<batch_size; s++)
 			{
-				s = *it;
+				si = batch_s[s];
 				struct feature_node comp;
-				comp.index = index[s];
+				comp.index = index[si];
 				comp.value = nyG[comp.index];
 				if(is_Iup(alpha_status[comp.index]))
 				{
-					if((int) min_heap.size() <  smgd_size)
+					if((int) min_heap.size() < smgd_size)
 						min_heap.push(comp);
 					else
 					{
