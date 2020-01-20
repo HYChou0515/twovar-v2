@@ -3288,13 +3288,14 @@ static inline void get_most_violating_pairs(
 		std::priority_queue<struct feature_node, std::vector<feature_node>, maxcomp> max_heap,
 		std::priority_queue<struct feature_node, std::vector<feature_node>, mincomp> min_heap,
 		int active_size, int *index, 
-		double *nyG, int *alpha_status, schar *y=NULL)
+		double *nyG, int *alpha_status, schar *y=NULL, int *batch_s=NULL)
 {
 	int smgd_size = *smgd_size_pt;
-	int s;
+	int s, si;
 	schar yc;
-	for(s=0; s<active_size; s++)
+	for(si=0; si<active_size; si++)
 	{
+		s = batch_s==NULL ? si : batch_s[si];
 		struct feature_node comp;
 		comp.index = index[s];
 		comp.value = nyG[comp.index];
@@ -4075,24 +4076,8 @@ void Solver::oneclass_random()
 					continue; // both i,j are not Iup
 			}
 
-			feature_node const * xi = prob->x[i];
-			feature_node const * xj = prob->x[j];
-
-			if(category == ONECLASS)
-			{
-				G_i = dot_n(w, xi);
-				G_j = dot_n(w, xj);
-			}
-			else if(category == SVDD)
-			{
-				G_i = dot_n(w, xi) - 0.5*QD[i];
-				G_j = dot_n(w, xj) - 0.5*QD[j];
-			}
-			else
-			{
-				fprintf(stderr, "not supported for this type\n");
-				return;
-			}
+			G_i = calculate_gradient(i);
+			G_j = calculate_gradient(j);
 
 			if(sh_mode == SH_ON)
 			{
@@ -4163,6 +4148,9 @@ void Solver::oneclass_random()
 						+1, alpha_status[j], G_j))
 				continue;
 
+			feature_node const * xi = prob->x[i];
+			feature_node const * xj = prob->x[j];
+
 			double Q_ij = feature_dot_n(xi, xj);
 			calculate_bias_newalpha(newalpha_ij, QD[i],QD[j],Q_ij,
 					upper_bound[2],upper_bound[2],alpha[i],alpha[j],G_i,G_j,+1,+1);
@@ -4212,7 +4200,7 @@ void Solver::oneclass_first_1000()
 	int l = prob->l;
 	int i, j;
 	double G_i, G_j;
-	double *G = new double[l];
+	double *G = Malloc(double, l);
 	update_size = 2;
 	int Gmax_index= -1, Gmin_index = -1;
 	double Gmax=-INF, Gmin = INF;
@@ -4232,20 +4220,7 @@ void Solver::oneclass_first_1000()
 		for(int s=0; s<active_size; s++)
 		{
 			int i = index[s];
-			feature_node * const xi = prob->x[i];
-			if(category == ONECLASS)
-			{
-				G[i] = dot_n(w, xi);
-			}
-			else if(category == SVDD)
-			{
-				G[i] = dot_n(w, xi) - 0.5*QD[i];
-			}
-			else
-			{
-				fprintf(stderr, "not supported for this type\n");
-				return;
-			}
+			G[i] = calculate_gradient(i);
 			if(is_Iup(alpha_status[i]))
 			{
 				if(-Gmax <= -G[i])
@@ -4254,7 +4229,6 @@ void Solver::oneclass_first_1000()
 					Gmax2_index = Gmax_index;
 					Gmax_index = i;
 				}
-
 			}
 			if(is_Ilow(alpha_status[i]))
 			{
@@ -4326,7 +4300,7 @@ void Solver::oneclass_second_1000()
 	int i, j;
 	update_size = 2;
 	double G_i, G_j;
-	double *G = new double[l];
+	double *G = Malloc(double, l);
 	int Gmax_index= -1, Gmin_index = -1;
 	double Gmax=-INF, smin = INF;
 	std::pair<double,double> *newalpha_ij = new std::pair<double,double>;
@@ -4421,7 +4395,7 @@ void Solver::oneclass_second_1000()
 void Solver::oneclass_random_greedy()
 {
 	int l = prob->l;
-	int i, j;
+	int i, j, s, si;
 	double G_i, G_j;
 	double nGmax, nGmin;
 	double Q_ij;
@@ -4430,20 +4404,20 @@ void Solver::oneclass_random_greedy()
 	int smgd_size = adjust_smgd_size(active_size);
 	int Iup_size = 0;
 	int Ilow_size = 0;
-	int *Iup = new int[smgd_size];
-	int *Ilow = new int[smgd_size];
+	int *Iup = Malloc(int, smgd_size);
+	int *Ilow = Malloc(int, smgd_size);
 
-	double *IupG = new double[smgd_size];
-	double *IlowG = new double[smgd_size];
+	double *IupG = Malloc(double, smgd_size);
+	double *IlowG = Malloc(double, smgd_size);
 	std::pair<double,double> *newalpha_ij = new std::pair<double,double>;
-	std::vector<int> workset_s(smgd_size);
-	std::vector<int>::iterator workset_last;
+
+	int *workset_s = Malloc(int, smgd_size);
+	int workset_size;
 
 	if(isnan(PGmax_old))
 		PGmax_old = INF;
 	if(isnan(PGmin_old))
 		PGmin_old = -INF;
-
 
 	while(iter < max_iter)
 	{
@@ -4473,23 +4447,24 @@ void Solver::oneclass_random_greedy()
 
 			if(rand_mode == CYCLIC)
 			{
-				for(int s = 0; s < smgd_size; s++)
+				for(s=0; s<smgd_size; s++)
 				{
 					if(cycle_i+s >= active_size)
 					{
 						smgd_size = s;
 						break;
 					}
-					workset_s[smgd_size-s-1] = cycle_i+s;
+					workset_s[s] = cycle_i+s;
 				}
-				workset_last = workset_s.begin()+smgd_size;
+				workset_size = smgd_size;
 			}
 			else if(rand_mode == RANDOM)
 			{
-				for(int s = 0; s < smgd_size; s++)
+				for(s=0; s<smgd_size; s++)
 					workset_s[s] = non_static_rand()%active_size;
-				std::sort(workset_s.begin(), workset_s.begin()+smgd_size, std::greater<int>());
-				workset_last = std::unique(workset_s.begin(), workset_s.begin()+smgd_size);
+				std::sort(workset_s,  workset_s+smgd_size);
+				int* last = std::unique(workset_s, workset_s+smgd_size);
+				workset_size = last-workset_s;
 			}
 			else
 			{
@@ -4499,7 +4474,7 @@ void Solver::oneclass_random_greedy()
 			// inner CD
 			int inner_iter = -1; // inner_iter==1 if use first/second to try to update a pair ONCE, if never done it, inner_iter=0
 			bool subprob_solved = false;
-			while( !subprob_solved && inner_iter < l) // this is a while(1) loop and should be break properly
+			while( !subprob_solved && inner_iter == 0) // at most do one inner iteration
 			{
 				inner_iter++;
 				update_size+=2;
@@ -4510,9 +4485,9 @@ void Solver::oneclass_random_greedy()
 					// when shrinking, we must do gradient calculation to shrink
 					Iup_size = 0;
 					Ilow_size = 0;
-					for(auto it=workset_s.begin(); it!=workset_last; ++it)
+					for(s=0; s<workset_size; s++)
 					{
-						int si = *it;
+						si = workset_s[s];
 						i = index[si];
 						if( is_Ilow(alpha_status[i]) )
 							++Ilow_size;
@@ -4532,27 +4507,14 @@ void Solver::oneclass_random_greedy()
 				// as some variables may be shrunk, 
 				// we re-determine Iup and Ilow
 				// calculate G and Iup/Ilow
-				for(auto it=workset_s.begin(); it!=workset_last; ++it)
+				for(s=0; s<workset_size; s++)
 				{
-					int si = *it;
+					si = workset_s[s];
 					i = index[si];
-					feature_node * const xi = prob->x[i];
-					if(category == ONECLASS)
-					{
-						G_i = dot_n(w, xi);
-					}
-					else if(category == SVDD)
-					{
-						G_i = dot_n(w, xi) - 0.5*QD[i];
-					}
-					else
-					{
-						fprintf(stderr, "not supported for this type\n");
-						return;
-					}
+					G_i = calculate_gradient(i);
 					if( !is_Ilow(alpha_status[i]) )
 					{
-						if(-G_i < PGmin_old)
+						if(-G_i < PGmin_old) // PGmin_old == -INF if not shrink
 						{
 							active_size--;
 							swap(index[si], index[active_size]);
@@ -4568,7 +4530,7 @@ void Solver::oneclass_random_greedy()
 					}
 					else if( !is_Iup(alpha_status[i]) )
 					{
-						if(-G_i > PGmax_old)
+						if(-G_i > PGmax_old) // PGmax_old == INF if not shrink
 						{
 							active_size--;
 							swap(index[si], index[active_size]);
@@ -4605,12 +4567,6 @@ void Solver::oneclass_random_greedy()
 						subprob_solved = true;
 						continue;
 					}
-				}
-				if(nGmax-nGmin < (nGmax_cycle-nGmin_cycle)/(1.0*active_size))
-				{
-					subprob_solved = true;
-					++nr_skip_subprob;
-					continue;
 				}
 				if(wss_mode == SEMIGD_FIRST)
 				{
@@ -4753,15 +4709,14 @@ void Solver::oneclass_random_greedy_random()
 {
 	clock_t start;
 	int l = prob->l;
-	int i, j, s, batch_i;
+	int i, j, s, si, batch_i;
 	int smgd_size;
 	double G_i, G_j;
 	int batch_size = l/10; // TODO: 0.1 should be a hyper-parameter
 	int *most_violating_i = Malloc(int, l);
 	int *most_violating_j = Malloc(int, l);
 	double *nyG = Malloc(double, l); // -yi*Gi, but in oneclass, y=1, so it's equivalent to -G
-	std::vector<int> batch_s(batch_size);
-	std::vector<int>::iterator  batch_last;
+	int *batch_s = Malloc(int, batch_size);
 	std::priority_queue<struct feature_node, std::vector<feature_node>, maxcomp> max_heap;
 	std::priority_queue<struct feature_node, std::vector<feature_node>, mincomp> min_heap;
 	std::pair<double,double> *newalpha_ij = new std::pair<double,double>;
@@ -4793,71 +4748,23 @@ void Solver::oneclass_random_greedy_random()
 					batch_size = s;
 					break;
 				}
-				// batch_i=0,4,8
-				// s=0,1,2,3
-				// b[4-s-1]=b[3,2,1,0]=0,1,2,3/4,5,6,7/8,9,10,11
-				batch_s[batch_size-s-1] = batch_i+s;
+				batch_s[s] = batch_i+s;
 			}
-			batch_last = batch_s.begin()+batch_size;
 			// inside batch
 			// calculate gradient
-			for(auto it=batch_s.begin(); it!=batch_last; ++it)
+			for(s=0; s<batch_size; s++)
 			{
-				s = *it;
-				i = index[s];
+				si = batch_s[s];
+				i = index[si];
 				nyG[i] = -calculate_gradient(i);
 			}
 
 			smgd_size = adjust_smgd_size(batch_size);
 
-			// determine working set
-			for(auto it=batch_s.begin(); it!=batch_last; ++it)
-			{
-				s = *it;
-				struct feature_node comp;
-				comp.index = index[s];
-				comp.value = nyG[comp.index];
-				if(is_Iup(alpha_status[comp.index]))
-				{
-					if((int) min_heap.size() <  smgd_size)
-						min_heap.push(comp);
-					else
-					{
-						if(min_heap.top().value < comp.value)
-						{
-							min_heap.pop();
-							min_heap.push(comp);
-						}
-					}
-				}
-				if(is_Ilow(alpha_status[comp.index]))
-				{
-					if((int) max_heap.size() < smgd_size)
-						max_heap.push(comp);
-					else
-					{
-						if(max_heap.top().value > comp.value)
-						{
-							max_heap.pop();
-							max_heap.push(comp);
-						}
-					}
-				}
-			}
-
-			smgd_size = min((int)min_heap.size(), (int)max_heap.size());
-			while((int)max_heap.size() > smgd_size)
-				max_heap.pop();
-			while((int)min_heap.size() > smgd_size)
-				min_heap.pop();
-
-			for(s=0; s<smgd_size; s++)
-			{
-				most_violating_i[smgd_size-1-s] = min_heap.top().index;
-				most_violating_j[smgd_size-1-s] = max_heap.top().index;
-				min_heap.pop();
-				max_heap.pop();
-			}
+			get_most_violating_pairs(
+					most_violating_i, most_violating_j, &smgd_size,
+					max_heap, min_heap, batch_size,
+					index, nyG, alpha_status, NULL, batch_s);
 
 			if(wss_mode == SEMIGD_G_RAND)
 			{
@@ -4991,9 +4898,11 @@ void Solver::oneclass_greedy_random()
 		}
 
 		smgd_size = adjust_smgd_size(active_size);
-		if(wss_mode == SEMIGD_G_SORT) {
+		if(wss_mode == SEMIGD_G_SORT) 
+		{
 			feature_node* comp_G = new feature_node[active_size];
-			for(s=0; s<active_size; s++) {
+			for(s=0; s<active_size; s++) 
+			{
 				comp_G[s].index=s;
 				comp_G[s].value=nyG[s];
 			}
@@ -5008,7 +4917,8 @@ void Solver::oneclass_greedy_random()
 					most_violating_j[min_size++] = comp_G[s].index;
 			smgd_size = min(min_size, max_size);
 		}
-		else {
+		else 
+		{
 			get_most_violating_pairs(
 					most_violating_i, most_violating_j, &smgd_size,
 					max_heap, min_heap, active_size,
