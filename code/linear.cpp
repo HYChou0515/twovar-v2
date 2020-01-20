@@ -4481,7 +4481,7 @@ void Solver::oneclass_random_greedy()
 						smgd_size = s;
 						break;
 					}
-					workset_s[smgd_size-s-1] = cycle_i+s;
+					workset_s[s] = cycle_i+s;
 				}
 				workset_size = smgd_size;
 			}
@@ -4489,7 +4489,7 @@ void Solver::oneclass_random_greedy()
 			{
 				for(s=0; s<smgd_size; s++)
 					workset_s[s] = non_static_rand()%active_size;
-				std::sort(workset_s,  workset_s+smgd_size, std::greater<int>());
+				std::sort(workset_s,  workset_s+smgd_size);
 				int* last = std::unique(workset_s, workset_s+smgd_size);
 				workset_size = last-workset_s;
 			}
@@ -4775,10 +4775,7 @@ void Solver::oneclass_random_greedy_random()
 					batch_size = s;
 					break;
 				}
-				// batch_i=0,4,8
-				// s=0,1,2,3
-				// b[4-s-1]=b[3,2,1,0]=0,1,2,3/4,5,6,7/8,9,10,11
-				batch_s[batch_size-s-1] = batch_i+s;
+				batch_s[s] = batch_i+s;
 			}
 			// inside batch
 			// calculate gradient
