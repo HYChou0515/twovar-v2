@@ -4076,24 +4076,8 @@ void Solver::oneclass_random()
 					continue; // both i,j are not Iup
 			}
 
-			feature_node const * xi = prob->x[i];
-			feature_node const * xj = prob->x[j];
-
-			if(category == ONECLASS)
-			{
-				G_i = dot_n(w, xi);
-				G_j = dot_n(w, xj);
-			}
-			else if(category == SVDD)
-			{
-				G_i = dot_n(w, xi) - 0.5*QD[i];
-				G_j = dot_n(w, xj) - 0.5*QD[j];
-			}
-			else
-			{
-				fprintf(stderr, "not supported for this type\n");
-				return;
-			}
+			G_i = calculate_gradient(i);
+			G_j = calculate_gradient(j);
 
 			if(sh_mode == SH_ON)
 			{
@@ -4164,6 +4148,9 @@ void Solver::oneclass_random()
 						+1, alpha_status[j], G_j))
 				continue;
 
+			feature_node const * xi = prob->x[i];
+			feature_node const * xj = prob->x[j];
+
 			double Q_ij = feature_dot_n(xi, xj);
 			calculate_bias_newalpha(newalpha_ij, QD[i],QD[j],Q_ij,
 					upper_bound[2],upper_bound[2],alpha[i],alpha[j],G_i,G_j,+1,+1);
@@ -4213,7 +4200,7 @@ void Solver::oneclass_first_1000()
 	int l = prob->l;
 	int i, j;
 	double G_i, G_j;
-	double *G = new double[l];
+	double *G = Malloc(double, l);
 	update_size = 2;
 	int Gmax_index= -1, Gmin_index = -1;
 	double Gmax=-INF, Gmin = INF;
@@ -4233,20 +4220,7 @@ void Solver::oneclass_first_1000()
 		for(int s=0; s<active_size; s++)
 		{
 			int i = index[s];
-			feature_node * const xi = prob->x[i];
-			if(category == ONECLASS)
-			{
-				G[i] = dot_n(w, xi);
-			}
-			else if(category == SVDD)
-			{
-				G[i] = dot_n(w, xi) - 0.5*QD[i];
-			}
-			else
-			{
-				fprintf(stderr, "not supported for this type\n");
-				return;
-			}
+			G[i] = calculate_gradient(i);
 			if(is_Iup(alpha_status[i]))
 			{
 				if(-Gmax <= -G[i])
@@ -4255,7 +4229,6 @@ void Solver::oneclass_first_1000()
 					Gmax2_index = Gmax_index;
 					Gmax_index = i;
 				}
-
 			}
 			if(is_Ilow(alpha_status[i]))
 			{
@@ -4327,7 +4300,7 @@ void Solver::oneclass_second_1000()
 	int i, j;
 	update_size = 2;
 	double G_i, G_j;
-	double *G = new double[l];
+	double *G = Malloc(double, l);
 	int Gmax_index= -1, Gmin_index = -1;
 	double Gmax=-INF, smin = INF;
 	std::pair<double,double> *newalpha_ij = new std::pair<double,double>;
@@ -4445,7 +4418,6 @@ void Solver::oneclass_random_greedy()
 		PGmax_old = INF;
 	if(isnan(PGmin_old))
 		PGmin_old = -INF;
-
 
 	while(iter < max_iter)
 	{
