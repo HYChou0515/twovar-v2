@@ -3,27 +3,23 @@ resumefolder='resume'
 
 runtype = [
 		## FOR EXP: 2-cd vs new-4 vs semigd vs semigd-rd
-#		"SVDD_L1_CY_1000",
-#		"SVDD_L1_SEMIGD_CY_FIRST_1000", #r=4
-#		"SVDD_L1_SEMIGD_1000", #r=0.1
-#		"SVDD_L1_FIRST_1000",
-
-#		"SVDD_L1_CY_1000",
-#		"SVDD_L1_CY_SH",
-#		"SVDD_L1_SEMIGD_SH", #r=0.1
-#		"SVDD_L1_SEMIGD_1000", #r=0.1
-
 		"SVDD_L1_CY_1000",
-#		"SVDD_L1_CY_SH",
+		"SVDD_L1_FIRST_1000",
+		"SVDD_L1_SEMIGD_CY_FIRST_1000", #r=4
 		"SVDD_L1_SEMIGD_1000", #r=0.1
-		"SVDD_L1_SEMIGD_SORT_1000", #r=0.1
-#		"SVDD_L1_SEMIGD_SH", #r=0.1
+		"SVDD_L1_SEMIGD_BATCH_1000", #r=0.1
+
+		"ONECLASS_L1_CY_1000",
+		"ONECLASS_L1_FIRST_1000",
+		"ONECLASS_L1_SEMIGD_CY_FIRST_1000", #r=4
+		"ONECLASS_L1_SEMIGD_1000", #r=0.1
+		"ONECLASS_L1_SEMIGD_BATCH_1000", #r=0.1
 ]
 nlist = [0.1,0.01]
 clist = []
 elist = [1e-2]
 rlist = [
-#	4,
+	4,
 	0.1
 ]
 m = 100
