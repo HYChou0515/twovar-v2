@@ -4421,7 +4421,7 @@ void Solver::oneclass_second_1000()
 void Solver::oneclass_random_greedy()
 {
 	int l = prob->l;
-	int i, j;
+	int i, j, s, si;
 	double G_i, G_j;
 	double nGmax, nGmin;
 	double Q_ij;
@@ -4436,8 +4436,9 @@ void Solver::oneclass_random_greedy()
 	double *IupG = new double[smgd_size];
 	double *IlowG = new double[smgd_size];
 	std::pair<double,double> *newalpha_ij = new std::pair<double,double>;
-	std::vector<int> workset_s(smgd_size);
-	std::vector<int>::iterator workset_last;
+
+	int *workset_s = new int[smgd_size];
+	int workset_size;
 
 	if(isnan(PGmax_old))
 		PGmax_old = INF;
@@ -4473,7 +4474,7 @@ void Solver::oneclass_random_greedy()
 
 			if(rand_mode == CYCLIC)
 			{
-				for(int s = 0; s < smgd_size; s++)
+				for(s=0; s<smgd_size; s++)
 				{
 					if(cycle_i+s >= active_size)
 					{
@@ -4482,14 +4483,15 @@ void Solver::oneclass_random_greedy()
 					}
 					workset_s[smgd_size-s-1] = cycle_i+s;
 				}
-				workset_last = workset_s.begin()+smgd_size;
+				workset_size = smgd_size;
 			}
 			else if(rand_mode == RANDOM)
 			{
-				for(int s = 0; s < smgd_size; s++)
+				for(s=0; s<smgd_size; s++)
 					workset_s[s] = non_static_rand()%active_size;
-				std::sort(workset_s.begin(), workset_s.begin()+smgd_size, std::greater<int>());
-				workset_last = std::unique(workset_s.begin(), workset_s.begin()+smgd_size);
+				std::sort(workset_s,  workset_s+smgd_size, std::greater<int>());
+				int* last = std::unique(workset_s, workset_s+smgd_size);
+				workset_size = last-workset_s;
 			}
 			else
 			{
@@ -4499,7 +4501,7 @@ void Solver::oneclass_random_greedy()
 			// inner CD
 			int inner_iter = -1; // inner_iter==1 if use first/second to try to update a pair ONCE, if never done it, inner_iter=0
 			bool subprob_solved = false;
-			while( !subprob_solved && inner_iter < l) // this is a while(1) loop and should be break properly
+			while( !subprob_solved && inner_iter == 0) // at most do one inner iteration
 			{
 				inner_iter++;
 				update_size+=2;
@@ -4510,9 +4512,9 @@ void Solver::oneclass_random_greedy()
 					// when shrinking, we must do gradient calculation to shrink
 					Iup_size = 0;
 					Ilow_size = 0;
-					for(auto it=workset_s.begin(); it!=workset_last; ++it)
+					for(s=0; s<workset_size; s++)
 					{
-						int si = *it;
+						si = workset_s[s];
 						i = index[si];
 						if( is_Ilow(alpha_status[i]) )
 							++Ilow_size;
@@ -4532,27 +4534,14 @@ void Solver::oneclass_random_greedy()
 				// as some variables may be shrunk, 
 				// we re-determine Iup and Ilow
 				// calculate G and Iup/Ilow
-				for(auto it=workset_s.begin(); it!=workset_last; ++it)
+				for(s=0; s<workset_size; s++)
 				{
-					int si = *it;
+					si = workset_s[s];
 					i = index[si];
-					feature_node * const xi = prob->x[i];
-					if(category == ONECLASS)
-					{
-						G_i = dot_n(w, xi);
-					}
-					else if(category == SVDD)
-					{
-						G_i = dot_n(w, xi) - 0.5*QD[i];
-					}
-					else
-					{
-						fprintf(stderr, "not supported for this type\n");
-						return;
-					}
+					G_i = calculate_gradient(i);
 					if( !is_Ilow(alpha_status[i]) )
 					{
-						if(-G_i < PGmin_old)
+						if(-G_i < PGmin_old) // PGmin_old == -INF if not shrink
 						{
 							active_size--;
 							swap(index[si], index[active_size]);
@@ -4568,7 +4557,7 @@ void Solver::oneclass_random_greedy()
 					}
 					else if( !is_Iup(alpha_status[i]) )
 					{
-						if(-G_i > PGmax_old)
+						if(-G_i > PGmax_old) // PGmax_old == INF if not shrink
 						{
 							active_size--;
 							swap(index[si], index[active_size]);
@@ -4605,12 +4594,6 @@ void Solver::oneclass_random_greedy()
 						subprob_solved = true;
 						continue;
 					}
-				}
-				if(nGmax-nGmin < (nGmax_cycle-nGmin_cycle)/(1.0*active_size))
-				{
-					subprob_solved = true;
-					++nr_skip_subprob;
-					continue;
 				}
 				if(wss_mode == SEMIGD_FIRST)
 				{
