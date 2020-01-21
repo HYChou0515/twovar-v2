@@ -15,15 +15,15 @@ runtype = [
 		"ONECLASS_L1_SEMIGD_1000", #r=0.1
 		#"ONECLASS_L1_SEMIGD_BATCH_1000", #r=0.1
 ]
-nlist = [0.1]
+nlist = [0.1,0.01]
 clist = []
 elist = [1e-2]
 rlist = [
 	4,
 #	0.1
 ]
-S = 1e9
-timeout = 3600
+m = 300000
+timeout = 7200
 tolerance = 1e-10
 dataset = [
 	"yahookr",

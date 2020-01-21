@@ -4474,9 +4474,8 @@ void Solver::oneclass_random_greedy()
 			// inner CD
 			int inner_iter = -1; // inner_iter==1 if use first/second to try to update a pair ONCE, if never done it, inner_iter=0
 			bool subprob_solved = false;
-			while( !subprob_solved && inner_iter == 0) // at most do one inner iteration
+			while( ++inner_iter == 0 && !subprob_solved) // at most do one inner iteration
 			{
-				inner_iter++;
 				update_size+=2;
 				++cdsteps;
 				if(sh_mode == SH_OFF)
