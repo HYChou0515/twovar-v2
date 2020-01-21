@@ -90,13 +90,15 @@ for data_count, data in enumerate(dataset):
 			#		sys.stderr.write(str(e)+os.linesep)
 			#		continue
 			#cmd = "%s%s -s %d -c %g -e %g -m %d -t %d -o %.16g" % (ROOT_PATH, train, runs[tp], tc, e, m, timeout, opt_val)
-			cmd = "%s%s -s %d -c %g -m %d -t %d" % (ROOT_PATH, train, runs[tp], tc, m, timeout)
+			cmd = "%s%s -s %d -c %g -t %d" % (ROOT_PATH, train, runs[tp], tc, timeout)
 			if need_e:
 				cmd = cmd + " -e %g" % (e)
 			if need_n:
 				cmd = cmd + " -n %g" % (n)
 			if need_r:
 				cmd = cmd + " -r %g" % (r)
+			if 'm' in locals():
+				cmd = cmd + " -m %d" % (m)
 			if 'S' in locals():
 				cmd = cmd + " -S %g" % (S)
 			cmd = cmd+ " %s" % datapath

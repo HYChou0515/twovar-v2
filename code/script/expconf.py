@@ -7,35 +7,34 @@ runtype = [
 		"SVDD_L1_FIRST_1000",
 		"SVDD_L1_SEMIGD_CY_FIRST_1000", #r=4
 		"SVDD_L1_SEMIGD_1000", #r=0.1
-		"SVDD_L1_SEMIGD_BATCH_1000", #r=0.1
+		#"SVDD_L1_SEMIGD_BATCH_1000", #r=0.1
 
 		"ONECLASS_L1_CY_1000",
 		"ONECLASS_L1_FIRST_1000",
 		"ONECLASS_L1_SEMIGD_CY_FIRST_1000", #r=4
 		"ONECLASS_L1_SEMIGD_1000", #r=0.1
-		"ONECLASS_L1_SEMIGD_BATCH_1000", #r=0.1
+		#"ONECLASS_L1_SEMIGD_BATCH_1000", #r=0.1
 ]
-nlist = [0.1,0.01]
+nlist = [0.1]
 clist = []
 elist = [1e-2]
 rlist = [
 	4,
-	0.1
+#	0.1
 ]
-m = 100
 S = 1e9
-timeout = 600
+timeout = 3600
 tolerance = 1e-10
 dataset = [
-#	"yahookr",
-#	"yahoojp",
-#	"covtype.libsvm.binary.scale",
-#	"a9a",
-#	"ijcnn1",
-#	"rcv1_train.binary",
-#	"real-sim",
-#	"news20.binary",
-	"avazu-app"
+	"yahookr",
+	"yahoojp",
+	"covtype.libsvm.binary.scale",
+	"a9a",
+	"ijcnn1",
+	"rcv1_train.binary",
+	"real-sim",
+	"news20.binary",
+#	"avazu-app"
 	]
 
 PROCESS_MAX = 1
