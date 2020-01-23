@@ -81,6 +81,7 @@ class Plotter(object):
 			self.draw()
 
 	def draw(self):
+		print('draw %s, C=%g' % (self.dstr, self.c))
 		self.setup_color_marker()
 		self.draw_fig()
 
@@ -398,9 +399,9 @@ class NrNOpPlotter(Plotter):
 				val = self.get_obj(line)
 				relval = self.calculate_relval(val, minimal)
 				nr_n_ops = (float(line[line.index('nr_n_ops')+1]))
-				if relval > self.YLIM[1] or nr_n_ops < NrNOpPlotter.XLIM[0]:
+				if relval > self.YLIM[1] or nr_n_ops < self.XLIM[0]:
 					continue
-				if relval < self.YLIM[0] or nr_n_ops > NrNOpPlotter.XLIM[1]:
+				if relval < self.YLIM[0] or nr_n_ops > self.XLIM[1]:
 					#if len(ys) == 0 or len(xs) == 0:
 					#	break
 					#interpolate_rate = 1-max((nr_n_ops-NrNOpPlotter.XLIM[1])/(nr_n_ops-xs[-1]),
@@ -417,9 +418,9 @@ class NrNOpPlotter(Plotter):
 				max_y = max(relval,max_y)
 				#print('nr_n_ops: %.16g\t relval: %.16g' % (nr_n_ops, relval))
 		xy_range = (min_x, max_x, min_y, max_y)
+		print("xy_range={}".format(xy_range))
 		if all(rng is not None for rng in xy_range):
 			self.xy_range.append(xy_range)
-		print("xy_range={}".format(xy_range))
 		logfile.close()
 		return ys, xs
 	def setup_fig(self):

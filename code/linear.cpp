@@ -4437,7 +4437,6 @@ void Solver::oneclass_random_greedy()
 		update_size = 0;
 		success_size = 0;
 		n_exchange = 0;
-		int nr_skip_subprob = 0;
 		double nGmax_cycle = -INF;
 		double nGmin_cycle = INF;
 		for(int cycle_i = 0; cycle_i < active_size; cycle_i+=smgd_size)
@@ -4473,10 +4472,10 @@ void Solver::oneclass_random_greedy()
 			}
 			// inner CD
 			int inner_iter = -1; // inner_iter==1 if use first/second to try to update a pair ONCE, if never done it, inner_iter=0
+			int ttl_inner_iter = 1; // solve inner CD exactly once
 			bool subprob_solved = false;
-			while( !subprob_solved && inner_iter == 0) // at most do one inner iteration
+			while( ++inner_iter < ttl_inner_iter && !subprob_solved) // at most do one inner iteration
 			{
-				inner_iter++;
 				update_size+=2;
 				++cdsteps;
 				if(sh_mode == SH_OFF)
@@ -4567,6 +4566,11 @@ void Solver::oneclass_random_greedy()
 						subprob_solved = true;
 						continue;
 					}
+				}
+				if(nGmax-nGmin < (nGmax_cycle-nGmin_cycle)/(1.0*active_size))
+				{
+					subprob_solved = true;
+					continue;
 				}
 				if(wss_mode == SEMIGD_FIRST)
 				{
