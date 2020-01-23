@@ -251,6 +251,9 @@ def compress(filepath, filetmp, max_line):
 
 	with open(filepath) as f:
 		colnames = f.readline().strip().split(' ')[::2]
+		if cmpr_line <= 0:
+			print('%s has too few lines, skip' % (filepath))
+			sys.exit(0)
 		aggregator = Aggregator(colnames, cmpr_line)
 
 	def next_n_lines(f, n):
@@ -315,5 +318,5 @@ def main():
 if __name__ == '__main__':
 	try:
 		main()
-	except e:
+	except Exception as e:
 		print(e)
