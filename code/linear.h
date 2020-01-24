@@ -246,6 +246,7 @@ struct parameter
 	double max_nr_n_ops; // this *= prob->l
 	double opt_val;
 	double nu;	/* for one-class formulation */
+	int scaled; // to solve a scaled problem or not
 
 	struct resume *_resume;
 	FILE* log_fp;

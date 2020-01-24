@@ -932,13 +932,13 @@ public:
 
 	// problem related
 	const problem *prob;
+	const parameter *param;
 	double *QD;
 	double *diag;
 	double *upper_bound;
 	schar *y;
 	double *w;
 	double *alpha;
-	double *linear_terms;
 	int *alpha_status;
 
 	// arguments and options
@@ -1041,7 +1041,7 @@ public:
 	RandMode rand_mode;
 	const char* solver_name;
 	//other function
-	double calculate_obj();
+	double calculate_obj(int scaled);
 	double calculate_rho();
 	double calculate_gradient(int i);
 	void update_two_alpha(std::pair<double,double> *newalpha_ij, int i, int j);
@@ -1395,23 +1395,42 @@ Solver::Solver(int _solver_type)
 	}
 #undef SAVE_NAME
 }
-double Solver::calculate_obj()
+double Solver::calculate_obj(int scaled=-1)
 {
 	int i;
 	double v = 0;
+	if(scaled == -1)
+	{
+		scaled = param->scaled;
+	}
+	/* 
+		if param->scaled == scaled
+			return v
+		elif param->scaled == 0
+			v is original obj
+			return scaled(v)
+		elif param->scaled == 1
+			v is scaled obj
+			return reverse_scaled(v)
+	*/
 	switch(category)
 	{
 		case ONE_NOBIAS:
 		case TWO_NOBIAS:
 		case TWO_BIAS:
 		{
-			for(i=0; i<prob->n; i++)
-				v += w[i]*w[i];
-			for(i=0; i<prob->l; i++)
+			if(scaled == param->scaled)
 			{
-				v += alpha[i]*(alpha[i]*diag[GETI(i)] - 2);
+				for(i=0; i<prob->n; i++)
+					v += w[i]*w[i];
+				for(i=0; i<prob->l; i++)
+				{
+					v += alpha[i]*(alpha[i]*diag[GETI(i)] - 2);
+				}
+				v /= 2;
 			}
-			v /= 2;
+			else
+				v = nan("");
 			break;
 		}
 		case ONECLASS:
@@ -1419,15 +1438,30 @@ double Solver::calculate_obj()
 			for(i=0; i<prob->n; i++)
 				v += w[i] * w[i];
 			v /= 2;
+			if(scaled == 1 && param->scaled == 0)
+			{
+				// return scaled v
+				v *= (param->nu * prob->l) * (param->nu * prob->l);
+			}
+			if(scaled == 0 && param->scaled == 1)
+			{
+				// return reversed scaled v
+				v /= (param->nu * prob->l) * (param->nu * prob->l);
+			}
 			break;
 		}
 		case SVDD:
 		{
-			for(i=0; i<prob->n; i++)
-				v += w[i] * w[i];
-			for(i=0; i<prob->l; i++)
-				v -= alpha[i]*QD[i];
-			v /= 2;
+			if(scaled == param->scaled)
+			{
+				for(i=0; i<prob->n; i++)
+					v += w[i] * w[i];
+				for(i=0; i<prob->l; i++)
+					v -= alpha[i]*QD[i];
+				v /= 2;
+			}
+			else
+				v = nan("");
 			break;
 		}
 	}
@@ -1624,7 +1658,8 @@ void Solver:: countSVs()
 void Solver::log_message()
 {
 	unsigned long long cur_nr_n_ops = nr_n_ops; // after this method, nr_n_ops may increased (if sparse_op used), so we save it before any operation
-	double new_obj = calculate_obj();
+	double new_obj = calculate_obj(0);
+	double scaled_obj = calculate_obj(1);
 
 	int cur_success_size = success_size;
 
@@ -1665,6 +1700,7 @@ void Solver::log_message()
 		log_info("t %f ", (double)(duration)/CLOCKS_PER_SEC);
 
 		log_info("obj %.16g ", new_obj);
+		log_info("scaledobj %.16g ", scaled_obj);
 		log_info("decr_rate %.3e ", (last_obj-new_obj)/fabs(new_obj));
 		log_info("actsize %d ", active_size);
 		log_info("sucsize %d ", cur_success_size);
@@ -5000,13 +5036,19 @@ static inline void svdd_update(
 	int l = prob->l;
 	int i;
 	double *QD = new double[l];
-	double *linear_terms = new double[l];
 	double *alpha =  new double[l];
 	double C = param->C;
 	int *alpha_status = new int[l];
 	int *index = new int[l];
 	double diag[3] = {1, 0, 1};//need to check
 	double upper_bound[3] = {INF, 0, INF};
+
+	if(param->scaled != 0)
+	{
+		// only support non-scaled svdd yet
+		fprintf(stderr, "ERROR: unknown param.scaled value %d\n", param->scaled);
+		return;
+	}
 
 	if(param->solver_type == SVDD_L1_RD_1000
 	|| param->solver_type == SVDD_L1_RD_SH
@@ -5059,18 +5101,17 @@ static inline void svdd_update(
 		alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[2]);
 		feature_node * const xi = prob->x[i];
 		QD[i] = sparse_operator::nrm2_sq(xi);
-		linear_terms[i] = -0.5 * QD[i];
 		sparse_operator::axpy(alpha[i], xi, w);
 		index[i] = i;
 	}
 	Solver solver = Solver(solver_type);
 	solver.prob = prob;
+	solver.param = param;
 	solver.w = w;
 	solver.w_size = prob->n;
 	solver.alpha = alpha;
 	solver.eps = param->eps;
 	solver.QD = QD;
-	solver.linear_terms = linear_terms;
 	solver.alpha_status = alpha_status;
 	solver.index = index;
 	solver.diag = diag;
@@ -5219,6 +5260,9 @@ static inline void oneclass_update(
 	// default solver_type: ONE_L2_CY_SH
 	double diag[3] = {1, 0, 1};//need to check
 	double upper_bound[3] = {INF, 0, INF};
+	double max_alpha = INF;
+	double remainder_alpha = 0;
+	int n = (int)(nu*l);  //number of alpha initialized as max_alpha
 
 	if(param->solver_type == ONECLASS_L1_RD_1000
 	|| param->solver_type == ONECLASS_L1_RD_SH
@@ -5245,20 +5289,36 @@ static inline void oneclass_update(
 	{
 		diag[0] = 0;
 		diag[2] = 0;
-		upper_bound[0] = 1;
-		upper_bound[2] = 1;
+		if(param->scaled == 0)
+		{
+			upper_bound[0] = 1.0/(nu*l);
+			upper_bound[2] = 1.0/(nu*l);
+			max_alpha = 1.0/(nu*l);
+			remainder_alpha = 1-n/(nu*l);
+		}
+		else if(param->scaled == 1)
+		{
+			upper_bound[0] = 1;
+			upper_bound[2] = 1;
+			max_alpha = 1;
+			remainder_alpha = nu*l-n;
+		}
+		else
+		{
+			fprintf(stderr, "ERROR: unknown param.scaled value %d\n", param->scaled);
+			return;
+		}
 	}
 
 	// Initial alpha can be set here. Note that
 	// 0 <= alpha[i] <= upper_bound[GETI(i)]
-	int n = (int)(nu*l); 
  	for(i=0; i<n; i++)
 	{
-		alpha[i] = 1;
+		alpha[i] = max_alpha;
 	}
 	if(n<l)
 	{
-		alpha[i] = nu*l-n;
+		alpha[i] = remainder_alpha;
 	}
 	for(i=n+1; i<l; i++)
 	{
@@ -5276,6 +5336,7 @@ static inline void oneclass_update(
 	}
 	Solver solver = Solver(solver_type);
 	solver.prob = prob;
+	solver.param = param;
 	solver.w = w;
 	solver.w_size = prob->n;
 	solver.alpha = alpha;
@@ -5483,6 +5544,7 @@ static inline void two_bias_update(
 	}
 	Solver solver = Solver(solver_type);
 	solver.prob = prob;
+	solver.param = param;
 	solver.w = w;
 	solver.w_size = w_size;
 	solver.alpha = alpha;
@@ -5736,6 +5798,7 @@ static inline void onetwo_nobias_update(
 	}
 	Solver solver = Solver(solver_type);
 	solver.prob = prob;
+	solver.param = param;
 	solver.w = w;
 	solver.w_size = w_size;
 	solver.alpha = alpha;
