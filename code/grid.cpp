@@ -440,6 +440,7 @@ void parse_stdin(char *input_file_name, GridItem* grid_item, char *param_str)
 	grid_item->param.nu = 0.1;
 	grid_item->param.nr_weight = 0;
 	grid_item->param.scaled = -1;
+	grid_item->param.normed = 0;
 	grid_item->param.weight_label = NULL;
 	grid_item->param.weight = NULL;
 	grid_item->param.init_sol = NULL;

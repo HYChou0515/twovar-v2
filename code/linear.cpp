@@ -5100,7 +5100,15 @@ static inline void svdd_update(
 	{
 		alpha_status[i] = updateAlphaStatus(alpha[i],upper_bound[2]);
 		feature_node * const xi = prob->x[i];
-		QD[i] = sparse_operator::nrm2_sq(xi);
+		if(param->normed == 0)
+			QD[i] = sparse_operator::nrm2_sq(xi);
+		else if(param->normed == 1)
+			QD[i] = 1;
+		else
+		{
+			fprintf(stderr, "ERROR: unknown param.normed value %d\n", param->normed);
+			return;
+		}
 		sparse_operator::axpy(alpha[i], xi, w);
 		index[i] = i;
 	}
