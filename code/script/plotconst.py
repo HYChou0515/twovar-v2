@@ -1,5 +1,8 @@
 dobj = \
 {
+	"svddL1nscaled":
+	{
+	},
 	"svddL1n":
 	{
 		0.2:
@@ -175,7 +178,7 @@ dobj = \
 			"yahookr":-0.499817159734992,
 		},
 	},
-	"oneL1n":
+	"oneL1nscaled":
 	{
 		0.2:
 		{
@@ -258,7 +261,7 @@ dobj = \
 			"yahookr": 0.387807357091539,
 		},
 	},
-	"oneL2n":
+	"oneL2nscaled":
 	{
 		0.2:
 		{
@@ -1021,6 +1024,7 @@ class LogInfo(object):
 		self.r = None
 		self.n = None
 		self.N = None # n=1/(c*l)
+		self.scaled = None
 		for i in range(1, len(tokens)):
 			token = tokens[i]
 			if token[0] == 'c':
@@ -1032,6 +1036,13 @@ class LogInfo(object):
 				self.r = float(token[1:])
 			if token[0] == 'n':
 				self.n = float(token[1:])
+			if token[0] == 'L':
+				self.scaled = int(token[1:])
+		if self.scaled is None:
+			if is_oneclass(self.stype) == 1:
+				self.scaled = 1
+			else:
+				self.scaled = 0
 
 		self.loss = "L1" if is_L1(self.stype) else "L2"
 		def true_and_notNone(a, b):
@@ -1070,6 +1081,8 @@ class LogInfo(object):
 		else:
 			dobj_key = "%sc" % (self.loss)
 			dobj_par = self.c
+		if self.scaled == 1:
+			dobj_key = "%sscaled" % (dobj_key)
 		return (dobj_key, dobj_par)
 
 	def get_obj_minimal(self):

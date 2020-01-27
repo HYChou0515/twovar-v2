@@ -1452,16 +1452,23 @@ double Solver::calculate_obj(int scaled=-1)
 		}
 		case SVDD:
 		{
-			if(scaled == param->scaled)
+			double quadratic = 0;
+			double linear = 0;
+			for(i=0; i<prob->n; i++)
+				quadratic += w[i] * w[i];
+			for(i=0; i<prob->l; i++)
+				linear -= alpha[i]*QD[i];
+			if(scaled == 1 && param->scaled == 0)
 			{
-				for(i=0; i<prob->n; i++)
-					v += w[i] * w[i];
-				for(i=0; i<prob->l; i++)
-					v -= alpha[i]*QD[i];
-				v /= 2;
+				quadratic *= (param->nu * prob->l) * (param->nu * prob->l);
+				linear *= (param->nu * prob->l);
 			}
-			else
-				v = nan("");
+			if(scaled == 0 && param->scaled == 1)
+			{
+				quadratic /= (param->nu * prob->l) * (param->nu * prob->l);
+				linear /= (param->nu * prob->l);
+			}
+			v = (quadratic+linear)/2;
 			break;
 		}
 	}
@@ -5042,13 +5049,9 @@ static inline void svdd_update(
 	int *index = new int[l];
 	double diag[3] = {1, 0, 1};//need to check
 	double upper_bound[3] = {INF, 0, INF};
-
-	if(param->scaled != 0)
-	{
-		// only support non-scaled svdd yet
-		fprintf(stderr, "ERROR: unknown param.scaled value %d\n", param->scaled);
-		return;
-	}
+	double max_alpha = INF;
+	double remainder_alpha = 0;
+	int n = (int)(1.0/C);  //number of alpha initialized as max_alpha
 
 	if(param->solver_type == SVDD_L1_RD_1000
 	|| param->solver_type == SVDD_L1_RD_SH
@@ -5075,23 +5078,32 @@ static inline void svdd_update(
 	{
 		diag[0] = 0;
 		diag[2] = 0;
-		upper_bound[0] = C;
-		upper_bound[2] = C;
-	}
-	if(C > (double)1/l)
-	{
-		double sum_alpha = 1;
-		for(i=0; i<l; i++)
+		if(param->scaled == 0)
 		{
-			alpha[i] = min(C,sum_alpha);
-			sum_alpha -= alpha[i];
+			upper_bound[0] = C;
+			upper_bound[2] = C;
+			max_alpha = C;
+			remainder_alpha = 1-n*C;
+		}
+		else if(param->scaled == 1)
+		{
+			upper_bound[0] = 1.0;
+			upper_bound[2] = 1.0;
+			max_alpha = 1.0;
+			remainder_alpha = 1.0/C-n;
+		}
+		else
+		{
+			fprintf(stderr, "ERROR: unknown param.scaled value %d\n", param->scaled);
+			return;
 		}
 	}
-	else
-	{
-		fprintf(stderr, "ERROR: not implement C <= 1/l yet\n");
-		return;
-	}
+	for(i=0; i<n; i++)
+		alpha[i] = max_alpha;
+	if(n<l)
+		alpha[i] = remainder_alpha;
+	for(i=n+1; i<l; i++)
+		alpha[i] = 0;
 
 	for(i=0; i<prob->n; i++)
 		w[i] = 0;
@@ -5321,17 +5333,11 @@ static inline void oneclass_update(
 	// Initial alpha can be set here. Note that
 	// 0 <= alpha[i] <= upper_bound[GETI(i)]
  	for(i=0; i<n; i++)
-	{
 		alpha[i] = max_alpha;
-	}
 	if(n<l)
-	{
 		alpha[i] = remainder_alpha;
-	}
 	for(i=n+1; i<l; i++)
-	{
 		alpha[i] = 0;
-	}
 	for(i=0; i<prob->n; i++)
 		w[i] = 0;
 	for(i=0; i<l; i++)
