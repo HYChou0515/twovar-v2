@@ -1,0 +1,131 @@
+Introduction
+============
+
+This is the experiment code for the paper: 
+"Dual Coordinate-Descent Methods for Linear One-Class SVM and SVDD".
+This README shows more details how to run with this code.
+
+Usage
+=====
+
+Usage: train [options] training_set_file [log_file] [resume_file] [model_file]
+
+To see the full usage, run `./train -h'.
+
+The options is the same as liblinear expect for the following addition options:
+	-n : nu value for one-class SVM
+	-r : number of inner CD iterations, (0,1] means r*l, (1,infty) means r
+	-L : solve a scaled problem
+	-m : max iteration
+	-S : max order-n operations
+	-t : timeout (in second)
+	-u : max cd steps (this *= prob->l)
+Additional related solver types:
+	-s type : set type of solver (default 1)
+	//for one-class svm
+	ONECLASS_L1_RD_1000 = 50111,
+	ONECLASS_L1_RD_SH = 50112,
+	ONECLASS_L1_SEMIGD_FIRST_CY_1000 = 50211,
+	ONECLASS_L1_SEMIGD_FIRST_CY_SH = 50212,
+	ONECLASS_L1_FIRST_1000 = 50311,
+	ONECLASS_L1_SECOND_1000 = 50411,
+	ONECLASS_L1_SEMIGD_FIRST_RD_1000 = 50511,
+	ONECLASS_L1_SEMIGD_FIRST_RD_SH = 50512,
+	ONECLASS_L1_SEMIGD_CY_FIRST_1000 = 50611,
+	ONECLASS_L1_SEMIGD_CY_FIRST_SH = 50612,
+	ONECLASS_L1_SEMIGD_RD_FIRST_1000 = 50711,
+	ONECLASS_L1_SEMIGD_RD_FIRST_SH = 50712,
+	ONECLASS_L1_CY_1000 = 50811,
+	ONECLASS_L1_CY_SH = 50812,
+	ONECLASS_L1_SEMIGD_CY_DUALOBJ_1000 = 50911,
+	ONECLASS_L1_SEMIGD_CY_DUALOBJ_SH = 50912,
+	ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000 = 51011,
+	ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH = 51012,
+	ONECLASS_L1_SEMIGD_BATCH_FIRST_CY_1000 = 51111,
+	ONECLASS_L1_SEMIGD_CONV_1000 = 51211,
+	ONECLASS_L1_SEMIGD_SORT_1000 = 51211,
+	//for svdd
+	SVDD_L1_RD_1000 = 60111,
+	SVDD_L1_RD_SH = 60112,
+	SVDD_L1_SEMIGD_FIRST_CY_1000 = 60211,
+	SVDD_L1_SEMIGD_FIRST_CY_SH = 60212,
+	SVDD_L1_FIRST_1000 = 60311,
+	SVDD_L1_SECOND_1000 = 60411,
+	SVDD_L1_SEMIGD_FIRST_RD_1000 = 60511,
+	SVDD_L1_SEMIGD_FIRST_RD_SH = 60512,
+	SVDD_L1_SEMIGD_CY_FIRST_1000 = 60611,
+	SVDD_L1_SEMIGD_CY_FIRST_SH = 60612,
+	SVDD_L1_SEMIGD_RD_FIRST_1000 = 60711,
+	SVDD_L1_SEMIGD_RD_FIRST_SH = 60712,
+	SVDD_L1_CY_1000 = 60811,
+	SVDD_L1_CY_SH = 60812,
+	SVDD_L1_SEMIGD_CY_DUALOBJ_1000 = 60911,
+	SVDD_L1_SEMIGD_CY_DUALOBJ_SH = 60912,
+	SVDD_L1_SEMIGD_RD_DUALOBJ_1000 = 61011,
+	SVDD_L1_SEMIGD_RD_DUALOBJ_SH = 61012,
+	SVDD_L1_SEMIGD_BATCH_FIRST_CY_1000 = 61111,
+	SVDD_L1_SEMIGD_CONV_1000 = 61211,
+	SVDD_L1_SEMIGD_SORT_1000 = 61311,
+
+Examples
+========
+
+> ./train -s 50211 -r 0.1 -n 0.1 heart_scale
+
+will run linear oneclass SVM, nu=1, with algorithm 
+greedy-0.1-cyclic without shrinking.
+
+===============================================================================
+FOR DEVELOPERS
+===============================================================================
+
+How to Add New Solver Type (-s)
+===============================
+1. linear.h
+	append NEWTYPE to solver_type enum with a valid code
+	example:
+		code=abcde
+		a: big category
+		bc: algo
+		d: loss 1 or 2
+		e: 1000 iter or shrink
+2. train.c
+	append NEWTYPE info to exit_with_help()
+	append NEWTYPE info to param.eps default value 
+3. grid.cpp
+	append NEWTYPE info to exit_with_help()
+	append NEWTYPE info to param.eps default value 
+4. linear.cpp
+	a) Solver::Solver
+		i) 	determine category
+		ii) SAVE_NAME	
+	b) (big) update function (e.g. onetwo_nobias_update)
+		i)
+			NEWTYPE is default L2
+			if NEWTYPE is L1, change diag and upper_bound 	
+		ii)
+			switch solver_type and run the (detailed) update function
+	c) train_one()
+		assign (big) update function
+	d) train()
+		the initial solution of oneclass type is not zeros
+	e) predict_values()
+		the initial solution of oneclass type is not zeros
+	f) Solver_type_table
+		SAVE_NAME to the solver type table
+	g) check_parameter()
+		exit if solver_type is not equal to NEWTYPE or other
+5. script/liblrconf.py
+	a) append NEWTYPE code to runs = {}
+	b) modify lists gdrd_prefix, rdgd_prefix or other_semigd_prefix.
+
+`grid' Usage
+============
+
+Usage; grid training_set_file < grid.job
+Each line of grid.job is a grid option of the training_set_file,
+the format is:
+[options] [log_file] [model_file]
+options: same as train
+log_file: the file to save the log of this grid, stdout if empty
+model_file: same as train

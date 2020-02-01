@@ -1,13 +1,13 @@
 CXX ?= g++
 CC ?= gcc
-CFLAGS = -std=c++11 -Wall -Wconversion -O3 -fPIC -g -fopenmp
-#CFLAGS = -Wall -Wconversion -fPIC -g
+CFLAGS = -std=c++11 -Wall -Wconversion -O3 -fPIC -g
+#CFLAGS = -std=c++11 -Wall -Wconversion -O3 -fPIC -g -fopenmp
 LIBS = blas/blas.a
 SHVER = 3
 OS = $(shell uname)
-#LIBS = -lblas
 
-all: train predict grid
+all: train predict
+#all: train predict grid
 
 lib: linear.o tron.o blas/blas.a
 	if [ "$(OS)" = "Darwin" ]; then \

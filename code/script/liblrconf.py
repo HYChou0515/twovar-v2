@@ -110,14 +110,14 @@ runs = {
 	"ONECLASS_L1_RD_1000" : 50111,
 	"ONECLASS_L1_RD_SH" : 50112,
 
-	"ONECLASS_L1_SEMIGD_1000" : 50211,
-	"ONECLASS_L1_SEMIGD_SH" : 50212,
+	"ONECLASS_L1_SEMIGD_FIRST_CY_1000" : 50211,
+	"ONECLASS_L1_SEMIGD_FIRST_CY_SH" : 50212,
 
 	"ONECLASS_L1_FIRST_1000" : 50311,
 	"ONECLASS_L1_SECOND_1000" : 50411,
 
-	"ONECLASS_L1_SEMIGD_RAND_1000" : 50511,
-	"ONECLASS_L1_SEMIGD_RAND_SH" : 50512,
+	"ONECLASS_L1_SEMIGD_FIRST_RD_1000" : 50511,
+	"ONECLASS_L1_SEMIGD_FIRST_RD_SH" : 50512,
 
 	"ONECLASS_L1_SEMIGD_CY_FIRST_1000" : 50611,
 	"ONECLASS_L1_SEMIGD_CY_FIRST_SH" : 50612,
@@ -134,7 +134,7 @@ runs = {
 	"ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000" : 51011,
 	"ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH" : 51012,
 
-	"ONECLASS_L1_SEMIGD_BATCH_1000" : 51111,
+	"ONECLASS_L1_SEMIGD_BATCH_FIRST_CY_1000" : 51111,
 
 	"ONECLASS_L1_SEMIGD_CONV_1000" : 51211,
 
@@ -143,14 +143,14 @@ runs = {
 	"SVDD_L1_RD_1000" : 60111,
 	"SVDD_L1_RD_SH" : 60112,
 
-	"SVDD_L1_SEMIGD_1000" : 60211,
-	"SVDD_L1_SEMIGD_SH" : 60212,
+	"SVDD_L1_SEMIGD_FIRST_CY_1000" : 60211,
+	"SVDD_L1_SEMIGD_FIRST_CY_SH" : 60212,
 
 	"SVDD_L1_FIRST_1000" : 60311,
 	"SVDD_L1_SECOND_1000" : 60411,
 
-	"SVDD_L1_SEMIGD_RAND_1000" : 60511,
-	"SVDD_L1_SEMIGD_RAND_SH" : 60512,
+	"SVDD_L1_SEMIGD_FIRST_RD_1000" : 60511,
+	"SVDD_L1_SEMIGD_FIRST_RD_SH" : 60512,
 
 	"SVDD_L1_SEMIGD_CY_FIRST_1000" : 60611,
 	"SVDD_L1_SEMIGD_CY_FIRST_SH" : 60612,
@@ -167,7 +167,7 @@ runs = {
 	"SVDD_L1_SEMIGD_RD_DUALOBJ_1000" : 61011,
 	"SVDD_L1_SEMIGD_RD_DUALOBJ_SH" : 61012,
 
-	"SVDD_L1_SEMIGD_BATCH_1000" : 61111,
+	"SVDD_L1_SEMIGD_BATCH_FIRST_CY_1000" : 61111,
 
 	"SVDD_L1_SEMIGD_CONV_1000" : 61211,
 
@@ -183,16 +183,38 @@ def is_biasobj(code):
 	else:
 		return str_code[0] == "4"
 
-def is_semigd(code):
+def _check_prefix3(code, prefix):
 	str_code = str(code)
 	if len(str_code) != 5:
 		return False
 	else:
-		semigd_prefix = [203, 204, 205, 206, 207,
-				402, 403, 404, 405, 407, 408,
-				502, 505, 506, 507, 509, 510, 511, 512, 513,
-				602, 605, 606, 607, 609, 610, 611, 612, 613]
-		return str_code[:3] in map(str, semigd_prefix)
+		return str_code[:3] in map(str, prefix)
+
+def is_greedy_random(code):
+	gdrd_prefix = [
+			502, 505, 511,
+			602, 605, 611,
+			]
+	return _check_prefix3(code, gdrd_prefix)
+
+def is_random_greedy(code):
+	rdgd_prefix = [
+			506, 507, 509, 510,
+			606, 607, 609, 610,
+			]
+	return _check_prefix3(code, rdgd_prefix)
+
+def is_other_semigd(code):
+	other_semigd_prefix = [
+			203, 204, 205, 206, 207,
+			402, 403, 404, 405, 407, 408,
+			512, 513,
+			612, 613,
+			]
+	return _check_prefix3(code, other_semigd_prefix)
+
+def is_semigd(code):
+	return is_greedy_random(code) or is_random_greedy(code) or is_other_semigd(code)
 
 def is_shrink(code):
 	str_code = str(code)

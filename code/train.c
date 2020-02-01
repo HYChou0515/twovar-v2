@@ -51,11 +51,16 @@ void exit_with_help()
 	"-v n: n-fold cross validation mode\n"
 	"-C : find parameter C (only for -s 0 and 2)\n"
 	"-q : quiet mode (no outputs)\n"
+	"-n : nu value for one-class SVM\n"
+	"-r : number of inner CD iterations, (0,1] means r*l, (1,infty) means r\n"
 	"-m : max iteration\n"
 	"-S : max order-n operations\n"
 	"-t : timeout (in second)\n"
 	"-u : max cd steps (this *= prob->l)\n"
-	"-o : minimum objective value\n"
+	"-L : solve a scaled problem\n"
+	"-N : the dataset is normalized or not (experimental)\n"
+	"-o : minimum objective value (experimental)\n"
+	""
 	"L2R_LR, \n"
 	"OLD_ONE_L2_CY_SH,\n"
 	"L2R_L2LOSS_SVC, \n"
@@ -157,12 +162,12 @@ void exit_with_help()
 	"//for one-class svm\n"
 	"ONECLASS_L1_RD_1000 = 50111,\n"
 	"ONECLASS_L1_RD_SH = 50112,\n"
-	"ONECLASS_L1_SEMIGD_1000 = 50211,\n"
-	"ONECLASS_L1_SEMIGD_SH = 50212,\n"
+	"ONECLASS_L1_SEMIGD_FIRST_CY_1000 = 50211,\n"
+	"ONECLASS_L1_SEMIGD_FIRST_CY_SH = 50212,\n"
 	"ONECLASS_L1_FIRST_1000 = 50311,\n"
 	"ONECLASS_L1_SECOND_1000 = 50411,\n"
-	"ONECLASS_L1_SEMIGD_RAND_1000 = 50511,\n"
-	"ONECLASS_L1_SEMIGD_RAND_SH = 50512,\n"
+	"ONECLASS_L1_SEMIGD_FIRST_RD_1000 = 50511,\n"
+	"ONECLASS_L1_SEMIGD_FIRST_RD_SH = 50512,\n"
 	"ONECLASS_L1_SEMIGD_CY_FIRST_1000 = 50611,\n"
 	"ONECLASS_L1_SEMIGD_CY_FIRST_SH = 50612,\n"
 	"ONECLASS_L1_SEMIGD_RD_FIRST_1000 = 50711,\n"
@@ -173,18 +178,18 @@ void exit_with_help()
 	"ONECLASS_L1_SEMIGD_CY_DUALOBJ_SH = 50912,\n"
 	"ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000 = 51011,\n"
 	"ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH = 51012,\n"
-	"ONECLASS_L1_SEMIGD_BATCH_1000 = 51111,\n"
+	"ONECLASS_L1_SEMIGD_BATCH_FIRST_CY_1000 = 51111,\n"
 	"ONECLASS_L1_SEMIGD_CONV_1000 = 51211,\n"
 	"ONECLASS_L1_SEMIGD_SORT_1000 = 51211,\n"
 	"//for svdd\n"
 	"SVDD_L1_RD_1000 = 60111,\n"
 	"SVDD_L1_RD_SH = 60112,\n"
-	"SVDD_L1_SEMIGD_1000 = 60211,\n"
-	"SVDD_L1_SEMIGD_SH = 60212,\n"
+	"SVDD_L1_SEMIGD_FIRST_CY_1000 = 60211,\n"
+	"SVDD_L1_SEMIGD_FIRST_CY_SH = 60212,\n"
 	"SVDD_L1_FIRST_1000 = 60311,\n"
 	"SVDD_L1_SECOND_1000 = 60411,\n"
-	"SVDD_L1_SEMIGD_RAND_1000 = 60511,\n"
-	"SVDD_L1_SEMIGD_RAND_SH = 60512,\n"
+	"SVDD_L1_SEMIGD_FIRST_RD_1000 = 60511,\n"
+	"SVDD_L1_SEMIGD_FIRST_RD_SH = 60512,\n"
 	"SVDD_L1_SEMIGD_CY_FIRST_1000 = 60611,\n"
 	"SVDD_L1_SEMIGD_CY_FIRST_SH = 60612,\n"
 	"SVDD_L1_SEMIGD_RD_FIRST_1000 = 60711,\n"
@@ -195,7 +200,7 @@ void exit_with_help()
 	"SVDD_L1_SEMIGD_CY_DUALOBJ_SH = 60912,\n"
 	"SVDD_L1_SEMIGD_RD_DUALOBJ_1000 = 61011,\n"
 	"SVDD_L1_SEMIGD_RD_DUALOBJ_SH = 61012,\n"
-	"SVDD_L1_SEMIGD_BATCH_1000 = 61111,\n"
+	"SVDD_L1_SEMIGD_BATCH_FIRST_CY_1000 = 61111,\n"
 	"SVDD_L1_SEMIGD_CONV_1000 = 61211,\n"
 	"SVDD_L1_SEMIGD_SORT_1000 = 61311,\n"
 	);
@@ -637,10 +642,10 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 			case ONECLASS_L1_CY_SH:
 			case ONECLASS_L1_SECOND_1000:
 			case ONECLASS_L1_FIRST_1000:
-			case ONECLASS_L1_SEMIGD_1000:
-			case ONECLASS_L1_SEMIGD_SH:
-			case ONECLASS_L1_SEMIGD_RAND_1000:
-			case ONECLASS_L1_SEMIGD_RAND_SH:
+			case ONECLASS_L1_SEMIGD_FIRST_CY_1000:
+			case ONECLASS_L1_SEMIGD_FIRST_CY_SH:
+			case ONECLASS_L1_SEMIGD_FIRST_RD_1000:
+			case ONECLASS_L1_SEMIGD_FIRST_RD_SH:
 			case ONECLASS_L1_SEMIGD_CY_FIRST_1000:
 			case ONECLASS_L1_SEMIGD_CY_FIRST_SH:
 			case ONECLASS_L1_SEMIGD_RD_FIRST_1000:
@@ -649,7 +654,7 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 			case ONECLASS_L1_SEMIGD_CY_DUALOBJ_SH:
 			case ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000:
 			case ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH:
-			case ONECLASS_L1_SEMIGD_BATCH_1000:
+			case ONECLASS_L1_SEMIGD_BATCH_FIRST_CY_1000:
 			case ONECLASS_L1_SEMIGD_CONV_1000:
 			case ONECLASS_L1_SEMIGD_SORT_1000:
 			case SVDD_L1_RD_1000:
@@ -658,10 +663,10 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 			case SVDD_L1_CY_SH:
 			case SVDD_L1_SECOND_1000:
 			case SVDD_L1_FIRST_1000:
-			case SVDD_L1_SEMIGD_1000:
-			case SVDD_L1_SEMIGD_SH:
-			case SVDD_L1_SEMIGD_RAND_1000:
-			case SVDD_L1_SEMIGD_RAND_SH:
+			case SVDD_L1_SEMIGD_FIRST_CY_1000:
+			case SVDD_L1_SEMIGD_FIRST_CY_SH:
+			case SVDD_L1_SEMIGD_FIRST_RD_1000:
+			case SVDD_L1_SEMIGD_FIRST_RD_SH:
 			case SVDD_L1_SEMIGD_CY_FIRST_1000:
 			case SVDD_L1_SEMIGD_CY_FIRST_SH:
 			case SVDD_L1_SEMIGD_RD_FIRST_1000:
@@ -670,7 +675,7 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 			case SVDD_L1_SEMIGD_CY_DUALOBJ_SH:
 			case SVDD_L1_SEMIGD_RD_DUALOBJ_1000:
 			case SVDD_L1_SEMIGD_RD_DUALOBJ_SH:
-			case SVDD_L1_SEMIGD_BATCH_1000:
+			case SVDD_L1_SEMIGD_BATCH_FIRST_CY_1000:
 			case SVDD_L1_SEMIGD_CONV_1000:
 			case SVDD_L1_SEMIGD_SORT_1000:
 				param.eps = 0.01;
@@ -687,10 +692,10 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 			case ONECLASS_L1_CY_SH:
 			case ONECLASS_L1_SECOND_1000:
 			case ONECLASS_L1_FIRST_1000:
-			case ONECLASS_L1_SEMIGD_1000:
-			case ONECLASS_L1_SEMIGD_SH:
-			case ONECLASS_L1_SEMIGD_RAND_1000:
-			case ONECLASS_L1_SEMIGD_RAND_SH:
+			case ONECLASS_L1_SEMIGD_FIRST_CY_1000:
+			case ONECLASS_L1_SEMIGD_FIRST_CY_SH:
+			case ONECLASS_L1_SEMIGD_FIRST_RD_1000:
+			case ONECLASS_L1_SEMIGD_FIRST_RD_SH:
 			case ONECLASS_L1_SEMIGD_CY_FIRST_1000:
 			case ONECLASS_L1_SEMIGD_CY_FIRST_SH:
 			case ONECLASS_L1_SEMIGD_RD_FIRST_1000:
@@ -699,7 +704,7 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 			case ONECLASS_L1_SEMIGD_CY_DUALOBJ_SH:
 			case ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000:
 			case ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH:
-			case ONECLASS_L1_SEMIGD_BATCH_1000:
+			case ONECLASS_L1_SEMIGD_BATCH_FIRST_CY_1000:
 			case ONECLASS_L1_SEMIGD_CONV_1000:
 			case ONECLASS_L1_SEMIGD_SORT_1000:
 				param.scaled = 1;
@@ -710,10 +715,10 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 			case SVDD_L1_CY_SH:
 			case SVDD_L1_SECOND_1000:
 			case SVDD_L1_FIRST_1000:
-			case SVDD_L1_SEMIGD_1000:
-			case SVDD_L1_SEMIGD_SH:
-			case SVDD_L1_SEMIGD_RAND_1000:
-			case SVDD_L1_SEMIGD_RAND_SH:
+			case SVDD_L1_SEMIGD_FIRST_CY_1000:
+			case SVDD_L1_SEMIGD_FIRST_CY_SH:
+			case SVDD_L1_SEMIGD_FIRST_RD_1000:
+			case SVDD_L1_SEMIGD_FIRST_RD_SH:
 			case SVDD_L1_SEMIGD_CY_FIRST_1000:
 			case SVDD_L1_SEMIGD_CY_FIRST_SH:
 			case SVDD_L1_SEMIGD_RD_FIRST_1000:
@@ -722,7 +727,7 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 			case SVDD_L1_SEMIGD_CY_DUALOBJ_SH:
 			case SVDD_L1_SEMIGD_RD_DUALOBJ_1000:
 			case SVDD_L1_SEMIGD_RD_DUALOBJ_SH:
-			case SVDD_L1_SEMIGD_BATCH_1000:
+			case SVDD_L1_SEMIGD_BATCH_FIRST_CY_1000:
 			case SVDD_L1_SEMIGD_CONV_1000:
 			case SVDD_L1_SEMIGD_SORT_1000:
 				param.scaled = 1;

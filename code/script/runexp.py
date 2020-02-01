@@ -52,7 +52,12 @@ for data_count, data in enumerate(dataset):
 	for tp in runtype:
 		if is_semigd(runs[tp]):
 			need_r = True
-			rlist_real = rlist
+			if is_greedy_random(runs[tp]):
+				rlist_real = greedy_random_rlist
+			if is_random_greedy(runs[tp]):
+				rlist_real = random_greedy_rlist
+			if is_other_semigd(runs[tp]):
+				rlist_real = other_semigd_rlist
 		else:
 			rlist_real = [0]
 			need_r = False
@@ -80,7 +85,6 @@ for data_count, data in enumerate(dataset):
 				basename = basename + "_r%g" %(r)
 			filename = "%s%s" % (LOG_PATH, basename)
 			resumename = "%s%s" % (RESUME_PATH, basename)
-			print(filename)
 			loginfo = LogInfo(filename)
 			#	try:
 			#		opt_val = loginfo.get_obj_minimal()
@@ -102,7 +106,7 @@ for data_count, data in enumerate(dataset):
 			if 'S' in locals():
 				cmd = cmd + " -S %g" % (S)
 			cmd = cmd+ " %s" % datapath
-			print(str(ind) + ': ' + cmd)
+			print(str(ind) + ': ' + cmd + ' ' + filename)
 			if mode == 0:
 				cmd = cmd + " %s %s" % (filename, resumename)
 				subprocess.Popen(cmd.split(' '))
