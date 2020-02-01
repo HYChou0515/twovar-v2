@@ -439,6 +439,8 @@ void parse_stdin(char *input_file_name, GridItem* grid_item, char *param_str)
 	grid_item->param.opt_val = -INF;
 	grid_item->param.nu = 0.1;
 	grid_item->param.nr_weight = 0;
+	grid_item->param.scaled = -1;
+	grid_item->param.normed = 0;
 	grid_item->param.weight_label = NULL;
 	grid_item->param.weight = NULL;
 	grid_item->param.init_sol = NULL;
@@ -515,6 +517,11 @@ void parse_stdin(char *input_file_name, GridItem* grid_item, char *param_str)
 			case 'e':
 				val_token = strtok(NULL, " ");
 				grid_item->param.eps = atof(val_token);
+				break;
+
+			case 'L':
+				val_token = strtok(NULL, " ");
+				grid_item->param.scaled = atoi(val_token);
 				break;
 
 			case 'B':
@@ -757,6 +764,58 @@ void parse_stdin(char *input_file_name, GridItem* grid_item, char *param_str)
 			case SVDD_L1_SEMIGD_CONV_1000:
 			case SVDD_L1_SEMIGD_SORT_1000:
 				grid_item->param.eps = 0.01;
+				break;
+		}
+	}
+	if(grid_item->param.scaled == -1)
+	{
+		switch(grid_item->param.solver_type)
+		{
+			case ONECLASS_L1_RD_1000:
+			case ONECLASS_L1_RD_SH:
+			case ONECLASS_L1_CY_1000:
+			case ONECLASS_L1_CY_SH:
+			case ONECLASS_L1_SECOND_1000:
+			case ONECLASS_L1_FIRST_1000:
+			case ONECLASS_L1_SEMIGD_1000:
+			case ONECLASS_L1_SEMIGD_SH:
+			case ONECLASS_L1_SEMIGD_RAND_1000:
+			case ONECLASS_L1_SEMIGD_RAND_SH:
+			case ONECLASS_L1_SEMIGD_CY_FIRST_1000:
+			case ONECLASS_L1_SEMIGD_CY_FIRST_SH:
+			case ONECLASS_L1_SEMIGD_RD_FIRST_1000:
+			case ONECLASS_L1_SEMIGD_RD_FIRST_SH:
+			case ONECLASS_L1_SEMIGD_CY_DUALOBJ_1000:
+			case ONECLASS_L1_SEMIGD_CY_DUALOBJ_SH:
+			case ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000:
+			case ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH:
+			case ONECLASS_L1_SEMIGD_BATCH_1000:
+			case ONECLASS_L1_SEMIGD_CONV_1000:
+			case ONECLASS_L1_SEMIGD_SORT_1000:
+				grid_item->param.scaled = 1;
+				break;
+			case SVDD_L1_RD_1000:
+			case SVDD_L1_RD_SH:
+			case SVDD_L1_CY_1000:
+			case SVDD_L1_CY_SH:
+			case SVDD_L1_SECOND_1000:
+			case SVDD_L1_FIRST_1000:
+			case SVDD_L1_SEMIGD_1000:
+			case SVDD_L1_SEMIGD_SH:
+			case SVDD_L1_SEMIGD_RAND_1000:
+			case SVDD_L1_SEMIGD_RAND_SH:
+			case SVDD_L1_SEMIGD_CY_FIRST_1000:
+			case SVDD_L1_SEMIGD_CY_FIRST_SH:
+			case SVDD_L1_SEMIGD_RD_FIRST_1000:
+			case SVDD_L1_SEMIGD_RD_FIRST_SH:
+			case SVDD_L1_SEMIGD_CY_DUALOBJ_1000:
+			case SVDD_L1_SEMIGD_CY_DUALOBJ_SH:
+			case SVDD_L1_SEMIGD_RD_DUALOBJ_1000:
+			case SVDD_L1_SEMIGD_RD_DUALOBJ_SH:
+			case SVDD_L1_SEMIGD_BATCH_1000:
+			case SVDD_L1_SEMIGD_CONV_1000:
+			case SVDD_L1_SEMIGD_SORT_1000:
+				grid_item->param.scaled = 1;
 				break;
 		}
 	}

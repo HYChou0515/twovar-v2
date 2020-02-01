@@ -56,6 +56,7 @@ class Plotter(object):
 		self.figpath = args.figpath+'/'
 		self.filesuffix = args.suffix
 		self.relobj_denom = args.relobj_denom
+		self.scaled = args.scaled
 
 		matplotlib.rc('xtick', labelsize=20)
 		matplotlib.rc('ytick', labelsize=20)
@@ -132,9 +133,9 @@ class Plotter(object):
 				clridx += 1
 
 		min_xs, max_xs, min_ys, max_ys = zip(*self.xy_range) # list of tuples to tuple of lists
-		plt.hlines(1e-2,0,max(max_xs),linestyles='-')
-		plt.hlines(1e-3,0,max(max_xs),linestyles='--')
-		plt.hlines(1e-4,0,max(max_xs),linestyles='-.')
+#		plt.hlines(1e-2,0,max(max_xs),linestyles='-')
+#		plt.hlines(1e-3,0,max(max_xs),linestyles='--')
+#		plt.hlines(1e-4,0,max(max_xs),linestyles='-.')
 		plt.subplots_adjust(bottom=0.1,left=0.1,right=0.98,top=0.98)
 		self.setup_fig()
 		plt.close(self.fig)
@@ -174,7 +175,11 @@ class Plotter(object):
 			raise IOError
 
 	def get_obj(self, line):
-		return float(line[line.index('obj')+1])
+		if self.scaled == 0:
+			obj = 'obj'
+		elif self.scaled == 1:
+			obj = 'scaledobj'
+		return float(line[line.index(obj)+1])
 
 	def set_xy_lim(self, min_xs, max_xs, min_ys, max_ys):
 		# set xlim
@@ -696,6 +701,10 @@ class Parser:
 				type=float, action='store',
 				default=0.0,
 				help='relobj=(f-f*)/([this]+f*)')
+		self.parser.add_argument('--scaled', dest='scaled',
+				type=int, action='store',
+				default=0,
+				help='0: use obj, 1: use scaledobj, default: 0')
 		#positional arguments
 		self.parser.add_argument('plottype', type=str,
 				choices=[klass.PLOTTYPE for klass in Plotter.__subclasses__()],

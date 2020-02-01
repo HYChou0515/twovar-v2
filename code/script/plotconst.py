@@ -1,5 +1,19 @@
 dobj = \
 {
+	"svddL1nscaled":
+	{
+		0.1:
+		{
+			"a9a":21600356.1464752,
+			"covtype.libsvm.binary.scale":3759164457.59744,
+			"ijcnn1":1566297.41682521,
+			"news20.binary":40305.0858787121,
+			"rcv1_train.binary":10319.2060337398,
+			"real-sim":43605.8781839598,
+			"yahoojp":188323.133285471,
+			"yahookr":5063886.23455435,
+		},
+	},
 	"svddL1n":
 	{
 		0.2:
@@ -175,7 +189,7 @@ dobj = \
 			"yahookr":-0.499817159734992,
 		},
 	},
-	"oneL1n":
+	"oneL1nscaled":
 	{
 		0.2:
 		{
@@ -258,7 +272,7 @@ dobj = \
 			"yahookr": 0.387807357091539,
 		},
 	},
-	"oneL2n":
+	"oneL2nscaled":
 	{
 		0.2:
 		{
@@ -1021,6 +1035,7 @@ class LogInfo(object):
 		self.r = None
 		self.n = None
 		self.N = None # n=1/(c*l)
+		self.scaled = None
 		for i in range(1, len(tokens)):
 			token = tokens[i]
 			if token[0] == 'c':
@@ -1032,6 +1047,13 @@ class LogInfo(object):
 				self.r = float(token[1:])
 			if token[0] == 'n':
 				self.n = float(token[1:])
+			if token[0] == 'L':
+				self.scaled = int(token[1:])
+		if self.scaled is None:
+			if is_oneclass(self.stype) == 0:
+				self.scaled = 0
+			else:
+				self.scaled = 1
 
 		self.loss = "L1" if is_L1(self.stype) else "L2"
 		def true_and_notNone(a, b):
@@ -1070,6 +1092,8 @@ class LogInfo(object):
 		else:
 			dobj_key = "%sc" % (self.loss)
 			dobj_par = self.c
+		if self.scaled == 1:
+			dobj_key = "%sscaled" % (dobj_key)
 		return (dobj_key, dobj_par)
 
 	def get_obj_minimal(self):

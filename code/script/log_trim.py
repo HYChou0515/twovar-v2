@@ -13,6 +13,7 @@ TOLERANCE = 1e-9
 LINE_BUFFER = 1000000
 MAX_LINE = 10000
 LOG_SUMMARY_LINES = None # assigned by find_log_summary_lines()
+OBJ = 'scaledobj'
 
 def column_n_of_space(filename, f, fout):
 	if fout is None:
@@ -177,6 +178,7 @@ def compress(filepath, filetmp, max_line):
 					'iter': (EXACT, int, lambda x: "%d "%x),
 					't': (EXACT, float, lambda x: "%f "%x),
 					'obj': (EXACT, float, lambda x: "%.16g "%x),
+					'scaledobj': (EXACT, float, lambda x: "%.16g "%x),
 					'decr_rate': (EXACT, float, lambda x: "%.3e "%x),
 					'actsize': (EXACT, int, lambda x: "%d "%x),
 					'sucsize': (EXACT, int, lambda x: "%d "%x),
@@ -235,7 +237,7 @@ def compress(filepath, filetmp, max_line):
 					if t == EXACT:
 						out_str += to_str(self.cols[i])
 					if t == DECR_RATE:
-						this_obj = self.cols[self.colnames.index('obj')]
+						this_obj = self.cols[self.colnames.index(OBJ)]
 						out_str += to_str((self.last_obj-this_obj)/ math.fabs(this_obj))
 						self.last_obj = this_obj
 					if t == SUCS_RATE:
@@ -292,7 +294,7 @@ def main():
 			loginfo = LogInfo(filepath)
 			filetmp = filename+'.tmp'
 			#trim
-			cut_key_column_to(filepath, filetmp, 'obj')
+			cut_key_column_to(filepath, filetmp, OBJ)
 			line_opt_enough = get_enough_optimal_line_number(loginfo, filetmp)
 			cut_key_column_to(filepath, filetmp, 'decr_rate')
 			line_decr_enough = get_enough_decrease_line_number(loginfo, filetmp)

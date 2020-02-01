@@ -360,6 +360,8 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 	param.opt_val = -INF;
 	param.nu = 0.1;
 	param.nr_weight = 0;
+	param.scaled = -1;
+	param.normed = 0;
 	param.weight_label = NULL;
 	param.weight = NULL;
 	param.init_sol = NULL;
@@ -422,6 +424,14 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 
 			case 'e':
 				param.eps = atof(argv[i]);
+				break;
+
+			case 'L':
+				param.scaled = atoi(argv[i]);
+				break;
+
+			case 'N':
+				param.normed = atoi(argv[i]);
 				break;
 
 			case 'B':
@@ -664,6 +674,58 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 			case SVDD_L1_SEMIGD_CONV_1000:
 			case SVDD_L1_SEMIGD_SORT_1000:
 				param.eps = 0.01;
+				break;
+		}
+	}
+	if(param.scaled == -1)
+	{
+		switch(param.solver_type)
+		{
+			case ONECLASS_L1_RD_1000:
+			case ONECLASS_L1_RD_SH:
+			case ONECLASS_L1_CY_1000:
+			case ONECLASS_L1_CY_SH:
+			case ONECLASS_L1_SECOND_1000:
+			case ONECLASS_L1_FIRST_1000:
+			case ONECLASS_L1_SEMIGD_1000:
+			case ONECLASS_L1_SEMIGD_SH:
+			case ONECLASS_L1_SEMIGD_RAND_1000:
+			case ONECLASS_L1_SEMIGD_RAND_SH:
+			case ONECLASS_L1_SEMIGD_CY_FIRST_1000:
+			case ONECLASS_L1_SEMIGD_CY_FIRST_SH:
+			case ONECLASS_L1_SEMIGD_RD_FIRST_1000:
+			case ONECLASS_L1_SEMIGD_RD_FIRST_SH:
+			case ONECLASS_L1_SEMIGD_CY_DUALOBJ_1000:
+			case ONECLASS_L1_SEMIGD_CY_DUALOBJ_SH:
+			case ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000:
+			case ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH:
+			case ONECLASS_L1_SEMIGD_BATCH_1000:
+			case ONECLASS_L1_SEMIGD_CONV_1000:
+			case ONECLASS_L1_SEMIGD_SORT_1000:
+				param.scaled = 1;
+				break;
+			case SVDD_L1_RD_1000:
+			case SVDD_L1_RD_SH:
+			case SVDD_L1_CY_1000:
+			case SVDD_L1_CY_SH:
+			case SVDD_L1_SECOND_1000:
+			case SVDD_L1_FIRST_1000:
+			case SVDD_L1_SEMIGD_1000:
+			case SVDD_L1_SEMIGD_SH:
+			case SVDD_L1_SEMIGD_RAND_1000:
+			case SVDD_L1_SEMIGD_RAND_SH:
+			case SVDD_L1_SEMIGD_CY_FIRST_1000:
+			case SVDD_L1_SEMIGD_CY_FIRST_SH:
+			case SVDD_L1_SEMIGD_RD_FIRST_1000:
+			case SVDD_L1_SEMIGD_RD_FIRST_SH:
+			case SVDD_L1_SEMIGD_CY_DUALOBJ_1000:
+			case SVDD_L1_SEMIGD_CY_DUALOBJ_SH:
+			case SVDD_L1_SEMIGD_RD_DUALOBJ_1000:
+			case SVDD_L1_SEMIGD_RD_DUALOBJ_SH:
+			case SVDD_L1_SEMIGD_BATCH_1000:
+			case SVDD_L1_SEMIGD_CONV_1000:
+			case SVDD_L1_SEMIGD_SORT_1000:
+				param.scaled = 1;
 				break;
 		}
 	}
