@@ -21,16 +21,15 @@ nlist = [
 		]
 clist = []
 elist = [1e-2]
-rlist = [
-	4,
-	0.1
-]
+greedy_random_rlist = [0.1]
+random_greedy_rlist = [4]
+other_semigd_rlist = []
 S = 6e7 # maximum #O(n) operation
 m = 300000 # maximum iter
 timeout = 60 # maximum seconds
 tolerance = 1e-10
 dataset = [
-	#"yahookr",
+	"yahookr",
 	"yahoojp",
 	"covtype.libsvm.binary.scale",
 	"a9a",

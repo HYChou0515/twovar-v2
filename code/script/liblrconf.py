@@ -183,16 +183,38 @@ def is_biasobj(code):
 	else:
 		return str_code[0] == "4"
 
-def is_semigd(code):
+def _check_prefix3(code, prefix):
 	str_code = str(code)
 	if len(str_code) != 5:
 		return False
 	else:
-		semigd_prefix = [203, 204, 205, 206, 207,
-				402, 403, 404, 405, 407, 408,
-				502, 505, 506, 507, 509, 510, 511, 512, 513,
-				602, 605, 606, 607, 609, 610, 611, 612, 613]
-		return str_code[:3] in map(str, semigd_prefix)
+		return str_code[:3] in map(str, prefix)
+
+def is_greedy_random(code):
+	gdrd_prefix = [
+			502, 505, 511,
+			602, 605, 611,
+			]
+	return _check_prefix3(code, gdrd_prefix)
+
+def is_random_greedy(code):
+	rdgd_prefix = [
+			506, 507, 509, 510,
+			606, 607, 609, 610,
+			]
+	return _check_prefix3(code, rdgd_prefix)
+
+def is_other_semigd(code):
+	other_semigd_prefix = [
+			203, 204, 205, 206, 207,
+			402, 403, 404, 405, 407, 408,
+			512, 513,
+			612, 613,
+			]
+	return _check_prefix3(code, other_semigd_prefix)
+
+def is_semigd(code):
+	return is_greedy_random(code) or is_random_greedy(code) or is_other_semigd(code)
 
 def is_shrink(code):
 	str_code = str(code)

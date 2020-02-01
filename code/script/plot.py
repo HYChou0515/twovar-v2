@@ -142,7 +142,12 @@ class Plotter(object):
 
 	def get_rlist(self, tp):
 		if is_semigd(tp):
-			return rlist
+			if is_greedy_random(tp):
+				return greedy_random_rlist
+			if is_random_greedy(tp):
+				return random_greedy_rlist
+			if is_other_semigd(tp):
+				return other_semigd_rlist
 		else:
 			return [1]
 
