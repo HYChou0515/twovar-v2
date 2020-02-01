@@ -1,175 +1,79 @@
+Introduction
+============
+
 This is the experiment code for the paper: 
 "Dual Coordinate-Descent Methods for Linear One-Class SVM and SVDD".
+This README shows more details how to run with this code.
 
-This code will generate the experimental result figures in the paper.
-For the figures of O(n) operations, the result should be exactly the same.
-However, for the time experiments, the result may be slightly different 
-due to the CPU frequency and the work load of your computer.
+Usage
+=====
 
-This code has been tested under a 64-bit Linux environment.
+Usage: train [options] training_set_file [log_file] [resume_file] [model_file]
 
-To run this code, there are several requirements, 
-please see Section System Requirement.
+To see the full usage, run `./train -h'.
 
-The information of the experiment data can 
-be found in Section Experiment Data.
+The options is the same as liblinear expect for the following addition options:
+	-n : nu value for one-class SVM
+	-r : number of inner CD iterations, (0,1] means r*l, (1,infty) means r
+	-L : solve a scaled problem
+	-m : max iteration
+	-S : max order-n operations
+	-t : timeout (in second)
+	-u : max cd steps (this *= prob->l)
+Additional related solver types:
+	-s type : set type of solver (default 1)
+	//for one-class svm
+	ONECLASS_L1_RD_1000 = 50111,
+	ONECLASS_L1_RD_SH = 50112,
+	ONECLASS_L1_SEMIGD_FIRST_CY_1000 = 50211,
+	ONECLASS_L1_SEMIGD_FIRST_CY_SH = 50212,
+	ONECLASS_L1_FIRST_1000 = 50311,
+	ONECLASS_L1_SECOND_1000 = 50411,
+	ONECLASS_L1_SEMIGD_FIRST_RD_1000 = 50511,
+	ONECLASS_L1_SEMIGD_FIRST_RD_SH = 50512,
+	ONECLASS_L1_SEMIGD_CY_FIRST_1000 = 50611,
+	ONECLASS_L1_SEMIGD_CY_FIRST_SH = 50612,
+	ONECLASS_L1_SEMIGD_RD_FIRST_1000 = 50711,
+	ONECLASS_L1_SEMIGD_RD_FIRST_SH = 50712,
+	ONECLASS_L1_CY_1000 = 50811,
+	ONECLASS_L1_CY_SH = 50812,
+	ONECLASS_L1_SEMIGD_CY_DUALOBJ_1000 = 50911,
+	ONECLASS_L1_SEMIGD_CY_DUALOBJ_SH = 50912,
+	ONECLASS_L1_SEMIGD_RD_DUALOBJ_1000 = 51011,
+	ONECLASS_L1_SEMIGD_RD_DUALOBJ_SH = 51012,
+	ONECLASS_L1_SEMIGD_BATCH_FIRST_CY_1000 = 51111,
+	ONECLASS_L1_SEMIGD_CONV_1000 = 51211,
+	ONECLASS_L1_SEMIGD_SORT_1000 = 51211,
+	//for svdd
+	SVDD_L1_RD_1000 = 60111,
+	SVDD_L1_RD_SH = 60112,
+	SVDD_L1_SEMIGD_FIRST_CY_1000 = 60211,
+	SVDD_L1_SEMIGD_FIRST_CY_SH = 60212,
+	SVDD_L1_FIRST_1000 = 60311,
+	SVDD_L1_SECOND_1000 = 60411,
+	SVDD_L1_SEMIGD_FIRST_RD_1000 = 60511,
+	SVDD_L1_SEMIGD_FIRST_RD_SH = 60512,
+	SVDD_L1_SEMIGD_CY_FIRST_1000 = 60611,
+	SVDD_L1_SEMIGD_CY_FIRST_SH = 60612,
+	SVDD_L1_SEMIGD_RD_FIRST_1000 = 60711,
+	SVDD_L1_SEMIGD_RD_FIRST_SH = 60712,
+	SVDD_L1_CY_1000 = 60811,
+	SVDD_L1_CY_SH = 60812,
+	SVDD_L1_SEMIGD_CY_DUALOBJ_1000 = 60911,
+	SVDD_L1_SEMIGD_CY_DUALOBJ_SH = 60912,
+	SVDD_L1_SEMIGD_RD_DUALOBJ_1000 = 61011,
+	SVDD_L1_SEMIGD_RD_DUALOBJ_SH = 61012,
+	SVDD_L1_SEMIGD_BATCH_FIRST_CY_1000 = 61111,
+	SVDD_L1_SEMIGD_CONV_1000 = 61211,
+	SVDD_L1_SEMIGD_SORT_1000 = 61311,
 
-To get the result of the main paper, you can follow
-the step-by-step instruction in Section Run the Experiment.
+Examples
+========
 
-If you want to use different settings to run the experiment,
-you may want to see how to configure the experiment
-in Section Experiment Configuration.
+> ./train -s 50211 -r 0.1 -n 0.1 heart_scale
 
-Since experiments are independent to each other,
-in Section Run Experiment Parallelly shows how to 
-run the experiments in parallel.
-
-Table of Contents
-=================
-- System Requirement
-- Experiment Data
-- Run the Experiment
-- Experiment Configuration
-- Run Experiment Parallelly
-
-FOR DEVELOPERS
-- How to Add New Solver Type (-s)
-- `grid' Usage
-
-System Requirement
-==================
-This experiment should be running under 64-bit Linux environments.
-The following commands or tools are suggested:
-- UNIX utilities (cp, mkdir)
-- gcc 4.4.3 or newer version
-- Python 2.7.12
-- matplotlib 1.5.3
-- make
-
-Experiment Data
-===============
-Experiment Data used in this paper are available at
-http://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/
-
-Run the Experiment
-==================
-I. Preparation
---------------
-For step 1-3, go into the directory `lrocsvm/code'.
-
-1. Put your dataset in the directory `../data/'.
-
-2. Create directories `./log/', `./resume/' and `./figure/'.
-
-3. Run `make'.
-
-II. Generate Logs
-----------------
-For step 4-8, go into the directory `lrocsvm/code/script'.
-
-4. The experiment configuration is in `./expconf.py',
-    use the default one or edit it to what you want.
-    See how to edit it in Section Experiment Configuration.
-    The default experiment runs the result in the main paper.
-
-5. Run `./runexp.py time'. This command generate a bash script `out_run.bash'.
-
-6. Run the script by `bash our_run.bash'. 
-    In the default setting, it should take up to 60 seconds for each line of the script.
-    To run the experiments parallelly, see imformation in Section Run Experiment Parallelly.
-
-7. See logs in `../log'.
-
-III. From Logs Generate Figures
-------------------------------
-8. Run `./plot.py --logpath ../log --relobj 0 --suffix d0 --scaled 1 nrnop' 
-    to generate figures in `../figure/'.
-
-Experiment Configuration
-========================
-I. Terminology
---------------
-The terminologies used in the paper and in this code are different.
-In this section we make connection of the two.
-The term in the code is structured like
-
-    {ONECLASS or SVDD}_L1_{SETTING}_{1000 or SH}
-    ------1st-part--------2nd-part----3rd-part--
-
-1. The first part indicates it's a oneclass SVM or SVDD.
-2. The second part is the main setting.
-    The following table shows the relationship with the paper.
-
-         ------------------------------------------
-        | SETTING          |  Paper                |
-        |------------------|-----------------------|
-        | CY               |  cyclic-2cd           |
-        | FIRST            |  greedy-2cd           |
-        | SEMIGD_CY_FIRST  |  cyclic-|B|cd-greedy  |
-        | SEMIGD_FIRST_CY  |  greedy-R-cyclic      |
-         ------------------------------------------
-
-3. In the third part, SH means it is with shrinking technique.
-    1000 means it is without shrinking technique.
-    Furthermore, there is no stopping condition and runs 
-    1000 iterations by default.
-    The maximum iteration is set by -m option.
-
-Specifically, ONECLASS/SVDD_L1_CY_1000 is Algorithm 2, 
-ONECLASS/SVDD_L1_SEMIGD_CY_FIRST_1000 is Algorithm 4 and
-ONECLASS/SVDD_L1_SEMIGD_FIRST_CY_1000 is Algorithm 5.
-
-II. Configuration
------------------
-Configuration can be made in `lrocsvm/code/script/expconf.py'.
-
-1. runtype in line 4: the settings to run.
-
-2. nlist in line 17: the nu values to run. 
-    For SVDD, this nu is converted to the corresponding C
-    for each dataset by C=1/(nu*l) where l is 
-    the number of instances of the dataset.
-
-3. two rlist in line 24 and 25:
-    If r is in (0, 1], then it corresponds to the R value in the paper,
-    meaning we run r*l inner CD steps.
-    If r > 1, then it corresponds to the r value in the paper,
-    meaning we run r inner CD steps.
-    random_greedy_rlist is the rlist for Algorithm 4.
-    greedy_random_rlist is the rlist for Algorithm 5.
-
-4. dataset in line 31: the dataset to run.
-
-Run Experiment Parallelly
-=========================
-There are two ways to run the experiment parallelly, from `GNU Parallel' or `grid'.
-
-I. GNU Parallel
----------------
-GNU Parallel (https://www.gnu.org/software/parallel/) is a shell tool 
-for executing jobs in parallel using one or more computers.
-
-1. After `out_run.bash' is generated, run each line in the script in parallel by
-        > parallel --jobs $NR_JOBS < out_run.bash
-    where $NR_JOBS is the number of jobs you want to run in paralle.
-
-II. grid 
---------
-`grid' uses shared memory so that running experiments of a same data set in parallel
-does not waste storing duplicate data set in the memory.
-It requires OpenMP.
-
-1. Uncomment line 3 and 9, and comment line 4 and 10 of `Makefile'.
-Then run `make'.
-
-2. Modify line 43 (PROCESS_MAX) of `./script/expconf.py' to 
-the number of cores you want to run in parallel.
-
-3. Instead of `./runexp.py time', run `./runexp.py grid'. 
-    It will generate `out_run.bash' and several `grid_*.job' files.
-
-4. Run `bash out_run.bash'.
+will run linear oneclass SVM, nu=1, with algorithm 
+greedy-0.1-cyclic without shrinking.
 
 ===============================================================================
 FOR DEVELOPERS
@@ -213,7 +117,7 @@ How to Add New Solver Type (-s)
 		exit if solver_type is not equal to NEWTYPE or other
 5. script/liblrconf.py
 	a) append NEWTYPE code to runs = {}
-	b) modify semigd_prefix = []
+	b) modify lists gdrd_prefix, rdgd_prefix or other_semigd_prefix.
 
 `grid' Usage
 ============

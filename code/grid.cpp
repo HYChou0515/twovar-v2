@@ -14,8 +14,7 @@ void print_null(const char *s) {}
 void exit_with_help()
 {
 	printf(
-	"Usage: train training_set_file [log_file] [resume_file] [model_file]\n"
-	"options are from stdin\n"
+	"Usage: train [options] training_set_file [log_file] [resume_file] [model_file]\n"
 	"options:\n"
 	"-s type : set type of solver (default 1)\n"
 	"  for multi-class classification\n"
@@ -52,11 +51,17 @@ void exit_with_help()
 	"-wi weight: weights adjust the parameter C of different classes (see README for details)\n"
 	"-v n: n-fold cross validation mode\n"
 	"-C : find parameter C (only for -s 0 and 2)\n"
+	"-n : nu value for one-class SVM\n"
 	"-q : quiet mode (no outputs)\n"
+	"-r : number of inner CD iterations, (0,1] means r*l, (1,infty) means r\n"
 	"-m : max iteration\n"
 	"-S : max order-n operations\n"
 	"-t : timeout (in second)\n"
-	"-o : minimum objective value\n"
+	"-u : max cd steps (this *= prob->l)\n"
+	"-L : solve a scaled problem\n"
+	"-N : the dataset is normalized or not (experimental)\n"
+	"-o : minimum objective value (experimental)\n"
+	""
 	"L2R_LR, \n"
 	"OLD_ONE_L2_CY_SH,\n"
 	"L2R_L2LOSS_SVC, \n"
