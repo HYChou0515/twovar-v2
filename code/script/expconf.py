@@ -1,21 +1,18 @@
-logfolder='log_notime'
+logfolder='log'
 resumefolder='resume'
 
 runtype = [
-		## FOR EXP: 2-cd vs new-4 vs semigd vs semigd-rd
 		"SVDD_L1_CY_1000",
 		"SVDD_L1_FIRST_1000",
 		"SVDD_L1_SEMIGD_CY_FIRST_1000", #r=4
 		"SVDD_L1_SEMIGD_1000", #r=0.1
 		#"SVDD_L1_SEMIGD_BATCH_1000", #r=0.1
-		#"SVDD_L1_SEMIGD_SORT_1000",
 
 		"ONECLASS_L1_CY_1000",
 		"ONECLASS_L1_FIRST_1000",
 		"ONECLASS_L1_SEMIGD_CY_FIRST_1000", #r=4
 		"ONECLASS_L1_SEMIGD_1000", #r=0.1
 		#"ONECLASS_L1_SEMIGD_BATCH_1000", #r=0.1
-		#"ONCELASS_L1_SEMIGD_SORT_1000",
 ]
 nlist = [
 		0.1,
@@ -28,12 +25,12 @@ rlist = [
 	4,
 	0.1
 ]
-S = 6e7
-m = 300000
-timeout = 7200
+S = 6e7 # maximum #O(n) operation
+m = 300000 # maximum iter
+timeout = 60 # maximum seconds
 tolerance = 1e-10
 dataset = [
-	"yahookr",
+	#"yahookr",
 	"yahoojp",
 	"covtype.libsvm.binary.scale",
 	"a9a",
@@ -41,10 +38,9 @@ dataset = [
 	"rcv1_train.binary",
 	"real-sim",
 	"news20.binary",
-#	"avazu-app"
 	]
 
-PROCESS_MAX = 1
+PROCESS_MAX = 1 # max number of jobs of a `gird' command
 
 # plot config
 
