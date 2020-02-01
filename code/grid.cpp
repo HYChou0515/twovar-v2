@@ -815,7 +815,7 @@ void parse_stdin(char *input_file_name, GridItem* grid_item, char *param_str)
 			case SVDD_L1_SEMIGD_BATCH_1000:
 			case SVDD_L1_SEMIGD_CONV_1000:
 			case SVDD_L1_SEMIGD_SORT_1000:
-				grid_item->param.scaled = 0;
+				grid_item->param.scaled = 1;
 				break;
 		}
 	}

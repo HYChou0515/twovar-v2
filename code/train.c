@@ -725,7 +725,7 @@ void parse_command_line(int argc, char **argv, char *input_file_name, char *mode
 			case SVDD_L1_SEMIGD_BATCH_1000:
 			case SVDD_L1_SEMIGD_CONV_1000:
 			case SVDD_L1_SEMIGD_SORT_1000:
-				param.scaled = 0;
+				param.scaled = 1;
 				break;
 		}
 	}
