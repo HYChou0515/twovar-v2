@@ -4950,7 +4950,7 @@ void Solver::oneclass_greedy_random()
 			feature_node* comp_G = new feature_node[active_size];
 			for(s=0; s<active_size; s++) 
 			{
-				comp_G[s].index=i;
+				comp_G[s].index=index[s];
 				comp_G[s].value=nyG[s];
 			}
 			qsort(comp_G, active_size, sizeof(feature_node), cmp);
