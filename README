@@ -1,17 +1,17 @@
-This is the experiment code for the paper: 
+This is the experiment code for the paper:
 "Dual Coordinate-Descent Methods for Linear One-Class SVM and SVDD".
 
 This code will generate the experimental result figures in the paper.
 For the figures of O(n) operations, the result should be exactly the same.
-However, for the time experiments, the result may be slightly different 
+However, for the time experiments, the result may be slightly different
 due to the CPU frequency and the work load of your computer.
 
 This code has been tested under a 64-bit Linux environment.
 
-To run this code, there are several requirements, 
+To run this code, there are several requirements,
 please see Section System Requirement.
 
-The information of the experiment data can 
+The information of the experiment data can
 be found in Section Experiment Data.
 
 To get the result of the main paper, you can follow
@@ -22,7 +22,7 @@ you may want to see how to configure the experiment
 in Section Experiment Configuration.
 
 Since experiments are independent to each other,
-in Section Run Experiment Parallelly shows how to 
+in Section Run Experiment Parallelly shows how to
 run the experiments in parallel.
 
 Table of Contents
@@ -71,7 +71,7 @@ For step 4-8, go into the directory `lrocsvm/code/script'.
 
 5. Run `./runexp.py time'. This command generate a bash script `out_run.bash'.
 
-6. Run the script by `bash our_run.bash'. 
+6. Run the script by `bash out_run.bash'.
     In the default setting, it should take up to 60 seconds for each line of the script.
     To run the experiments parallelly, see imformation in Section Run Experiment Parallelly.
 
@@ -79,7 +79,7 @@ For step 4-8, go into the directory `lrocsvm/code/script'.
 
 III. From Logs Generate Figures
 ------------------------------
-8. Run `./plot.py --logpath ../log --relobj 0 --suffix d0 --scaled 1 nrnop' 
+8. Run `./plot.py --logpath ../log --relobj 0 --suffix d0 --scaled 1 nrnop'
     to generate figures in `../figure/'.
 
 Experiment Configuration
@@ -90,12 +90,12 @@ The terminologies used in the paper and in this code are different.
 In this section we make connection of the two.
 The term in the code is structured like
 
-    {ONECLASS or SVDD}_L1_{SETTING}_{1000 or SH}
-    ------1st-part--------2nd-part----3rd-part--
+    {ONECLASS or SVDD}_L1_{SETTING }_{1000 or SH}
+    {-----1st-part---}----{2nd-part}-{-3rd-part-}
 
 1. The first part indicates it's a oneclass SVM or SVDD.
 2. The second part is the main setting.
-    The following table shows the relationship with the paper.
+    The following table shows the relationship to the paper.
 
          ------------------------------------------
         | SETTING          |  Paper                |
@@ -108,11 +108,11 @@ The term in the code is structured like
 
 3. In the third part, SH means it is with shrinking technique.
     1000 means it is without shrinking technique.
-    Furthermore, there is no stopping condition and runs 
+    Furthermore, there is no stopping condition and runs
     1000 iterations by default.
     The maximum iteration is set by -m option.
 
-Specifically, ONECLASS/SVDD_L1_CY_1000 is Algorithm 2, 
+Specifically, ONECLASS/SVDD_L1_CY_1000 is Algorithm 2,
 ONECLASS/SVDD_L1_SEMIGD_CY_FIRST_1000 is Algorithm 4 and
 ONECLASS/SVDD_L1_SEMIGD_FIRST_CY_1000 is Algorithm 5.
 
@@ -122,9 +122,9 @@ Configuration can be made in `lrocsvm/code/script/expconf.py'.
 
 1. runtype in line 4: the settings to run.
 
-2. nlist in line 17: the nu values to run. 
+2. nlist in line 17: the nu values to run.
     For SVDD, this nu is converted to the corresponding C
-    for each dataset by C=1/(nu*l) where l is 
+    for each dataset by C=1/(nu*l) where l is
     the number of instances of the dataset.
 
 3. two rlist in lines 24 and 25:
@@ -143,14 +143,14 @@ There are two ways to run the experiment parallelly, from `GNU Parallel' or `gri
 
 I. GNU Parallel
 ---------------
-GNU Parallel (https://www.gnu.org/software/parallel/) is a shell tool 
+GNU Parallel (https://www.gnu.org/software/parallel/) is a shell tool
 for executing jobs in parallel using one or more computers.
 
 1. After `out_run.bash' is generated, run each line in the script in parallel by
         > parallel --jobs $NR_JOBS < out_run.bash
     where $NR_JOBS is the number of jobs you want to run in paralle.
 
-II. grid 
+II. grid
 --------
 `grid' uses shared memory so that running experiments of a same data set in parallel
 does not waste storing duplicate data set in the memory.
@@ -159,10 +159,10 @@ It requires OpenMP.
 1. Comment lines 3 and 9, and uncomment lines 4 and 10 of `Makefile'.
 Then run `make'.
 
-2. Modify line 43 (PROCESS_MAX) of `./script/expconf.py' to 
+2. Modify line 43 (PROCESS_MAX) of `./script/expconf.py' to
 the number of cores you want to run in parallel.
 
-3. Instead of `./runexp.py time', run `./runexp.py grid'. 
+3. Instead of `./runexp.py time', run `./runexp.py grid'.
     It will generate `out_run.bash' and several `grid_*.job' files.
 
 4. Run `bash out_run.bash'.
