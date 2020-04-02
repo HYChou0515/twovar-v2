@@ -126,7 +126,7 @@ class Plotter(object):
 				lb = uselabel[tp]
 				if is_semigd(tp):
 					lb = lb % r
-				plt.plot(xs, ys, self.makr[clridx],
+				plt.plot(xs, ys, linestyle=self.makr[clridx],
 						color=self.colors[clridx],
 						figure=self.fig, label=lb,
 						linewidth=3, markersize=6, markevery=0.1)
