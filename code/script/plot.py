@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import math, bisect
 import sys, os, resource
-import numpy as np
 from plotconst import *
 from liblrconf import *
 from expconf import *
