@@ -29,6 +29,7 @@ Table of Contents
 =================
 - System Requirement
 - Experiment Data
+- Quick Start
 - Run the Experiment
 - Experiment Configuration
 - Run Experiment Parallelly
@@ -39,7 +40,7 @@ This experiment should be running under 64-bit Linux environments.
 The following commands or tools are suggested:
 - UNIX utilities (cp, mkdir)
 - gcc 4.4.3 or newer version
-- Python 2.7.12
+- Python 3.6.3
 - matplotlib 1.5.3
 - make
 
@@ -66,8 +67,10 @@ For step 4-8, go into the directory `lrocsvm/code/script'.
 
 4. The experiment configuration is in `./expconf.py',
     use the default one or edit it to what you want.
-    See how to edit it in Section Experiment Configuration.
     The default experiment runs the result in the main paper.
+	Other experiments are labeled as `./expconf.py.fig*'.
+	To run them, just do `mv ./expconf.py.fig* ./expconf.py'.
+    See how to edit expconf.py in Section Experiment Configuration.
 
 5. Run `./runexp.py time'. This command generate a bash script `out_run.bash'.
 
@@ -81,6 +84,8 @@ III. From Logs Generate Figures
 ------------------------------
 8. Run `./plot.py --logpath ../log --relobj 0 --suffix d0 --scaled 1 nrnop'
     to generate figures in `../figure/'.
+	For `./expconf.py.fig8-9', run 
+	`./plot.py --logpath ../log --relobj 0 --suffix d0 --scaled 1 time' instead.
 
 Experiment Configuration
 ========================
@@ -97,14 +102,15 @@ The term in the code is structured like
 2. The second part is the main setting.
     The following table shows the relationship to the paper.
 
-         ------------------------------------------
-        | SETTING          |  Paper                |
-        |------------------|-----------------------|
-        | CY               |  cyclic-2cd           |
-        | FIRST            |  greedy-2cd           |
-        | SEMIGD_CY_FIRST  |  cyclic-|B|cd-greedy  |
-        | SEMIGD_FIRST_CY  |  greedy-R-cyclic      |
-         ------------------------------------------
+         ----------------------------------------------------
+        | SETTING                |  Paper                    |
+        |------------------------|---------------------------|
+        | CY                     |  cyclic-2cd               |
+        | FIRST                  |  greedy-2cd               |
+		| SEMIGD_CY_FIRST        |  cyclic-|B|cd-greedy      |
+        | SEMIGD_FIRST_CY        |  greedy-R-cyclic          |
+        | SEMIGD_BATCH_FIRST_CY  |  cyclic-R̄-greedy-R-cyclic |
+         ----------------------------------------------------
 
 3. In the third part, SH means it is with shrinking technique.
     1000 means it is without shrinking technique.
@@ -113,8 +119,10 @@ The term in the code is structured like
     The maximum iteration is set by -m option.
 
 Specifically, ONECLASS/SVDD_L1_CY_1000 is Algorithm 2,
-ONECLASS/SVDD_L1_SEMIGD_CY_FIRST_1000 is Algorithm 4 and
-ONECLASS/SVDD_L1_SEMIGD_FIRST_CY_1000 is Algorithm 5.
+ONECLASS/SVDD_L1_SEMIGD_CY_FIRST_1000 is Algorithm 4,
+ONECLASS/SVDD_L1_SEMIGD_FIRST_CY_1000 is Algorithm 5 and
+ONECLASS/SVDD_L1_SEMIGD_FIRST_CY_SH is Algorithm 7
+ONECLASS/SVDD_L1_SEMIGD_BATCH_FIRST_CY_1000 is Algorithm 8.
 
 II. Configuration
 -----------------
