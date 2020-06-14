@@ -7,18 +7,18 @@ runtype = [
 		"SVDD_L1_SEMIGD_CY_FIRST_1000", #r=4
 		"SVDD_L1_SEMIGD_FIRST_CY_1000", #r=0.1
 		#"SVDD_L1_SEMIGD_FIRST_CY_SH", #r=0.1
-		#"SVDD_L1_SEMIGD_BATCH_FIRST_CY_1000", #r=0.1
+		"SVDD_L1_SEMIGD_BATCH_FIRST_CY_1000", #r=0.1
 
 		"ONECLASS_L1_CY_1000",
 		"ONECLASS_L1_FIRST_1000",
 		"ONECLASS_L1_SEMIGD_CY_FIRST_1000", #r=4
 		"ONECLASS_L1_SEMIGD_FIRST_CY_1000", #r=0.1
 		#"ONECLASS_L1_SEMIGD_FIRST_CY_SH", #r=0.1
-		#"ONECLASS_L1_SEMIGD_BATCH_FIRST_CY_1000", #r=0.1
+		"ONECLASS_L1_SEMIGD_BATCH_FIRST_CY_1000", #r=0.1
 ]
 nlist = [
 		0.1,
-		#0.01,
+		0.01,
 		#0.005
 		]
 clist = []
@@ -45,7 +45,7 @@ PROCESS_MAX = 1 # max number of jobs of a `gird' command
 
 # plot config
 
-MARKER = [(0, (6, 5)),(0, (7, 5, 3, 5)),(0, (1.5, 5, 1.5, 5)),(0, (5, 4, 2, 4, 2, 4)),(0, (4, 4, 4, 4, 2, 4))]
+MARKER = ['^--', 'v--', 'p--', 'D--', 'o--']
 Y_BUFFER = 2
 MIN_SQUASH = 0.2
 YLIM = (1e-6, 1000)

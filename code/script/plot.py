@@ -102,9 +102,11 @@ class Plotter(object):
 				except StubException:
 					totnum += 1
 					continue
-		self.colors = [cmap(j) for j in np.linspace(0, 1, totnum+1)]
+#		self.colors = [cmap(j) for j in np.linspace(0, 1, totnum+1)]
+		self.colors = ['blue', 'm', 'tomato', 'k', 'g']
 		self.makr = MARKER
 		self.makr = self.makr * int(math.ceil(float(len(self.colors))/len(self.makr)))
+		self.markeredgewidth = 0
 
 	def init_new_fig(self):
 		pass
@@ -126,10 +128,11 @@ class Plotter(object):
 				lb = uselabel[tp]
 				if is_semigd(tp):
 					lb = lb % r
-				plt.plot(xs, ys, linestyle=self.makr[clridx],
+				plt.plot(xs, ys, self.makr[clridx],
 						color=self.colors[clridx],
 						figure=self.fig, label=lb,
-						linewidth=3, markersize=6, markevery=0.1)
+						linewidth=3, markersize=13,
+						markeredgewidth=0, markevery=0.1)
 				clridx += 1
 
 		min_xs, max_xs, min_ys, max_ys = zip(*self.xy_range) # list of tuples to tuple of lists
@@ -756,42 +759,42 @@ def main():
 					svc_l2loss_stype.append(st)
 
 	#L1 ocsvm
-	if len(filter(lambda s: s is not None, ocsvm_l1loss_stype)) != 0:
+	if len(list(filter(lambda s: s is not None, ocsvm_l1loss_stype))) != 0:
 		for plotter_class in Plotter.__subclasses__():
 			if args.plottype == plotter_class.PLOTTYPE:
 				plotter = plotter_class(ocsvm_l1loss_stype, "L1", dataset, nlist, min(elist), args)
 		plotter.draw_all()
 
 	#L1 svdd
-	if len(filter(lambda s: s is not None, svdd_l1loss_stype)) != 0:
+	if len(list(filter(lambda s: s is not None, svdd_l1loss_stype))) != 0:
 		for plotter_class in Plotter.__subclasses__():
 			if args.plottype == plotter_class.PLOTTYPE:
 				plotter = plotter_class(svdd_l1loss_stype, "L1", dataset, nlist, min(elist), args)
 		plotter.draw_all()
 
 	#L1 svc
-	if len(filter(lambda s: s is not None, svc_l1loss_stype)) != 0:
+	if len(list(filter(lambda s: s is not None, svc_l1loss_stype))) != 0:
 		for plotter_class in Plotter.__subclasses__():
 			if args.plottype == plotter_class.PLOTTYPE:
 				plotter = plotter_class(svc_l1loss_stype, "L1", dataset, clist, min(elist), args)
 		plotter.draw_all()
 
 	#L2 ocsvm
-	if len(filter(lambda s: s is not None, ocsvm_l2loss_stype)) != 0:
+	if len(list(filter(lambda s: s is not None, ocsvm_l2loss_stype))) != 0:
 		for plotter_class in Plotter.__subclasses__():
 			if args.plottype == plotter_class.PLOTTYPE:
 				plotter = plotter_class(ocsvm_l2loss_stype, "L2", dataset, nlist, min(elist), args)
 		plotter.draw_all()
 
 	#L2 svdd
-	if len(filter(lambda s: s is not None, svdd_l2loss_stype)) != 0:
+	if len(list(filter(lambda s: s is not None, svdd_l2loss_stype))) != 0:
 		for plotter_class in Plotter.__subclasses__():
 			if args.plottype == plotter_class.PLOTTYPE:
 				plotter = plotter_class(svdd_l2loss_stype, "L2", dataset, nlist, min(elist), args)
 		plotter.draw_all()
 
 	#L2 svc
-	if len(filter(lambda s: s is not None, svc_l2loss_stype)) != 0:
+	if len(list(filter(lambda s: s is not None, svc_l2loss_stype))) != 0:
 		for plotter_class in Plotter.__subclasses__():
 			if args.plottype == plotter_class.PLOTTYPE:
 				plotter = plotter_class(svc_l2loss_stype, "L2", dataset, clist, min(elist), args)
@@ -811,7 +814,7 @@ def get_memory():
 	return free_memory
 
 if __name__ == '__main__':
-	assert sys.version_info[:3] == (2,7,12)
+#	assert sys.version_info[:3] == (2,7,13)
 	assert matplotlib.__version__ == '1.5.3'
 	memory_limit()
 	try:
